@@ -16,7 +16,10 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
         if (!string.IsNullOrWhiteSpace(region))
             accounts = accounts.Where(a => a.Region == region);
         if (!string.IsNullOrWhiteSpace(search))
-            accounts = accounts.Where(a => a.AccountName.Contains(search));
+        {
+            var term = search.Trim().ToLower();
+            accounts = accounts.Where(a => a.AccountName.ToLower().Contains(term));
+        }
 
         return await accounts
             .OrderBy(a => a.AccountName)
@@ -29,6 +32,12 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
                 StrategicFlag = a.StrategicFlag,
                 PriorityWeight = a.PriorityWeight,
                 Segment = a.Segment,
+                ProjectManager = a.ProjectManager,
+                SolutionArchitect = a.SolutionArchitect,
+                Cftl = a.Cftl,
+                AccountOwner = a.AccountOwner,
+                CustomerPoc = a.CustomerPoc,
+                BackupOwner = a.BackupOwner,
                 ResourceCount = _db.ResourceAccounts.Count(ra => ra.AccountId == a.AccountId)
             })
             .ToListAsync(ct);
@@ -56,6 +65,12 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
                 e.MeetingName, e.Duration, e.Region, e.Remarks))
             .ToListAsync(ct);
 
+        var history = await _db.OwnershipHistory.AsNoTracking()
+            .Where(h => h.AccountId == id)
+            .OrderByDescending(h => h.ChangedOn).ThenByDescending(h => h.Id)
+            .Select(h => new OwnershipHistoryDto(h.Id, h.Role, h.PreviousOwner, h.NewOwner, h.ChangedOn, h.Notes))
+            .ToListAsync(ct);
+
         return new AccountDetailDto
         {
             AccountId = account.AccountId,
@@ -65,9 +80,16 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
             StrategicFlag = account.StrategicFlag,
             PriorityWeight = account.PriorityWeight,
             Segment = account.Segment,
+            ProjectManager = account.ProjectManager,
+            SolutionArchitect = account.SolutionArchitect,
+            Cftl = account.Cftl,
+            AccountOwner = account.AccountOwner,
+            CustomerPoc = account.CustomerPoc,
+            BackupOwner = account.BackupOwner,
             ResourceCount = resources.Count,
             AssignedResources = resources,
-            RecentActivity = recent
+            RecentActivity = recent,
+            OwnershipHistory = history
         };
     }
 
@@ -85,10 +107,34 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
         var account = await _db.Accounts.FirstOrDefaultAsync(a => a.AccountId == id, ct);
         if (account is null)
             return null;
+        RecordOwnershipChanges(account, input);
         Apply(account, input);
         account.UpdatedUtc = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
         return await GetByIdAsync(id, ct);
+    }
+
+    /// <summary>Appends an ownership-history row for each owner field that actually changed.</summary>
+    private void RecordOwnershipChanges(Account account, AccountUpsertDto input)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        void Track(string role, string? oldVal, string? newVal)
+        {
+            var o = string.IsNullOrWhiteSpace(oldVal) ? null : oldVal.Trim();
+            var n = string.IsNullOrWhiteSpace(newVal) ? null : newVal.Trim();
+            if (!string.Equals(o, n, StringComparison.OrdinalIgnoreCase))
+                _db.OwnershipHistory.Add(new OwnershipHistory
+                {
+                    AccountId = account.AccountId, Role = role,
+                    PreviousOwner = o, NewOwner = n, ChangedOn = today
+                });
+        }
+        Track("PM", account.ProjectManager, input.ProjectManager);
+        Track("SA", account.SolutionArchitect, input.SolutionArchitect);
+        Track("CFTL", account.Cftl, input.Cftl);
+        Track("Account Owner", account.AccountOwner, input.AccountOwner);
+        Track("Customer POC", account.CustomerPoc, input.CustomerPoc);
+        Track("Backup Owner", account.BackupOwner, input.BackupOwner);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
@@ -118,5 +164,13 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
         account.StrategicFlag = input.StrategicFlag;
         account.PriorityWeight = input.PriorityWeight > 0 ? input.PriorityWeight : 1;
         account.Segment = string.IsNullOrWhiteSpace(input.Segment) ? null : input.Segment.Trim();
+        account.ProjectManager = Trim(input.ProjectManager);
+        account.SolutionArchitect = Trim(input.SolutionArchitect);
+        account.Cftl = Trim(input.Cftl);
+        account.AccountOwner = Trim(input.AccountOwner);
+        account.CustomerPoc = Trim(input.CustomerPoc);
+        account.BackupOwner = Trim(input.BackupOwner);
     }
+
+    private static string? Trim(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

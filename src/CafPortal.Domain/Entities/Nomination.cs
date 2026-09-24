@@ -21,5 +21,13 @@ public class Nomination : AuditableEntity
     public string? CftlPrimary { get; set; }
     public string? ProjectCoordinator { get; set; }
 
+    /// <summary>Reason the nomination is blocked (required when Status = Blocked).</summary>
+    public BlockerReasonType? BlockedReason { get; set; }
+    /// <summary>Date the nomination entered a blocked/waiting state.</summary>
+    public DateOnly? BlockedSince { get; set; }
+    /// <summary>Next follow-up date for deferred/waiting items.</summary>
+    public DateOnly? FollowUpDate { get; set; }
+
     public Account? Account { get; set; }
+    public ICollection<WaveLink> WaveLinks { get; set; } = new List<WaveLink>();
 }

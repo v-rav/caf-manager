@@ -14,6 +14,11 @@ public class LeaveController(ILeaveService leave) : ControllerBase
     public async Task<IActionResult> Get([FromQuery] int windowDays = 30, [FromQuery] string? region = null, CancellationToken ct = default)
         => Ok(await leave.GetWindowAsync(windowDays, region, ct));
 
+    /// <summary>Resources with active accounts who have upcoming leave (coverage clash risk).</summary>
+    [HttpGet("clashes")]
+    public async Task<IActionResult> GetClashes([FromQuery] string? region = null, CancellationToken ct = default)
+        => Ok(await leave.GetClashesAsync(region, ct));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] LeaveUpsertDto input, CancellationToken ct)
     {

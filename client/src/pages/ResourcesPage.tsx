@@ -38,6 +38,7 @@ const emptyForm: ResourceUpsert = {
   dedicatedFlag: false,
   capacityLimit: 5,
   activeFlag: true,
+  onboardingStatus: 'Active',
 }
 
 export function ResourcesPage() {
@@ -84,6 +85,7 @@ export function ResourcesPage() {
       dedicatedFlag: r.dedicatedFlag,
       capacityLimit: r.capacityLimit,
       activeFlag: r.activeFlag,
+      onboardingStatus: r.onboardingStatus,
     })
   }
 
@@ -151,6 +153,7 @@ export function ResourcesPage() {
               { key: 'region', header: 'Region', sortValue: (r) => r.region },
               { key: 'role', header: 'Role', sortValue: (r) => r.role },
               { key: 'skill', header: 'Primary Skill', sortValue: (r) => r.primarySkill ?? '', render: (r) => r.primarySkill ?? '—' },
+              { key: 'onboarding', header: 'Onboarding', sortValue: (r) => r.onboardingStatus, render: (r) => r.onboardingStatus },
               { key: 'accounts', header: 'Accounts', align: 'center', sortValue: (r) => r.accountCount, render: (r) => `${r.accountCount} / ${r.capacityLimit}` },
               { key: 'utilization', header: 'Utilization', minWidth: 140, sortValue: (r) => r.utilizationPercent, render: (r) => <UtilizationBar percent={r.utilizationPercent} /> },
               { key: 'status', header: 'Status', sortValue: (r) => r.capacityStatus, render: (r) => <StatusBadge status={r.capacityStatus} /> },
@@ -209,9 +212,22 @@ export function ResourcesPage() {
               <Input style={{ flex: 1 }} type="number" placeholder="Experience (yrs)" value={String(form.experienceYears)} onChange={(_, d) => patch({ experienceYears: Number(d.value) || 0 })} />
               <Input style={{ flex: 1 }} type="number" placeholder="Capacity Limit" value={String(form.capacityLimit)} onChange={(_, d) => patch({ capacityLimit: Number(d.value) || 5 })} />
             </div>
-            <div style={{ display: 'flex', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
               <Switch label="Dedicated" checked={form.dedicatedFlag} onChange={(_, d) => patch({ dedicatedFlag: d.checked })} />
               <Switch label="Active" checked={form.activeFlag} onChange={(_, d) => patch({ activeFlag: d.checked })} />
+              <Dropdown
+                style={{ flex: 1, minWidth: 180 }}
+                placeholder="Onboarding"
+                value={form.onboardingStatus ?? 'Active'}
+                selectedOptions={[form.onboardingStatus ?? 'Active']}
+                onOptionSelect={(_, d) => patch({ onboardingStatus: d.optionValue ?? 'Active' })}
+              >
+                {['Not Started', 'Access Requested', 'Access Granted', 'Trained', 'Active'].map((o) => (
+                  <Option key={o} value={o}>
+                    {o}
+                  </Option>
+                ))}
+              </Dropdown>
             </div>
           </>
         )}

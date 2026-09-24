@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { ErrorText, FilterSelect, Loading, Panel, StatusBadge, UtilizationBar } from '../components/common'
+import { KpiCard } from '../components/KpiCard'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import type { CapacityRow } from '../types'
@@ -18,9 +19,12 @@ const CAPACITY_STATUSES = ['Available', 'Partially Utilized', 'Fully Utilized', 
 export function CapacityPage() {
   const { region } = useRegion()
   const { data, loading, error, reload } = useAsync(() => api.capacity(region), [region])
+  const { data: clashes } = useAsync(() => api.leaveClashes(region), [region])
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const debouncedSearch = useDebounced(search)
+
+  const overloaded = (data ?? []).filter((c) => c.capacityStatus === 'Overloaded')
 
   const rows = useMemo(
     () =>
@@ -37,6 +41,52 @@ export function CapacityPage() {
       <Text size={600} weight="bold">
         Capacity Dashboard
       </Text>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <KpiCard label="Overloaded resources" value={overloaded.length} tone={overloaded.length ? 'danger' : 'success'} />
+        <KpiCard label="Leave-clash risks" value={clashes?.length ?? 0} tone={(clashes?.length ?? 0) ? 'warning' : 'success'} />
+      </div>
+
+      {overloaded.length > 0 && (
+        <Panel title={`Overloaded — needs rebalancing (${overloaded.length})`}>
+          <DataTable<CapacityRow>
+            ariaLabel="Overloaded resources"
+            rows={overloaded}
+            rowKey={(c) => c.resourceId}
+            defaultSort={{ key: 'utilization', dir: 'desc' }}
+            emptyMessage="None."
+            columns={[
+              { key: 'resource', header: 'Resource', sortValue: (c) => c.resourceName },
+              { key: 'region', header: 'Region', sortValue: (c) => c.region },
+              { key: 'role', header: 'Role', sortValue: (c) => c.role },
+              { key: 'accounts', header: 'Accounts', align: 'center', sortValue: (c) => c.accountCount },
+              { key: 'limit', header: 'Limit', align: 'center', sortValue: (c) => c.capacityLimit },
+              { key: 'utilization', header: 'Utilization', minWidth: 140, sortValue: (c) => c.utilizationPercent, render: (c) => <UtilizationBar percent={c.utilizationPercent} /> },
+            ]}
+          />
+        </Panel>
+      )}
+
+      {clashes && clashes.length > 0 && (
+        <Panel title={`Leave-clash alerts — resources with active accounts on upcoming leave (${clashes.length})`}>
+          <DataTable
+            ariaLabel="Leave clashes"
+            rows={clashes}
+            rowKey={(c) => c.resourceId}
+            defaultSort={{ key: 'accounts', dir: 'desc' }}
+            emptyMessage="No clashes."
+            columns={[
+              { key: 'resource', header: 'Resource', sortValue: (c) => c.resourceName },
+              { key: 'region', header: 'Region', sortValue: (c) => c.region },
+              { key: 'accounts', header: 'Active accounts', align: 'center', sortValue: (c) => c.activeAccounts },
+              { key: 'start', header: 'Leave from', sortValue: (c) => c.nextLeaveStart },
+              { key: 'end', header: 'Leave to', sortValue: (c) => c.nextLeaveEnd },
+              { key: 'days', header: 'Days in window', align: 'center', sortValue: (c) => c.leaveDaysInWindow },
+            ]}
+          />
+        </Panel>
+      )}
+
       <Panel
         title={`Resource vs Accounts heatmap${rows ? ` (${rows.length})` : ''}`}
         action={

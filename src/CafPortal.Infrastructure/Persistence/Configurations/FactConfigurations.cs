@@ -61,8 +61,40 @@ public class NominationConfiguration : IEntityTypeConfiguration<Nomination>
         builder.Property(x => x.SolutionArchitect).HasMaxLength(200);
         builder.Property(x => x.CftlPrimary).HasMaxLength(200);
         builder.Property(x => x.ProjectCoordinator).HasMaxLength(200);
+        builder.Property(x => x.BlockedReason).HasConversion<string>().HasMaxLength(40);
         builder.HasOne(x => x.Account).WithMany()
             .HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasMany(x => x.WaveLinks).WithOne(w => w.Nomination)
+            .HasForeignKey(w => w.NominationId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => x.Status);
+    }
+}
+
+public class WaveLinkConfiguration : IEntityTypeConfiguration<WaveLink>
+{
+    public void Configure(EntityTypeBuilder<WaveLink> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.WaveType).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.Reference).HasMaxLength(300).IsRequired();
+        builder.Property(x => x.Notes).HasMaxLength(1000);
+        builder.HasOne(x => x.Account).WithMany()
+            .HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(x => x.NominationId);
+    }
+}
+
+public class OwnershipHistoryConfiguration : IEntityTypeConfiguration<OwnershipHistory>
+{
+    public void Configure(EntityTypeBuilder<OwnershipHistory> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Role).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.PreviousOwner).HasMaxLength(200);
+        builder.Property(x => x.NewOwner).HasMaxLength(200);
+        builder.Property(x => x.Notes).HasMaxLength(500);
+        builder.HasOne(x => x.Account).WithMany(a => a.OwnershipHistory)
+            .HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => x.AccountId);
     }
 }

@@ -22,6 +22,7 @@ public static class SeedData
         await SeedSegmentsAsync(db, ct);
         await SeedCapacityConfigAsync(db, ct);
         await SeedApplicationSettingsAsync(db, ct);
+        await SeedVocabulariesAsync(db, ct);
         await SeedAliasesAsync(db, ct);
         await SeedStrategicAccountsAsync(db, ct);
         await db.SaveChangesAsync(ct);
@@ -97,14 +98,40 @@ public static class SeedData
 
     private static async Task SeedApplicationSettingsAsync(AppDbContext db, CancellationToken ct)
     {
-        if (await db.ApplicationSettings.AnyAsync(ct))
-            return;
-        db.ApplicationSettings.AddRange(
-            new ApplicationSetting { Key = "DefaultCapacityLimit", Value = "5", Description = "Optimal active accounts per resource" },
-            new ApplicationSetting { Key = "RefreshTime", Value = "02:00", Description = "Daily background refresh time (local)" },
-            new ApplicationSetting { Key = "AvailableThreshold", Value = "40", Description = "Utilization %% ceiling for Available" },
-            new ApplicationSetting { Key = "PartiallyUtilizedThreshold", Value = "80", Description = "Utilization %% ceiling for Partially Utilized" },
-            new ApplicationSetting { Key = "OverloadedThreshold", Value = "100", Description = "Utilization %% above which resource is Overloaded" });
+        var defaults = new (string Key, string Value, string Desc)[]
+        {
+            ("DefaultCapacityLimit", "5", "Optimal active accounts per resource"),
+            ("RefreshTime", "02:00", "Daily background refresh time (local)"),
+            ("AvailableThreshold", "40", "Utilization %% ceiling for Available"),
+            ("PartiallyUtilizedThreshold", "80", "Utilization %% ceiling for Partially Utilized"),
+            ("OverloadedThreshold", "100", "Utilization %% above which resource is Overloaded"),
+            ("StaleWarnDays", "3", "Days without update before a nomination is flagged for a warning"),
+            ("StaleEscalateDays", "5", "Days without update before a nomination is escalated"),
+            ("StaleDeferDays", "10", "Days without update before suggesting Customer Deferred"),
+            ("LeaveClashWindowDays", "30", "Upcoming-leave window used to detect coverage clashes")
+        };
+        var existing = await db.ApplicationSettings.Select(s => s.Key).ToListAsync(ct);
+        foreach (var (key, value, desc) in defaults)
+        {
+            if (!existing.Contains(key))
+                db.ApplicationSettings.Add(new ApplicationSetting { Key = key, Value = value, Description = desc });
+        }
+    }
+
+    private static async Task SeedVocabulariesAsync(AppDbContext db, CancellationToken ct)
+    {
+        if (!await db.Tools.AnyAsync(ct))
+        {
+            var tools = new[] { "AppCAT", "Azure Migrate", "Docker", "GitHub Copilot", "Java Upgrade", "OpenRewrite" };
+            for (var i = 0; i < tools.Length; i++)
+                db.Tools.Add(new ToolConfiguration { Name = tools[i], SortOrder = i + 1 });
+        }
+        if (!await db.Skills.AnyAsync(ct))
+        {
+            var skills = new[] { ".NET", "Java", "AKS", "DevOps", "Data", "Security" };
+            for (var i = 0; i < skills.Length; i++)
+                db.Skills.Add(new SkillConfiguration { Name = skills[i], SortOrder = i + 1 });
+        }
     }
 
     private static async Task SeedAliasesAsync(AppDbContext db, CancellationToken ct)

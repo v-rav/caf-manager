@@ -19,6 +19,7 @@ public class ResourceDto
     public double UtilizationPercent { get; set; }
     public string CapacityStatus { get; set; } = string.Empty;
     public bool OnLeaveToday { get; set; }
+    public string OnboardingStatus { get; set; } = string.Empty;
 }
 
 public class ResourceDetailDto : ResourceDto

@@ -15,11 +15,15 @@ public interface IApplicationDbContext
     DbSet<EngagementFact> EngagementFacts { get; }
     DbSet<CapacityFact> CapacityFacts { get; }
     DbSet<Nomination> Nominations { get; }
+    DbSet<WaveLink> WaveLinks { get; }
+    DbSet<OwnershipHistory> OwnershipHistory { get; }
 
     DbSet<RegionConfiguration> Regions { get; }
     DbSet<RoleConfiguration> Roles { get; }
     DbSet<RolePermission> RolePermissions { get; }
     DbSet<SegmentConfiguration> Segments { get; }
+    DbSet<ToolConfiguration> Tools { get; }
+    DbSet<SkillConfiguration> Skills { get; }
     DbSet<StrategicAccountConfiguration> StrategicAccountConfigurations { get; }
     DbSet<CapacityConfiguration> CapacityConfigurations { get; }
     DbSet<ApplicationSetting> ApplicationSettings { get; }

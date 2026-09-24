@@ -18,6 +18,15 @@ public class Account : AuditableEntity
     public string? Tpid { get; set; }
     public string? ExternalAccountId { get; set; }
 
+    /// <summary>Ownership matrix (reflects FDO roles) plus a backup owner for SPOF/handover cover.</summary>
+    public string? ProjectManager { get; set; }
+    public string? SolutionArchitect { get; set; }
+    public string? Cftl { get; set; }
+    public string? AccountOwner { get; set; }
+    public string? CustomerPoc { get; set; }
+    public string? BackupOwner { get; set; }
+
     public ICollection<ResourceAccount> ResourceAccounts { get; set; } = new List<ResourceAccount>();
     public ICollection<EngagementFact> EngagementFacts { get; set; } = new List<EngagementFact>();
+    public ICollection<OwnershipHistory> OwnershipHistory { get; set; } = new List<OwnershipHistory>();
 }

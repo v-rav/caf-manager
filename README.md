@@ -32,8 +32,10 @@ Key design points:
 - **Nightly background job** (`DailyRefreshHostedService`) runs at the configured `RefreshTime`
   (default `02:00`): load sources → transform → update SQLite → rebuild `CapacityFact` → clear cache.
 - **Configuration tables** drive everything: `RegionConfiguration`, `RoleConfiguration` +
-  `RolePermission`, `CapacityConfiguration`, `StrategicAccountConfiguration`, `ApplicationSetting`,
-  and `AccountAlias` (e.g. `SG → Societe Generale`).
+  `RolePermission`, `CapacityConfiguration`, `StrategicAccountConfiguration`, `SegmentConfiguration`,
+  `ApplicationSetting`, and `AccountAlias` (e.g. `SG → Societe Generale`).
+- **Configuration page** (in-app admin): edit the optimal accounts-per-role limits (recomputes
+  capacity on save) and manage the account **Segment** list (add / rename) — no redeploy needed.
 
 ### Capacity model
 
@@ -98,14 +100,17 @@ Open <http://localhost:5080> — the API serves the SPA and the JSON endpoints t
 | GET | `/api/dashboard/executive?region=` | Executive KPI cards + chart series |
 | GET | `/api/resources?search=&region=&role=&skill=&status=` | Resource hub |
 | GET | `/api/resources/{id}` | Resource detail (accounts + upcoming leave) |
-| GET | `/api/accounts?search=&region=` | Account hub |
+| GET | `/api/accounts?search=&region=` | Account hub (name search is case-insensitive) |
 | GET | `/api/accounts/{id}` | Account detail (resources + recent activity) |
 | GET | `/api/capacity?region=` | Capacity heatmap rows |
 | GET | `/api/strategicaccounts?region=` | Strategic account coverage + risk |
 | GET | `/api/leave?windowDays=30&region=` | Leave window (30/60/90) |
+| POST | `/api/leave` | Add leave; a From→To range expands into one record per day |
 | GET | `/api/nominations?region=&status=` | Nomination pipeline |
 | GET | `/api/configuration/regions` | Configured regions |
 | GET | `/api/configuration/roles` | Configured roles + permissions |
+| GET · PUT | `/api/configuration/capacity` | Read / bulk-update optimal accounts per role (rebuilds capacity) |
+| GET · POST · PUT | `/api/configuration/segments` | List / add / rename account segments |
 | POST | `/api/admin/refresh` | On-demand import + capacity rebuild |
 
 ---

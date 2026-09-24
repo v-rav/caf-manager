@@ -34,7 +34,7 @@ export function LeavePage() {
 
   const openCreate = () => {
     setEditId(null)
-    setForm({ resourceId: 0, leaveDate: today(), leaveType: 'Leave' })
+    setForm({ resourceId: 0, leaveDate: today(), endDate: today(), leaveType: 'Leave' })
   }
   const openEdit = (l: LeaveItem) => {
     setEditId(l.id)
@@ -68,7 +68,7 @@ export function LeavePage() {
     }
   }
 
-  const valid = !!form && form.resourceId > 0 && !!form.leaveDate
+  const valid = !!form && form.resourceId > 0 && !!form.leaveDate && (!form.endDate || form.endDate >= form.leaveDate)
   const resourceName = (id: number) => resources?.find((r) => r.resourceId === id)?.name ?? ''
 
   return (
@@ -149,7 +149,22 @@ export function LeavePage() {
                 </Option>
               ))}
             </Dropdown>
-            <Input type="date" value={form.leaveDate} onChange={(_, d) => patch({ leaveDate: d.value })} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+                  {editId ? 'Date' : 'From'}
+                </Text>
+                <Input type="date" value={form.leaveDate} max={form.endDate} onChange={(_, d) => patch({ leaveDate: d.value })} />
+              </label>
+              {!editId && (
+                <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+                    To
+                  </Text>
+                  <Input type="date" value={form.endDate ?? form.leaveDate} min={form.leaveDate} onChange={(_, d) => patch({ endDate: d.value })} />
+                </label>
+              )}
+            </div>
             <Dropdown
               placeholder="Leave type"
               value={form.leaveType}

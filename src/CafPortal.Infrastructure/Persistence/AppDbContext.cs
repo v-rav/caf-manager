@@ -15,11 +15,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<EngagementFact> EngagementFacts => Set<EngagementFact>();
     public DbSet<CapacityFact> CapacityFacts => Set<CapacityFact>();
     public DbSet<Nomination> Nominations => Set<Nomination>();
+    public DbSet<WaveLink> WaveLinks => Set<WaveLink>();
+    public DbSet<OwnershipHistory> OwnershipHistory => Set<OwnershipHistory>();
 
     public DbSet<RegionConfiguration> Regions => Set<RegionConfiguration>();
     public DbSet<RoleConfiguration> Roles => Set<RoleConfiguration>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<SegmentConfiguration> Segments => Set<SegmentConfiguration>();
+    public DbSet<ToolConfiguration> Tools => Set<ToolConfiguration>();
+    public DbSet<SkillConfiguration> Skills => Set<SkillConfiguration>();
     public DbSet<StrategicAccountConfiguration> StrategicAccountConfigurations => Set<StrategicAccountConfiguration>();
     public DbSet<CapacityConfiguration> CapacityConfigurations => Set<CapacityConfiguration>();
     public DbSet<ApplicationSetting> ApplicationSettings => Set<ApplicationSetting>();

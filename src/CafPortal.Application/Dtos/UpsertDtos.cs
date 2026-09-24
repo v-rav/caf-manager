@@ -17,6 +17,7 @@ public class ResourceUpsertDto
     public bool DedicatedFlag { get; set; }
     public int CapacityLimit { get; set; } = 5;
     public bool ActiveFlag { get; set; } = true;
+    public string? OnboardingStatus { get; set; }
 }
 
 /// <summary>Create/update payload for an account.</summary>
@@ -28,13 +29,20 @@ public class AccountUpsertDto
     public bool StrategicFlag { get; set; }
     public int PriorityWeight { get; set; } = 1;
     public string? Segment { get; set; }
+    public string? ProjectManager { get; set; }
+    public string? SolutionArchitect { get; set; }
+    public string? Cftl { get; set; }
+    public string? AccountOwner { get; set; }
+    public string? CustomerPoc { get; set; }
+    public string? BackupOwner { get; set; }
 }
 
-/// <summary>Create/update payload for a leave record.</summary>
+/// <summary>Create/update payload for a leave record. EndDate lets a single add span a range.</summary>
 public class LeaveUpsertDto
 {
     [Required] public int ResourceId { get; set; }
     [Required] public DateOnly LeaveDate { get; set; }
+    public DateOnly? EndDate { get; set; }
     [Required] public string LeaveType { get; set; } = "Leave";
 }
 

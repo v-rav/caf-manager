@@ -9,3 +9,8 @@ public class LeaveWindowDto
     public int DistinctResources { get; set; }
     public IReadOnlyList<LeaveDto> Items { get; set; } = Array.Empty<LeaveDto>();
 }
+
+/// <summary>A resource carrying active accounts who has upcoming leave — a coverage clash to watch.</summary>
+public record LeaveClashDto(
+    int ResourceId, string ResourceName, string Region, int ActiveAccounts,
+    DateOnly NextLeaveStart, DateOnly NextLeaveEnd, int LeaveDaysInWindow);

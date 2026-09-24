@@ -19,6 +19,9 @@ public class Resource : AuditableEntity
     public int CapacityLimit { get; set; } = 5;
     public bool ActiveFlag { get; set; } = true;
 
+    /// <summary>Onboarding/access lifecycle stage for this resource.</summary>
+    public Enums.OnboardingStatusType OnboardingStatus { get; set; } = Enums.OnboardingStatusType.Active;
+
     public ICollection<ResourceAccount> ResourceAccounts { get; set; } = new List<ResourceAccount>();
     public ICollection<LeaveFact> LeaveFacts { get; set; } = new List<LeaveFact>();
     public ICollection<EngagementFact> EngagementFacts { get; set; } = new List<EngagementFact>();

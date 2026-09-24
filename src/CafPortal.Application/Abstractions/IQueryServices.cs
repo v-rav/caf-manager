@@ -47,6 +47,9 @@ public interface ILeaveService
 {
     Task<LeaveWindowDto> GetWindowAsync(int windowDays, string? region, CancellationToken ct = default);
 
+    /// <summary>Resources with active accounts who have leave inside the window (coverage clash risk).</summary>
+    Task<IReadOnlyList<LeaveClashDto>> GetClashesAsync(string? region, CancellationToken ct = default);
+
     Task<LeaveDto?> CreateAsync(LeaveUpsertDto input, CancellationToken ct = default);
     Task<LeaveDto?> UpdateAsync(int id, LeaveUpsertDto input, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
@@ -55,4 +58,9 @@ public interface ILeaveService
 public interface INominationService
 {
     Task<IReadOnlyList<NominationDto>> GetAsync(string? region, string? status, CancellationToken ct = default);
+
+    Task<NominationDto?> UpdateAsync(int id, NominationUpdateDto input, CancellationToken ct = default);
+
+    Task<WaveLinkDto?> AddWaveLinkAsync(int nominationId, WaveLinkUpsertDto input, CancellationToken ct = default);
+    Task<bool> DeleteWaveLinkAsync(int nominationId, int waveLinkId, CancellationToken ct = default);
 }

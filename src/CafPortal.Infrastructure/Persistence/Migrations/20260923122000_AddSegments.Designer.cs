@@ -3,6 +3,7 @@ using System;
 using CafPortal.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CafPortal.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923122000_AddSegments")]
+    partial class AddSegments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -28,23 +31,7 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("AccountOwner")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("BackupOwner")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Cftl")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTimeOffset>("CreatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CustomerPoc")
-                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalAccountId")
@@ -54,21 +41,12 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.Property<int>("PriorityWeight")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("ProjectManager")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Region")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Segment")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SolutionArchitect")
-                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Status")
@@ -366,37 +344,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.ToTable("Segments");
                 });
 
-            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.SkillConfiguration", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("ActiveFlag")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("CreatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset?>("UpdatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Skills");
-                });
-
             modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.StrategicAccountConfiguration", b =>
                 {
                     b.Property<int>("Id")
@@ -436,37 +383,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.HasIndex("AccountName");
 
                     b.ToTable("StrategicAccountConfigurations");
-                });
-
-            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.ToolConfiguration", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("ActiveFlag")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("CreatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset?>("UpdatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Tools");
                 });
 
             modelBuilder.Entity("CafPortal.Domain.Entities.EngagementFact", b =>
@@ -561,13 +477,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("BlockedReason")
-                        .HasMaxLength(40)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateOnly?>("BlockedSince")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("CftlPrimary")
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
@@ -577,9 +486,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("CurrentState")
                         .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateOnly?>("FollowUpDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MigrationStatus")
@@ -627,48 +533,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.ToTable("Nominations");
                 });
 
-            modelBuilder.Entity("CafPortal.Domain.Entities.OwnershipHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("AccountId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateOnly>("ChangedOn")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("CreatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("NewOwner")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PreviousOwner")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("UpdatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccountId");
-
-                    b.ToTable("OwnershipHistory");
-                });
-
             modelBuilder.Entity("CafPortal.Domain.Entities.Resource", b =>
                 {
                     b.Property<int>("ResourceId")
@@ -697,11 +561,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("OnboardingStatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PrimarySkill")
@@ -779,47 +638,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.ToTable("ResourceAccounts");
                 });
 
-            modelBuilder.Entity("CafPortal.Domain.Entities.WaveLink", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("AccountId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("CreatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("NominationId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Reference")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("UpdatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("WaveType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccountId");
-
-                    b.HasIndex("NominationId");
-
-                    b.ToTable("WaveLinks");
-                });
-
             modelBuilder.Entity("CafPortal.Domain.Entities.CapacityFact", b =>
                 {
                     b.HasOne("CafPortal.Domain.Entities.Resource", "Resource")
@@ -890,17 +708,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.Navigation("Account");
                 });
 
-            modelBuilder.Entity("CafPortal.Domain.Entities.OwnershipHistory", b =>
-                {
-                    b.HasOne("CafPortal.Domain.Entities.Account", "Account")
-                        .WithMany("OwnershipHistory")
-                        .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Account");
-                });
-
             modelBuilder.Entity("CafPortal.Domain.Entities.ResourceAccount", b =>
                 {
                     b.HasOne("CafPortal.Domain.Entities.Account", "Account")
@@ -920,29 +727,9 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.Navigation("Resource");
                 });
 
-            modelBuilder.Entity("CafPortal.Domain.Entities.WaveLink", b =>
-                {
-                    b.HasOne("CafPortal.Domain.Entities.Account", "Account")
-                        .WithMany()
-                        .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("CafPortal.Domain.Entities.Nomination", "Nomination")
-                        .WithMany("WaveLinks")
-                        .HasForeignKey("NominationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Account");
-
-                    b.Navigation("Nomination");
-                });
-
             modelBuilder.Entity("CafPortal.Domain.Entities.Account", b =>
                 {
                     b.Navigation("EngagementFacts");
-
-                    b.Navigation("OwnershipHistory");
 
                     b.Navigation("ResourceAccounts");
                 });
@@ -950,11 +737,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.RoleConfiguration", b =>
                 {
                     b.Navigation("Permissions");
-                });
-
-            modelBuilder.Entity("CafPortal.Domain.Entities.Nomination", b =>
-                {
-                    b.Navigation("WaveLinks");
                 });
 
             modelBuilder.Entity("CafPortal.Domain.Entities.Resource", b =>

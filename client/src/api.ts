@@ -5,16 +5,22 @@ import type {
   AccountUpsert,
   CapacityRow,
   ExecutiveDashboard,
+  LeaveClash,
   LeaveItem,
   LeaveUpsert,
   LeaveWindow,
   Nomination,
+  NominationUpdate,
+  OperationsSetting,
   RegionOption,
   Resource,
   ResourceDetail,
   ResourceUpsert,
   RoleCapacity,
+  SegmentOption,
   StrategicAccount,
+  WaveLink,
+  WaveLinkUpsert,
 } from './types'
 
 // Same-origin in production (SPA served by the API); dev uses the Vite proxy.
@@ -65,6 +71,9 @@ export const api = {
   leave: (windowDays: number, region?: string) =>
     http.get<LeaveWindow>('/api/leave', { params: { windowDays, region } }).then((r) => r.data),
 
+  leaveClashes: (region?: string) =>
+    http.get<LeaveClash[]>('/api/leave/clashes', { params: { region } }).then((r) => r.data),
+
   createLeave: (input: LeaveUpsert) => http.post<LeaveItem>('/api/leave', input).then((r) => r.data),
 
   updateLeave: (id: number, input: LeaveUpsert) =>
@@ -75,6 +84,15 @@ export const api = {
   nominations: (region?: string, status?: string) =>
     http.get<Nomination[]>('/api/nominations', { params: { region, status } }).then((r) => r.data),
 
+  updateNomination: (id: number, input: NominationUpdate) =>
+    http.put<Nomination>(`/api/nominations/${id}`, input).then((r) => r.data),
+
+  addWave: (nominationId: number, input: WaveLinkUpsert) =>
+    http.post<WaveLink>(`/api/nominations/${nominationId}/waves`, input).then((r) => r.data),
+
+  deleteWave: (nominationId: number, waveId: number) =>
+    http.delete(`/api/nominations/${nominationId}/waves/${waveId}`).then((r) => r.data),
+
   regions: () => http.get<RegionOption[]>('/api/configuration/regions').then((r) => r.data),
 
   roles: () => http.get<{ roleName: string }[]>('/api/configuration/roles').then((r) => r.data.map((x) => x.roleName)),
@@ -83,6 +101,29 @@ export const api = {
 
   updateRoleCapacity: (updates: { roleName: string; capacityLimit: number }[]) =>
     http.put<RoleCapacity[]>('/api/configuration/capacity', updates).then((r) => r.data),
+
+  segments: () => http.get<SegmentOption[]>('/api/configuration/segments').then((r) => r.data),
+
+  addSegment: (name: string) =>
+    http.post<SegmentOption>('/api/configuration/segments', { name }).then((r) => r.data),
+
+  updateSegment: (id: number, name: string) =>
+    http.put<SegmentOption>(`/api/configuration/segments/${id}`, { name }).then((r) => r.data),
+
+  tools: () => http.get<SegmentOption[]>('/api/configuration/tools').then((r) => r.data),
+  addTool: (name: string) => http.post<SegmentOption>('/api/configuration/tools', { name }).then((r) => r.data),
+  updateTool: (id: number, name: string) =>
+    http.put<SegmentOption>(`/api/configuration/tools/${id}`, { name }).then((r) => r.data),
+
+  skills: () => http.get<SegmentOption[]>('/api/configuration/skills').then((r) => r.data),
+  addSkill: (name: string) => http.post<SegmentOption>('/api/configuration/skills', { name }).then((r) => r.data),
+  updateSkill: (id: number, name: string) =>
+    http.put<SegmentOption>(`/api/configuration/skills/${id}`, { name }).then((r) => r.data),
+
+  operationsSettings: () =>
+    http.get<OperationsSetting[]>('/api/configuration/settings').then((r) => r.data),
+  updateOperationsSettings: (updates: { key: string; value: string }[]) =>
+    http.put<OperationsSetting[]>('/api/configuration/settings', updates).then((r) => r.data),
 
   refresh: () => http.post('/api/admin/refresh').then((r) => r.data),
 }

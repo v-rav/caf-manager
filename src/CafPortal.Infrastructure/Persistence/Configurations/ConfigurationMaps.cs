@@ -38,6 +38,26 @@ public class SegmentConfigurationMap : IEntityTypeConfiguration<SegmentConfigura
     }
 }
 
+public class ToolConfigurationMap : IEntityTypeConfiguration<ToolConfiguration>
+{
+    public void Configure(EntityTypeBuilder<ToolConfiguration> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => x.Name).IsUnique();
+    }
+}
+
+public class SkillConfigurationMap : IEntityTypeConfiguration<SkillConfiguration>
+{
+    public void Configure(EntityTypeBuilder<SkillConfiguration> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => x.Name).IsUnique();
+    }
+}
+
 public class RolePermissionMap : IEntityTypeConfiguration<RolePermission>
 {
     public void Configure(EntityTypeBuilder<RolePermission> builder)

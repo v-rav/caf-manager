@@ -38,6 +38,7 @@ export interface Resource {
   utilizationPercent: number
   capacityStatus: string
   onLeaveToday: boolean
+  onboardingStatus: string
 }
 
 export interface AccountSummary {
@@ -69,7 +70,14 @@ export interface Account {
   status?: string
   strategicFlag: boolean
   priorityWeight: number
+  segment?: string
   resourceCount: number
+  projectManager?: string
+  solutionArchitect?: string
+  cftl?: string
+  accountOwner?: string
+  customerPoc?: string
+  backupOwner?: string
 }
 
 export interface ResourceSummary {
@@ -93,6 +101,16 @@ export interface Engagement {
 export interface AccountDetail extends Account {
   assignedResources: ResourceSummary[]
   recentActivity: Engagement[]
+  ownershipHistory: OwnershipHistory[]
+}
+
+export interface OwnershipHistory {
+  id: number
+  role: string
+  previousOwner?: string
+  newOwner?: string
+  changedOn: string
+  notes?: string
 }
 
 export interface CapacityRow {
@@ -141,6 +159,43 @@ export interface Nomination {
   solutionArchitect?: string
   cftlPrimary?: string
   projectCoordinator?: string
+  blockedReason?: string
+  blockedSince?: string
+  followUpDate?: string
+  daysSinceUpdate: number
+  staleTier: string
+  waves: WaveLink[]
+}
+
+export interface WaveLink {
+  id: number
+  waveType: string
+  reference: string
+  notes?: string
+}
+
+export interface NominationUpdate {
+  status: string
+  blockedReason?: string
+  blockedSince?: string
+  followUpDate?: string
+  remarks?: string
+}
+
+export interface WaveLinkUpsert {
+  waveType: string
+  reference: string
+  notes?: string
+}
+
+export interface LeaveClash {
+  resourceId: number
+  resourceName: string
+  region: string
+  activeAccounts: number
+  nextLeaveStart: string
+  nextLeaveEnd: string
+  leaveDaysInWindow: number
 }
 
 export interface RegionOption {
@@ -153,6 +208,18 @@ export interface RoleCapacity {
   description?: string
   capacityLimit: number
   configured: boolean
+}
+
+export interface SegmentOption {
+  id: number
+  name: string
+  sortOrder: number
+}
+
+export interface OperationsSetting {
+  key: string
+  value: string
+  description?: string
 }
 
 export interface ResourceUpsert {
@@ -168,6 +235,7 @@ export interface ResourceUpsert {
   dedicatedFlag: boolean
   capacityLimit: number
   activeFlag: boolean
+  onboardingStatus?: string
 }
 
 export interface AccountUpsert {
@@ -176,10 +244,18 @@ export interface AccountUpsert {
   status?: string
   strategicFlag: boolean
   priorityWeight: number
+  segment?: string
+  projectManager?: string
+  solutionArchitect?: string
+  cftl?: string
+  accountOwner?: string
+  customerPoc?: string
+  backupOwner?: string
 }
 
 export interface LeaveUpsert {
   resourceId: number
   leaveDate: string
+  endDate?: string
   leaveType: string
 }

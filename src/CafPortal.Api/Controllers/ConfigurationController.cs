@@ -144,4 +144,99 @@ public class ConfigurationController(
     }
 
     public record SegmentUpsert(string Name);
+
+    /// <summary>Controlled tool-name vocabulary.</summary>
+    [HttpGet("tools")]
+    public async Task<IActionResult> GetTools(CancellationToken ct)
+        => Ok(await db.Tools.AsNoTracking().Where(t => t.ActiveFlag)
+            .OrderBy(t => t.SortOrder).Select(t => new { t.Id, t.Name, t.SortOrder }).ToListAsync(ct));
+
+    [HttpPost("tools")]
+    public async Task<IActionResult> AddTool([FromBody] VocabUpsert input, CancellationToken ct)
+    {
+        var name = input.Name?.Trim();
+        if (string.IsNullOrEmpty(name)) return BadRequest("Tool name is required.");
+        if (await db.Tools.AnyAsync(t => t.Name == name, ct)) return Conflict($"Tool '{name}' already exists.");
+        var maxSort = await db.Tools.AnyAsync(ct) ? await db.Tools.MaxAsync(t => t.SortOrder, ct) : 0;
+        var tool = new ToolConfiguration { Name = name, SortOrder = maxSort + 1 };
+        db.Tools.Add(tool);
+        await db.SaveChangesAsync(ct);
+        return Ok(new { tool.Id, tool.Name, tool.SortOrder });
+    }
+
+    [HttpPut("tools/{id:int}")]
+    public async Task<IActionResult> UpdateTool(int id, [FromBody] VocabUpsert input, CancellationToken ct)
+    {
+        var name = input.Name?.Trim();
+        if (string.IsNullOrEmpty(name)) return BadRequest("Tool name is required.");
+        var tool = await db.Tools.FirstOrDefaultAsync(t => t.Id == id, ct);
+        if (tool is null) return NotFound();
+        if (await db.Tools.AnyAsync(t => t.Name == name && t.Id != id, ct)) return Conflict($"Tool '{name}' already exists.");
+        tool.Name = name;
+        await db.SaveChangesAsync(ct);
+        return Ok(new { tool.Id, tool.Name, tool.SortOrder });
+    }
+
+    /// <summary>Controlled skill vocabulary.</summary>
+    [HttpGet("skills")]
+    public async Task<IActionResult> GetSkills(CancellationToken ct)
+        => Ok(await db.Skills.AsNoTracking().Where(s => s.ActiveFlag)
+            .OrderBy(s => s.SortOrder).Select(s => new { s.Id, s.Name, s.SortOrder }).ToListAsync(ct));
+
+    [HttpPost("skills")]
+    public async Task<IActionResult> AddSkill([FromBody] VocabUpsert input, CancellationToken ct)
+    {
+        var name = input.Name?.Trim();
+        if (string.IsNullOrEmpty(name)) return BadRequest("Skill name is required.");
+        if (await db.Skills.AnyAsync(s => s.Name == name, ct)) return Conflict($"Skill '{name}' already exists.");
+        var maxSort = await db.Skills.AnyAsync(ct) ? await db.Skills.MaxAsync(s => s.SortOrder, ct) : 0;
+        var skill = new SkillConfiguration { Name = name, SortOrder = maxSort + 1 };
+        db.Skills.Add(skill);
+        await db.SaveChangesAsync(ct);
+        return Ok(new { skill.Id, skill.Name, skill.SortOrder });
+    }
+
+    [HttpPut("skills/{id:int}")]
+    public async Task<IActionResult> UpdateSkill(int id, [FromBody] VocabUpsert input, CancellationToken ct)
+    {
+        var name = input.Name?.Trim();
+        if (string.IsNullOrEmpty(name)) return BadRequest("Skill name is required.");
+        var skill = await db.Skills.FirstOrDefaultAsync(s => s.Id == id, ct);
+        if (skill is null) return NotFound();
+        if (await db.Skills.AnyAsync(s => s.Name == name && s.Id != id, ct)) return Conflict($"Skill '{name}' already exists.");
+        skill.Name = name;
+        await db.SaveChangesAsync(ct);
+        return Ok(new { skill.Id, skill.Name, skill.SortOrder });
+    }
+
+    public record VocabUpsert(string Name);
+
+    /// <summary>Editable operational thresholds (stale tiers, leave-clash window).</summary>
+    [HttpGet("settings")]
+    public async Task<IActionResult> GetSettings(CancellationToken ct)
+    {
+        string[] keys = ["StaleWarnDays", "StaleEscalateDays", "StaleDeferDays", "LeaveClashWindowDays"];
+        return Ok(await db.ApplicationSettings.AsNoTracking()
+            .Where(s => keys.Contains(s.Key))
+            .Select(s => new { s.Key, s.Value, s.Description })
+            .ToListAsync(ct));
+    }
+
+    [HttpPut("settings")]
+    public async Task<IActionResult> UpdateSettings([FromBody] IReadOnlyList<SettingUpsert> updates, CancellationToken ct)
+    {
+        if (updates is null || updates.Count == 0) return BadRequest("No settings supplied.");
+        string[] allowed = ["StaleWarnDays", "StaleEscalateDays", "StaleDeferDays", "LeaveClashWindowDays"];
+        var rows = await db.ApplicationSettings.Where(s => allowed.Contains(s.Key)).ToListAsync(ct);
+        foreach (var u in updates)
+        {
+            if (!allowed.Contains(u.Key) || !int.TryParse(u.Value, out var n) || n < 1) continue;
+            var row = rows.FirstOrDefault(r => r.Key == u.Key);
+            if (row is not null) row.Value = n.ToString();
+        }
+        await db.SaveChangesAsync(ct);
+        return await GetSettings(ct);
+    }
+
+    public record SettingUpsert(string Key, string Value);
 }

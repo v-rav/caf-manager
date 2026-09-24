@@ -28,10 +28,13 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
                 (r.PrimarySkill != null && r.PrimarySkill.Contains(query.Skill)) ||
                 (r.Skills != null && r.Skills.Contains(query.Skill)));
         if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var term = query.Search.Trim().ToLower();
             resources = resources.Where(r =>
-                r.Name.Contains(query.Search) ||
-                (r.Psid != null && r.Psid.Contains(query.Search)) ||
-                (r.Email != null && r.Email.Contains(query.Search)));
+                r.Name.ToLower().Contains(term) ||
+                (r.Psid != null && r.Psid.ToLower().Contains(term)) ||
+                (r.Email != null && r.Email.ToLower().Contains(term)));
+        }
 
         var rows = await resources
             .OrderBy(r => r.Name)
@@ -185,6 +188,10 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
         resource.DedicatedFlag = input.DedicatedFlag;
         resource.CapacityLimit = input.CapacityLimit > 0 ? input.CapacityLimit : 5;
         resource.ActiveFlag = input.ActiveFlag;
+        if (!string.IsNullOrWhiteSpace(input.OnboardingStatus)
+            && Enum.TryParse<CafPortal.Domain.Enums.OnboardingStatusType>(
+                input.OnboardingStatus.Replace(" ", string.Empty), true, out var onboarding))
+            resource.OnboardingStatus = onboarding;
     }
 
     private static ResourceDto MapResource(Domain.Entities.Resource r, Domain.Entities.CapacityFact? capacity,
@@ -214,7 +221,8 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
             AccountCount = accountCount,
             UtilizationPercent = utilization,
             CapacityStatus = status.ToDisplay(),
-            OnLeaveToday = onLeave
+            OnLeaveToday = onLeave,
+            OnboardingStatus = r.OnboardingStatus.ToDisplay()
         };
     }
 }
