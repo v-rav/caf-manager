@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CapacityFact> CapacityFacts => Set<CapacityFact>();
     public DbSet<Nomination> Nominations => Set<Nomination>();
     public DbSet<WaveLink> WaveLinks => Set<WaveLink>();
+    public DbSet<NominationResource> NominationResources => Set<NominationResource>();
     public DbSet<OwnershipHistory> OwnershipHistory => Set<OwnershipHistory>();
     public DbSet<PerformanceReview> PerformanceReviews => Set<PerformanceReview>();
     public DbSet<ImportRun> ImportRuns => Set<ImportRun>();

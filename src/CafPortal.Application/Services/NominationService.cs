@@ -15,7 +15,11 @@ public class NominationService(IApplicationDbContext db) : INominationService
     {
         var (warn, escalate, defer) = await GetStaleTiersAsync(ct);
 
-        var query = _db.Nominations.AsNoTracking().Include(n => n.WaveLinks).Include(n => n.Account).AsQueryable();
+        var query = _db.Nominations.AsNoTracking()
+            .Include(n => n.WaveLinks)
+            .Include(n => n.Account)
+            .Include(n => n.ResourceAssignments).ThenInclude(ra => ra.Resource)
+            .AsQueryable();
         if (!string.IsNullOrWhiteSpace(region))
             query = query.Where(n => n.Region == region);
         if (!string.IsNullOrWhiteSpace(status) && TryParseStatus(status, out var parsed))
@@ -66,7 +70,16 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 Waves = n.WaveLinks
                     .OrderBy(w => w.WaveType)
                     .Select(w => new WaveLinkDto { Id = w.Id, WaveType = w.WaveType.ToDisplay(), Reference = w.Reference, Notes = w.Notes })
-                    .ToList()
+                    .ToList(),
+                AssignedResources = n.ResourceAssignments
+                    .OrderBy(ra => ra.Role).ThenBy(ra => ra.Resource != null ? ra.Resource.Name : string.Empty)
+                    .Select(ra => new NominationResourceDto(
+                        ra.ResourceId,
+                        ra.Resource != null ? ra.Resource.Name : string.Empty,
+                        ra.Resource != null ? ra.Resource.Region : string.Empty,
+                        ra.Role))
+                    .ToList(),
+                AssignedResourceCount = n.ResourceAssignments.Count
             };
         }).ToList();
     }
@@ -89,10 +102,10 @@ public class NominationService(IApplicationDbContext db) : INominationService
         if (!string.IsNullOrWhiteSpace(input.Remarks))
             n.Remarks = input.Remarks.Trim();
 
-        // Ownership (PM/CFTL/SA) is portal-editable; edits are preserved across FDO imports.
+        // Ownership (PM/CFTL) is portal-editable; edits are preserved across FDO imports.
+        // Solution Architect is managed via resource assignment (AssignResourceAsync), not here.
         n.ProjectCoordinator = string.IsNullOrWhiteSpace(input.ProjectCoordinator) ? null : input.ProjectCoordinator.Trim();
         n.CftlPrimary = string.IsNullOrWhiteSpace(input.CftlPrimary) ? null : input.CftlPrimary.Trim();
-        n.SolutionArchitect = string.IsNullOrWhiteSpace(input.SolutionArchitect) ? null : input.SolutionArchitect.Trim();
 
         // Stamp a blocked-since date automatically when moving into a blocked/waiting state without one.
         if (IsBlockedState(n.Status) && n.BlockedSince is null)
@@ -132,6 +145,62 @@ public class NominationService(IApplicationDbContext db) : INominationService
         if (link is null) return false;
         _db.WaveLinks.Remove(link);
         await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<NominationResourceDto?> AssignResourceAsync(int nominationId, AssignResourceDto input, CancellationToken ct = default)
+    {
+        var n = await _db.Nominations.FirstOrDefaultAsync(x => x.Id == nominationId, ct);
+        if (n is null) return null;
+        var resource = await _db.Resources.FirstOrDefaultAsync(r => r.ResourceId == input.ResourceId, ct);
+        if (resource is null) return null;
+
+        var role = string.IsNullOrWhiteSpace(input.Role) ? null : input.Role.Trim();
+        var link = await _db.NominationResources
+            .FirstOrDefaultAsync(x => x.NominationId == nominationId && x.ResourceId == input.ResourceId, ct);
+        if (link is null)
+        {
+            link = new NominationResource { NominationId = nominationId, ResourceId = input.ResourceId, Role = role };
+            _db.NominationResources.Add(link);
+        }
+        else
+        {
+            link.Role = role;
+            link.UpdatedUtc = DateTimeOffset.UtcNow;
+        }
+
+        // The Solution Architect assignment is the single source for the nomination's SA field (grid SA column).
+        if (string.Equals(role, "Solution Architect", StringComparison.OrdinalIgnoreCase))
+            n.SolutionArchitect = resource.Name;
+
+        await _db.SaveChangesAsync(ct);
+        return new NominationResourceDto(resource.ResourceId, resource.Name, resource.Region, role);
+    }
+
+    public async Task<bool> UnassignResourceAsync(int nominationId, int resourceId, CancellationToken ct = default)
+    {
+        var link = await _db.NominationResources
+            .FirstOrDefaultAsync(x => x.NominationId == nominationId && x.ResourceId == resourceId, ct);
+        if (link is null) return false;
+        var wasSolutionArchitect = string.Equals(link.Role, "Solution Architect", StringComparison.OrdinalIgnoreCase);
+        _db.NominationResources.Remove(link);
+        await _db.SaveChangesAsync(ct);
+
+        if (wasSolutionArchitect)
+        {
+            // Re-derive the nomination SA from any remaining SA assignment; else clear it.
+            var remaining = await _db.NominationResources
+                .Where(x => x.NominationId == nominationId && x.Role == "Solution Architect")
+                .OrderBy(x => x.Id)
+                .Select(x => x.Resource!.Name)
+                .FirstOrDefaultAsync(ct);
+            var n = await _db.Nominations.FirstOrDefaultAsync(x => x.Id == nominationId, ct);
+            if (n is not null)
+            {
+                n.SolutionArchitect = remaining;
+                await _db.SaveChangesAsync(ct);
+            }
+        }
         return true;
     }
 

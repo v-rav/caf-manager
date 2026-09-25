@@ -147,7 +147,6 @@ export function AccountsPage() {
               { key: 'tpid', header: 'TPID', sortValue: (a) => a.tpid ?? '', render: (a) => a.tpid ?? '—' },
               { key: 'region', header: 'Region', sortValue: (a) => a.region },
               { key: 'segment', header: 'Segment', sortValue: (a) => a.segment ?? '', render: (a) => a.segment ?? '—' },
-              { key: 'resources', header: 'Resources', align: 'center', sortValue: (a) => a.resourceCount },
               { key: 'status', header: 'Status', sortValue: (a) => a.status ?? '', render: (a) => a.status ?? '—' },
               {
                 key: 'actions',

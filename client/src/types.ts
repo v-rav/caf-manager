@@ -173,19 +173,6 @@ export interface CapacityRow {
   heatColor: string
 }
 
-export interface StrategicAccount {
-  accountId: number
-  accountName: string
-  region: string
-  priorityWeight: number
-  riskFlag: boolean
-  executiveVisibilityFlag: boolean
-  assignedResourceCount: number
-  recentActivityCount: number
-  lastActivityDate?: string
-  riskIndicator: string
-}
-
 export interface LeaveWindow {
   windowDays: number
   totalLeaveDays: number
@@ -221,6 +208,15 @@ export interface Nomination {
   waveCount: number
   noWavesLinked: boolean
   waves: WaveLink[]
+  assignedResources: NominationResource[]
+  assignedResourceCount: number
+}
+
+export interface NominationResource {
+  resourceId: number
+  name: string
+  region: string
+  role?: string
 }
 
 export interface WaveLink {

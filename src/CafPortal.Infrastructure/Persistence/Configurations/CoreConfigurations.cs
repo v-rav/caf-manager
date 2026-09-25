@@ -71,3 +71,17 @@ public class ResourceAccountConfiguration : IEntityTypeConfiguration<ResourceAcc
         builder.HasIndex(x => new { x.ResourceId, x.AccountId }).IsUnique();
     }
 }
+
+public class NominationResourceConfiguration : IEntityTypeConfiguration<NominationResource>
+{
+    public void Configure(EntityTypeBuilder<NominationResource> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Role).HasMaxLength(50);
+        builder.HasOne(x => x.Nomination).WithMany(n => n.ResourceAssignments)
+            .HasForeignKey(x => x.NominationId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.Resource).WithMany()
+            .HasForeignKey(x => x.ResourceId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => new { x.NominationId, x.ResourceId }).IsUnique();
+    }
+}

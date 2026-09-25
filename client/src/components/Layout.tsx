@@ -10,7 +10,6 @@ import {
   NavigationRegular,
   PeopleRegular,
   SettingsRegular,
-  StarRegular,
   ClipboardTaskListLtrRegular,
   PersonStarRegular,
 } from '@fluentui/react-icons'
@@ -26,7 +25,6 @@ const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
   { to: '/accounts', label: 'Account Hub', icon: <BuildingRegular /> },
   { to: '/capacity', label: 'Capacity', icon: <GaugeRegular /> },
   { to: '/leave', label: 'Leave', icon: <CalendarLtrRegular /> },
-  { to: '/strategic', label: 'Strategic Accounts', icon: <StarRegular /> },
   { to: '/nominations', label: 'Nominations', icon: <ClipboardTaskListLtrRegular /> },
   { to: '/performance', label: 'Performance', icon: <PersonStarRegular /> },
   { to: '/history', label: 'Import History', icon: <HistoryRegular /> },

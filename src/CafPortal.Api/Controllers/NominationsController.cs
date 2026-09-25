@@ -30,4 +30,15 @@ public class NominationsController(INominationService nominations) : ControllerB
     [HttpDelete("{id:int}/waves/{waveId:int}")]
     public async Task<IActionResult> DeleteWave(int id, int waveId, CancellationToken ct)
         => await nominations.DeleteWaveLinkAsync(id, waveId, ct) ? NoContent() : NotFound();
+
+    [HttpPost("{id:int}/resources")]
+    public async Task<IActionResult> AssignResource(int id, [FromBody] AssignResourceDto input, CancellationToken ct)
+    {
+        var link = await nominations.AssignResourceAsync(id, input, ct);
+        return link is null ? BadRequest("Nomination or resource not found.") : Ok(link);
+    }
+
+    [HttpDelete("{id:int}/resources/{resourceId:int}")]
+    public async Task<IActionResult> UnassignResource(int id, int resourceId, CancellationToken ct)
+        => await nominations.UnassignResourceAsync(id, resourceId, ct) ? NoContent() : NotFound();
 }

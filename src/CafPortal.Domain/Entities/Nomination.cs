@@ -36,4 +36,5 @@ public class Nomination : AuditableEntity
 
     public Account? Account { get; set; }
     public ICollection<WaveLink> WaveLinks { get; set; } = new List<WaveLink>();
+    public ICollection<NominationResource> ResourceAssignments { get; set; } = new List<NominationResource>();
 }

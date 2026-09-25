@@ -10,7 +10,6 @@ import { LeavePage } from './pages/LeavePage'
 import { NominationsPage } from './pages/NominationsPage'
 import { PerformancePage } from './pages/PerformancePage'
 import { ResourcesPage } from './pages/ResourcesPage'
-import { StrategicAccountsPage } from './pages/StrategicAccountsPage'
 import { RegionProvider } from './region'
 
 const router = createBrowserRouter([
@@ -23,7 +22,6 @@ const router = createBrowserRouter([
       { path: 'accounts', element: <AccountsPage /> },
       { path: 'capacity', element: <CapacityPage /> },
       { path: 'leave', element: <LeavePage /> },
-      { path: 'strategic', element: <StrategicAccountsPage /> },
       { path: 'nominations', element: <NominationsPage /> },
       { path: 'performance', element: <PerformancePage /> },
       { path: 'history', element: <HistoryPage /> },

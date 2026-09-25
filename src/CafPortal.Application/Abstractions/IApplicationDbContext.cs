@@ -16,6 +16,7 @@ public interface IApplicationDbContext
     DbSet<CapacityFact> CapacityFacts { get; }
     DbSet<Nomination> Nominations { get; }
     DbSet<WaveLink> WaveLinks { get; }
+    DbSet<NominationResource> NominationResources { get; }
     DbSet<OwnershipHistory> OwnershipHistory { get; }
     DbSet<PerformanceReview> PerformanceReviews { get; }
     DbSet<ImportRun> ImportRuns { get; }

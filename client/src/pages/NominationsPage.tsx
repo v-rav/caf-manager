@@ -1,6 +1,7 @@
 import {
   Badge,
   Button,
+  Combobox,
   Dropdown,
   Input,
   Option,
@@ -194,6 +195,25 @@ const BLOCKER_OPTIONS = [
 
 const WAVE_OPTIONS = ['App', 'DB', 'Security/Defender', 'Landing Zone', 'Dispatch', 'Related']
 
+// Delivery roles a resource can hold on a nomination (operational staffing, not the capacity model).
+const ASSIGN_ROLES = ['Solution Architect', 'Migration Engineer', 'DevOps Engineer']
+
+// Which resource Role values are eligible for each delivery role (keyword match, case-insensitive).
+// Solution Architect ← *Architect*; Migration Engineer ← *Engineer* (non-DevOps) / SME / ME; DevOps ← *DevOps*.
+function eligibleForRole(assignRole: string, resourceRole?: string): boolean {
+  const r = (resourceRole ?? '').toLowerCase()
+  switch (assignRole) {
+    case 'Solution Architect':
+      return r.includes('architect')
+    case 'Migration Engineer':
+      return (r.includes('engineer') && !r.includes('devops')) || r.includes('migration') || r.includes('sme')
+    case 'DevOps Engineer':
+      return r.includes('devops')
+    default:
+      return true
+  }
+}
+
 const BLOCKED_STATES = ['Blocked', 'Waiting for Customer Action', 'Waiting on Follow-up']
 
 // Lightweight keyword → blocker-reason suggestion from free-text (no AI needed).
@@ -239,6 +259,7 @@ function recommendedAction(staleTier: string, ageDays: number): string | null {
 export function NominationsPage() {
   const { region } = useRegion()
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
+  const { data: resourceList } = useAsync(() => api.resources({}), [])
   const [currentStateFilter, setCurrentStateFilter] = useState('')
   const [migrationFilter, setMigrationFilter] = useState('')
   const [slaFilter, setSlaFilter] = useState('')
@@ -253,6 +274,12 @@ export function NominationsPage() {
   const [form, setForm] = useState<NominationUpdate>({ status: 'Open' })
   const [waveType, setWaveType] = useState('App')
   const [waveRef, setWaveRef] = useState('')
+  // Resource-assignment state (Manage dialog).
+  const [assignResourceId, setAssignResourceId] = useState<number | null>(null)
+  const [assignRole, setAssignRole] = useState(ASSIGN_ROLES[0])
+  const [resourceQuery, setResourceQuery] = useState('')
+  // True only while the user is typing a search, so a seeded/selected value doesn't filter the list.
+  const [resourceTyping, setResourceTyping] = useState(false)
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -328,10 +355,19 @@ export function NominationsPage() {
       remarks: n.remarks ?? '',
       projectCoordinator: n.projectCoordinator ?? '',
       cftlPrimary: n.cftlPrimary ?? '',
-      solutionArchitect: n.solutionArchitect ?? '',
     })
     setWaveType('App')
     setWaveRef('')
+    // Seed the resource picker with the nomination's current SA so the dropdown reflects it;
+    // pre-select the matching resource when the SA name maps to one in the resource list.
+    const currentSa = (n.solutionArchitect ?? '').trim()
+    const saMatch = currentSa
+      ? (resourceList ?? []).find((r) => r.name.trim().toLowerCase() === currentSa.toLowerCase())
+      : undefined
+    setAssignResourceId(saMatch?.resourceId ?? null)
+    setAssignRole('Solution Architect')
+    setResourceQuery(currentSa)
+    setResourceTyping(false)
   }
 
   const isBlocked = BLOCKED_STATES.includes(form.status)
@@ -371,6 +407,35 @@ export function NominationsPage() {
     setBusy(true)
     try {
       await api.deleteWave(editing.id, waveId)
+      const fresh = await api.nominations(region)
+      await reload()
+      setEditing(fresh.find((n) => n.id === editing.id) ?? editing)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const assignResource = async () => {
+    if (!editing || !assignResourceId) return
+    setBusy(true)
+    try {
+      await api.assignNominationResource(editing.id, assignResourceId, assignRole)
+      const fresh = await api.nominations(region)
+      await reload()
+      setEditing(fresh.find((n) => n.id === editing.id) ?? editing)
+      setAssignResourceId(null)
+      setResourceQuery('')
+      setResourceTyping(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const unassignResource = async (resourceId: number) => {
+    if (!editing) return
+    setBusy(true)
+    try {
+      await api.unassignNominationResource(editing.id, resourceId)
       const fresh = await api.nominations(region)
       await reload()
       setEditing(fresh.find((n) => n.id === editing.id) ?? editing)
@@ -579,6 +644,32 @@ export function NominationsPage() {
                   ),
                 },
                 {
+                  key: 'team',
+                  header: 'Team',
+                  sortValue: (n) => n.assignedResourceCount,
+                  render: (n) =>
+                    n.assignedResourceCount === 0 ? (
+                      <span style={{ color: 'var(--colorNeutralForeground3)' }}>—</span>
+                    ) : (
+                      <Tooltip
+                        relationship="description"
+                        content={
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 280 }}>
+                            {n.assignedResources.map((a) => (
+                              <div key={a.resourceId}>
+                                <b>{a.role ?? 'Role TBD'}:</b> {a.name}
+                              </div>
+                            ))}
+                          </div>
+                        }
+                      >
+                        <Badge appearance="tint" color="brand" size="small" style={{ cursor: 'help' }}>
+                          {n.assignedResourceCount}
+                        </Badge>
+                      </Tooltip>
+                    ),
+                },
+                {
                   key: 'actions',
                   header: '',
                   align: 'center',
@@ -721,16 +812,105 @@ export function NominationsPage() {
           />
         </Field>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Field label="PM">
             <Input style={{ width: '100%' }} value={form.projectCoordinator ?? ''} onChange={(_, d) => setForm((f) => ({ ...f, projectCoordinator: d.value }))} />
           </Field>
           <Field label="CFTL">
             <Input style={{ width: '100%' }} value={form.cftlPrimary ?? ''} onChange={(_, d) => setForm((f) => ({ ...f, cftlPrimary: d.value }))} />
           </Field>
-          <Field label="SA">
-            <Input style={{ width: '100%' }} value={form.solutionArchitect ?? ''} onChange={(_, d) => setForm((f) => ({ ...f, solutionArchitect: d.value }))} />
-          </Field>
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--colorNeutralStroke2)', paddingTop: 10 }}>
+          <Text weight="semibold">Assigned resources</Text>
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', margin: '2px 0 6px' }}>
+            Staff this migration with a delivery role. The Solution Architect assigned here drives the SA column. Operational only — this does not affect account capacity.
+          </Text>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '8px 0' }}>
+            {(editing?.assignedResources ?? []).length === 0 && (
+              <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+                No resources assigned yet.
+              </Text>
+            )}
+            {(editing?.assignedResources ?? []).map((a) => (
+              <div key={a.resourceId} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Badge appearance="outline" color="brand" size="small">
+                  {a.role ?? 'Role TBD'}
+                </Badge>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {a.name}
+                  {a.region ? ` · ${a.region}` : ''}
+                </span>
+                <Button
+                  appearance="subtle"
+                  size="small"
+                  icon={<DeleteRegular />}
+                  onClick={() => unassignResource(a.resourceId)}
+                  disabled={busy}
+                />
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+            <Combobox
+              placeholder="Search resource…"
+              value={resourceQuery}
+              selectedOptions={assignResourceId ? [String(assignResourceId)] : []}
+              onChange={(e) => {
+                setResourceQuery(e.target.value)
+                setResourceTyping(true)
+                setAssignResourceId(null)
+              }}
+              onOptionSelect={(_, d) => {
+                const id = Number(d.optionValue)
+                setAssignResourceId(id)
+                const r = (resourceList ?? []).find((x) => x.resourceId === id)
+                setResourceQuery(r ? r.name : '')
+                setResourceTyping(false)
+              }}
+              style={{ flex: 1, minWidth: 180 }}
+            >
+              {(resourceList ?? [])
+                .filter((r) => eligibleForRole(assignRole, r.role))
+                .filter((r) => !resourceTyping || !resourceQuery || r.name.toLowerCase().includes(resourceQuery.toLowerCase()))
+                .slice(0, 50)
+                .map((r) => (
+                  <Option key={r.resourceId} value={String(r.resourceId)} text={r.name}>
+                    {r.name} · {r.role}
+                  </Option>
+                ))}
+            </Combobox>
+            <Dropdown
+              value={assignRole}
+              selectedOptions={[assignRole]}
+              onOptionSelect={(_, d) => {
+                const next = d.optionValue ?? assignRole
+                setAssignRole(next)
+                // Clear a selection that isn't eligible for the newly chosen role, and reset the search.
+                const sel = (resourceList ?? []).find((x) => x.resourceId === assignResourceId)
+                if (sel && !eligibleForRole(next, sel.role)) {
+                  setAssignResourceId(null)
+                  setResourceQuery('')
+                }
+                setResourceTyping(false)
+              }}
+              style={{ minWidth: 170 }}
+            >
+              {ASSIGN_ROLES.map((r) => (
+                <Option key={r} value={r}>
+                  {r}
+                </Option>
+              ))}
+            </Dropdown>
+            <Button
+              appearance="secondary"
+              icon={<AddRegular />}
+              onClick={assignResource}
+              disabled={busy || !assignResourceId}
+            >
+              Assign
+            </Button>
+          </div>
         </div>
 
         <div style={{ borderTop: '1px solid var(--colorNeutralStroke2)', paddingTop: 10 }}>

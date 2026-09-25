@@ -40,6 +40,20 @@ public class NominationDto
     public bool NoWavesLinked { get; set; }
 
     public IReadOnlyList<WaveLinkDto> Waves { get; set; } = Array.Empty<WaveLinkDto>();
+
+    /// <summary>Resources assigned to this nomination (operational staffing, separate from account capacity).</summary>
+    public IReadOnlyList<NominationResourceDto> AssignedResources { get; set; } = Array.Empty<NominationResourceDto>();
+    public int AssignedResourceCount { get; set; }
+}
+
+/// <summary>A resource assigned to a nomination with a delivery role.</summary>
+public record NominationResourceDto(int ResourceId, string Name, string Region, string? Role);
+
+/// <summary>Payload to assign (or re-role) a resource on a nomination.</summary>
+public class AssignResourceDto
+{
+    public int ResourceId { get; set; }
+    public string? Role { get; set; }
 }
 
 /// <summary>Update payload for a nomination (status/blocker/follow-up managed in the portal).</summary>

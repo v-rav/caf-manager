@@ -24,7 +24,6 @@ import type {
   RestoreResult,
   RoleCapacity,
   SegmentOption,
-  StrategicAccount,
   WaveLink,
   WaveLinkUpsert,
 } from './types'
@@ -85,9 +84,6 @@ export const api = {
   capacity: (region?: string) =>
     http.get<CapacityRow[]>('/api/capacity', { params: { region } }).then((r) => r.data),
 
-  strategicAccounts: (region?: string) =>
-    http.get<StrategicAccount[]>('/api/strategicaccounts', { params: { region } }).then((r) => r.data),
-
   leave: (windowDays: number, region?: string) =>
     http.get<LeaveWindow>('/api/leave', { params: { windowDays, region } }).then((r) => r.data),
 
@@ -112,6 +108,12 @@ export const api = {
 
   deleteWave: (nominationId: number, waveId: number) =>
     http.delete(`/api/nominations/${nominationId}/waves/${waveId}`).then((r) => r.data),
+
+  assignNominationResource: (nominationId: number, resourceId: number, role?: string) =>
+    http.post(`/api/nominations/${nominationId}/resources`, { resourceId, role }).then((r) => r.data),
+
+  unassignNominationResource: (nominationId: number, resourceId: number) =>
+    http.delete(`/api/nominations/${nominationId}/resources/${resourceId}`).then((r) => r.data),
 
   regions: () => http.get<RegionOption[]>('/api/configuration/regions').then((r) => r.data),
 

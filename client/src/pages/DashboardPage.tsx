@@ -37,7 +37,7 @@ export function DashboardPage() {
         <KpiCard label="Fully Utilized" value={data.fullyUtilizedResources} tone="warning" onClick={() => navigate('/resources?capacity=Fully%20Utilized')} />
         <KpiCard label="Overloaded" value={data.overloadedResources} tone="danger" onClick={() => navigate('/capacity?status=Overloaded')} />
         <KpiCard label="On Leave" value={data.resourcesOnLeave} onClick={() => navigate('/leave')} />
-        <KpiCard label="Strategic Accounts" value={data.strategicAccounts} tone="brand" onClick={() => navigate('/strategic')} />
+        <KpiCard label="Strategic Accounts" value={data.strategicAccounts} tone="brand" />
         <KpiCard label="Open Nominations" value={data.openNominations} onClick={() => navigate('/nominations')} />
       </div>
 

@@ -63,6 +63,9 @@ public interface INominationService
 
     Task<WaveLinkDto?> AddWaveLinkAsync(int nominationId, WaveLinkUpsertDto input, CancellationToken ct = default);
     Task<bool> DeleteWaveLinkAsync(int nominationId, int waveLinkId, CancellationToken ct = default);
+
+    Task<NominationResourceDto?> AssignResourceAsync(int nominationId, AssignResourceDto input, CancellationToken ct = default);
+    Task<bool> UnassignResourceAsync(int nominationId, int resourceId, CancellationToken ct = default);
 }
 
 public interface IPerformanceReviewService
