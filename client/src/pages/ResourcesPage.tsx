@@ -31,6 +31,7 @@ const emptyForm: ResourceUpsert = {
   name: '',
   psid: '',
   email: '',
+  aliases: '',
   region: '',
   role: '',
   primarySkill: '',
@@ -85,6 +86,7 @@ export function ResourcesPage() {
       name: r.name,
       psid: r.psid ?? '',
       email: r.email ?? '',
+      aliases: r.aliases ?? '',
       region: r.region,
       role: r.role,
       primarySkill: r.primarySkill ?? '',
@@ -212,6 +214,7 @@ export function ResourcesPage() {
               <Input style={{ flex: 1 }} placeholder="PSID" value={form.psid} onChange={(_, d) => patch({ psid: d.value })} />
               <Input style={{ flex: 1 }} placeholder="Email" value={form.email} onChange={(_, d) => patch({ email: d.value })} />
             </div>
+            <Input placeholder="Aliases (; separated name variants)" value={form.aliases} onChange={(_, d) => patch({ aliases: d.value })} />
             <div style={{ display: 'flex', gap: 8 }}>
               <Dropdown style={{ flex: 1 }} placeholder="Region *" value={form.region} selectedOptions={[form.region]} onOptionSelect={(_, d) => patch({ region: d.optionValue ?? '' })}>
                 {regions?.map((r) => (

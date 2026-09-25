@@ -178,13 +178,20 @@ public class ReconciliationService(IApplicationDbContext db) : IReconciliationSe
 
         // Resources: id lookup + normalized-name → id, to match the FDO SA name to a resource.
         var resources = await _db.Resources.AsNoTracking()
-            .Select(r => new { r.ResourceId, r.Name, r.Role }).ToListAsync(ct);
+            .Select(r => new { r.ResourceId, r.Name, r.Role, r.Aliases }).ToListAsync(ct);
         var resourceNames = resources.ToDictionary(r => r.ResourceId, r => r.Name);
         var resByNorm = new Dictionary<string, int>();
         foreach (var r in resources)
         {
-            var k = Norm(r.Name);
-            if (k.Length > 0 && !resByNorm.ContainsKey(k)) resByNorm[k] = r.ResourceId;
+            // Match on the canonical name and any alias (FDO name variants).
+            var candidates = new List<string> { r.Name };
+            if (!string.IsNullOrWhiteSpace(r.Aliases))
+                candidates.AddRange(r.Aliases.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            foreach (var nm in candidates)
+            {
+                var k = Norm(nm);
+                if (k.Length > 0 && !resByNorm.ContainsKey(k)) resByNorm[k] = r.ResourceId;
+            }
         }
 
         // Account links (used ONLY for engineering roles — SA comes from FDO, one per wave).

@@ -34,6 +34,7 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
                 Segment = a.Segment,
                 Tpid = a.Tpid,
                 ExternalAccountId = a.ExternalAccountId,
+                Aliases = a.Aliases,
                 ProjectManager = a.ProjectManager,
                 SolutionArchitect = a.SolutionArchitect,
                 Cftl = a.Cftl,
@@ -82,6 +83,7 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
             StrategicFlag = account.StrategicFlag,
             PriorityWeight = account.PriorityWeight,
             Segment = account.Segment,
+            Aliases = account.Aliases,
             ProjectManager = account.ProjectManager,
             SolutionArchitect = account.SolutionArchitect,
             Cftl = account.Cftl,
@@ -166,6 +168,7 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
         account.StrategicFlag = input.StrategicFlag;
         account.PriorityWeight = input.PriorityWeight > 0 ? input.PriorityWeight : 1;
         account.Segment = string.IsNullOrWhiteSpace(input.Segment) ? null : input.Segment.Trim();
+        account.Aliases = string.IsNullOrWhiteSpace(input.Aliases) ? null : input.Aliases.Trim();
         account.ProjectManager = Trim(input.ProjectManager);
         account.SolutionArchitect = Trim(input.SolutionArchitect);
         account.Cftl = Trim(input.Cftl);

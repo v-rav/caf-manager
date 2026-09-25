@@ -25,6 +25,7 @@ public static class SeedData
         await SeedVocabulariesAsync(db, ct);
         await SeedPerformanceReviewsAsync(db, ct);
         await SeedAliasesAsync(db, ct);
+        await SeedResourceAliasesAsync(db, ct);
         await SeedStrategicAccountsAsync(db, ct);
         await db.SaveChangesAsync(ct);
 
@@ -212,6 +213,44 @@ public static class SeedData
             new AccountAlias { Alias = "TSN", StandardAccountName = "Skills Network" },
             new AccountAlias { Alias = "MB", StandardAccountName = "Mercedes-Benz" },
             new AccountAlias { Alias = "KPC", StandardAccountName = "Kuwait Petroleum Corporation" });
+    }
+
+    // Known FDO name variants -> canonical roster name. Fills Aliases only when empty (never overwrites a manual edit).
+    private static readonly Dictionary<string, string> ResourceAliasSeed = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Adeniyi Oladimeji Adebayo"] = "Adeniyi Adebayo",
+        ["Samson Massaey"] = "Samson Massey",
+        ["Kiran Raj"] = "Kiran Raj M C",
+        ["Abhishek Sarkar"] = "Abhishek Sarkar appmig",
+        ["Rodrigo Pedroso"] = "Rodrigo Pedroso Bregalanti",
+        ["Seethai P"] = "Seethai Paulsamy",
+        ["Hema Chandra Dyapa"] = "Hema Dyapa",
+    };
+
+    private static async Task SeedResourceAliasesAsync(AppDbContext db, CancellationToken ct)
+    {
+        var all = await db.Resources.ToListAsync(ct);
+        var changed = false;
+        foreach (var r in all)
+        {
+            // Backfill known aliases without clobbering manual edits.
+            if (string.IsNullOrWhiteSpace(r.Aliases) && ResourceAliasSeed.TryGetValue(r.Name, out var alias))
+            {
+                r.Aliases = alias;
+                changed = true;
+            }
+            // Strip stray zero-width/control characters that fragment the role vocabulary.
+            var cleanRole = new string(r.Role.Where(c => !char.IsControl(c) && c is not ('\u200b' or '\u200c' or '\u200d' or '\ufeff')).ToArray()).Trim();
+            if (cleanRole.Equals("App Migration Engineers", StringComparison.OrdinalIgnoreCase))
+                cleanRole = "App Migration Engineer";
+            if (cleanRole != r.Role)
+            {
+                r.Role = cleanRole;
+                changed = true;
+            }
+        }
+        if (changed)
+            await db.SaveChangesAsync(ct);
     }
 
     private static readonly string[] StrategicSeed =

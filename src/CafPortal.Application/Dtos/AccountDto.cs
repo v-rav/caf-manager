@@ -11,6 +11,7 @@ public class AccountDto
     public string? Segment { get; set; }
     public string? Tpid { get; set; }
     public string? ExternalAccountId { get; set; }
+    public string? Aliases { get; set; }
     public int ResourceCount { get; set; }
 
     public string? ProjectManager { get; set; }

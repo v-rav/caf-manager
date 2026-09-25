@@ -71,6 +71,7 @@ export interface Resource {
   psid?: string
   name: string
   email?: string
+  aliases?: string
   region: string
   role: string
   primarySkill?: string
@@ -119,6 +120,7 @@ export interface Account {
   segment?: string
   tpid?: string
   externalAccountId?: string
+  aliases?: string
   resourceCount: number
   projectManager?: string
   solutionArchitect?: string
@@ -375,6 +377,7 @@ export interface ResourceUpsert {
   psid?: string
   name: string
   email?: string
+  aliases?: string
   region: string
   role: string
   primarySkill?: string
@@ -394,6 +397,7 @@ export interface AccountUpsert {
   strategicFlag: boolean
   priorityWeight: number
   segment?: string
+  aliases?: string
   projectManager?: string
   solutionArchitect?: string
   cftl?: string

@@ -18,7 +18,7 @@ import { useRegion } from '../region'
 import type { Account, AccountUpsert, OwnershipHistory } from '../types'
 
 const emptyForm: AccountUpsert = {
-  accountName: '', region: '', status: 'Active', strategicFlag: false, priorityWeight: 1, segment: '',
+  accountName: '', region: '', status: 'Active', strategicFlag: false, priorityWeight: 1, segment: '', aliases: '',
   projectManager: '', solutionArchitect: '', cftl: '', accountOwner: '', customerPoc: '', backupOwner: '',
 }
 
@@ -66,6 +66,7 @@ export function AccountsPage() {
       strategicFlag: a.strategicFlag,
       priorityWeight: a.priorityWeight,
       segment: a.segment ?? '',
+      aliases: a.aliases ?? '',
       projectManager: a.projectManager ?? '',
       solutionArchitect: a.solutionArchitect ?? '',
       cftl: a.cftl ?? '',
@@ -197,6 +198,11 @@ export function AccountsPage() {
                 </Option>
               ))}
             </Dropdown>
+            <Input
+              placeholder="Aliases (; separated name variants)"
+              value={form.aliases ?? ''}
+              onChange={(_, d) => patch({ aliases: d.value })}
+            />
             <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
               <Dropdown
                 style={{ flex: 1 }}

@@ -12,6 +12,7 @@ public class ResourceConfiguration : IEntityTypeConfiguration<Resource>
         builder.Property(r => r.Name).HasMaxLength(200).IsRequired();
         builder.Property(r => r.Psid).HasMaxLength(50);
         builder.Property(r => r.Email).HasMaxLength(256);
+        builder.Property(r => r.Aliases).HasMaxLength(400);
         builder.Property(r => r.Region).HasMaxLength(50).IsRequired();
         builder.Property(r => r.Role).HasMaxLength(100).IsRequired();
         builder.Property(r => r.PrimarySkill).HasMaxLength(200);
@@ -19,7 +20,8 @@ public class ResourceConfiguration : IEntityTypeConfiguration<Resource>
         builder.Property(r => r.OnboardingStatus).HasConversion<string>().HasMaxLength(30);
         builder.HasIndex(r => r.Region);
         builder.HasIndex(r => r.Psid);
-        builder.HasIndex(r => r.Email);
+        // Email is the stable identity: unique when present, blanks excluded.
+        builder.HasIndex(r => r.Email).IsUnique().HasFilter("[Email] IS NOT NULL AND [Email] <> ''");
     }
 }
 
@@ -33,6 +35,7 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(a => a.Status).HasMaxLength(50);
         builder.Property(a => a.Tpid).HasMaxLength(50);
         builder.Property(a => a.ExternalAccountId).HasMaxLength(50);
+        builder.Property(a => a.Aliases).HasMaxLength(400);
         builder.Property(a => a.Segment).HasMaxLength(100);
         builder.Property(a => a.ProjectManager).HasMaxLength(200);
         builder.Property(a => a.SolutionArchitect).HasMaxLength(200);

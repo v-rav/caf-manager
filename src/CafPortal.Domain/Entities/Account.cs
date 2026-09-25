@@ -18,6 +18,9 @@ public class Account : AuditableEntity
     public string? Tpid { get; set; }
     public string? ExternalAccountId { get; set; }
 
+    /// <summary>Semicolon-separated alternate account-name spellings used to match this account by name.</summary>
+    public string? Aliases { get; set; }
+
     /// <summary>Ownership matrix (reflects FDO roles) plus a backup owner for SPOF/handover cover.</summary>
     public string? ProjectManager { get; set; }
     public string? SolutionArchitect { get; set; }

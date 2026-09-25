@@ -8,6 +8,7 @@ public class ResourceUpsertDto
     public string? Psid { get; set; }
     [Required] public string Name { get; set; } = string.Empty;
     public string? Email { get; set; }
+    public string? Aliases { get; set; }
     [Required] public string Region { get; set; } = string.Empty;
     [Required] public string Role { get; set; } = string.Empty;
     public string? PrimarySkill { get; set; }
@@ -29,6 +30,7 @@ public class AccountUpsertDto
     public bool StrategicFlag { get; set; }
     public int PriorityWeight { get; set; } = 1;
     public string? Segment { get; set; }
+    public string? Aliases { get; set; }
     public string? ProjectManager { get; set; }
     public string? SolutionArchitect { get; set; }
     public string? Cftl { get; set; }
