@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IStrategicAccountService, StrategicAccountService>();
         services.AddScoped<ILeaveService, LeaveService>();
         services.AddScoped<INominationService, NominationService>();
+        services.AddScoped<IPerformanceReviewService, PerformanceReviewService>();
         return services;
     }
 }

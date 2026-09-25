@@ -105,3 +105,92 @@ P1-01 and P1-06 use the confirmed enums/wave types below.
 | Leave notice window | No mandated advance period found → keep configurable (default e.g. 14 days); still require tracker update + PM/Lead notify. |
 | Ownership fields | Current FDO: PM, SA, CFTL, Account Owner, Customer POC. **Backup Owner** is a new enhancement (Phase 2). |
 | Free-text drift | Worst offender = **tool names**; also skills. Replace with controlled dropdowns (Phase 2 P2-03). |
+
+---
+
+## 6. Phase 4 — Effectiveness enhancements (make it a daily tool)
+
+A holistic review of the shipped MVP found the governance features are complete, but the layer
+that turns "data tables" into "a tool people open every morning" is missing. Phase 4 closes that
+gap. Priority: 🔴 Now · 🟠 Next · ⚪ Later.
+
+| ID | Enhancement | Why it matters | Priority | Status |
+|----|-------------|----------------|----------|--------|
+| P4-01 | **Data-freshness banner** — header shows last-refresh time + row counts, driven by a new `GET /api/admin/status`; stamp `LastDataRefreshUtc` on every import | Users can't tell if data is stale; imports run server-side with no visible signal | 🔴 | ✅ |
+| P4-02 | **Excel export** — `GET /api/export/{resources\|capacity\|nominations\|performance\|summary}` (ClosedXML) + export buttons on each grid, plus a one-click **Executive summary** workbook | "Executive reporting" is a stated goal; leads need a shareable snapshot | 🔴 | ✅ |
+| P4-03 | **Dashboard drill-through** — KPI cards and chart segments navigate to the relevant page with the filter pre-applied (Overloaded → Capacity, Open Nominations → Nominations, On Leave → Leave…) | Dashboard was a dead-end snapshot; this makes it the entry point | 🔴 | ✅ |
+| P4-04 | **Capacity heatmap** — resource × utilization-band grid (green/amber/red), spec'd but delivered only as a table | At-a-glance overload/SPOF visibility | 🟠 | ✅ |
+| P4-05 | **Leave intake that gets used** — in-app quick-add is present, but the imported dataset has 0 leave rows, so On-Leave KPI + clash alerts always read zero; wire `LeaveCal.xlsx` loader / CSV upload | Coverage-planning features are inert without leave data | 🟠 | ☐ |
+| P4-06 | **Trends over time** — periodic snapshots (utilization, blocked-age, avg performance) + trend charts | Shows *direction*, not just *state* — the management value | 🟠 | ☐ |
+| P4-07 | **"My view"** — a lead's personalized landing filtered to their region/reports with only their action items (stale noms, clashes, training needs) | Turns the portal into a personal worklist | 🟠 | ☐ |
+| P4-08 | **Global search** — top-bar people/account/nomination lookup | Faster navigation across 78 resources / 262 accounts | ⚪ | ☐ |
+| P4-09 | **Entra ID auth** (spec Phase 2) — protect performance scores + governance data on a public App Service URL | Security before wider rollout | ⚪ | ☐ |
+| P4-10 | **In-app import upload** — replace the server-file dependency with a file picker | Self-service refresh without server access | ⚪ | ☐ |
+| P4-11 | **API smoke tests** — capacity math, stale tiers, clash window | No automated tests today | ⚪ | ☐ |
+| P4-12 | **Repo hygiene** — remove stray root logs; confirm `*.log` ignored | Noise / minor leak risk | 🔴 | ✅ |
+
+**This iteration ships P4-01, P4-02, P4-03, P4-04, P4-12.** P4-05→P4-11 remain backlog: they need a
+data decision (leave source), new infra (auth, snapshots background job), or product scoping (my-view),
+and are best done as follow-ups once the cockpit changes prove out.
+
+## 7. Pending / to verify (known caveats)
+
+| # | Item | Why it matters | Status |
+|---|------|----------------|--------|
+| PV-01 | **SLA-breach age semantics vs FDO** — the per-stage day-count in `Detail View.xlsx` ("N days" in the stage column) may **only start accruing after an SLA breach**, not from stage entry. Our current logic treats it as elapsed days-in-stage and derives Warn/Escalate/Defer directly from it. Confirm the FDO source definition; if the day-count is post-breach, the Warn/Escalate/Defer thresholds and the "Age in stage" label likely need re-mapping. | Age drives SLA tier, the SLA-breach filter, and the recommended-action cadence — a wrong basis mis-flags nominations. | ☐ Pending — verify against FDO, then correct `NominationService.StaleTier` / stage-age basis if needed |
+
+> **Note:** `StageAgeDays` is imported per current stage and `StaleTier` is gated to Stage 2–4. Once the
+> FDO day-count definition is confirmed, revisit whether age = stage-entry elapsed or post-breach elapsed,
+> and adjust thresholds/labels accordingly.
+
+## 8. Phase 5 — Recurring FDO ingestion (the app becomes the system of record)
+
+**Problem.** FDO data is dropped periodically (weekly). The original import **wiped and re-inserted**
+nominations on every refresh, which destroyed all portal-owned governance data — blocker reason,
+blocked-since, follow-up date, manual status, and wave links — and cascade-deleted `WaveLink` rows.
+That is fatal for a recurring drop: every refresh erased the operational context leads had entered.
+
+**Approach.** Split responsibility per field. FDO owns the pipeline facts; the portal owns the
+governance/operational overlay. On each drop we **upsert-merge** (never wipe), keyed on the FDO
+**Task Id**, and reconcile anything missing without hard-deleting.
+
+### Field-ownership matrix
+
+| FDO-owned (refreshed every drop) | Portal-owned (preserved across drops) |
+|----------------------------------|----------------------------------------|
+| Account name, TPID, Region | `Status` (manual workflow state) |
+| Offering / phase | `BlockedReason`, `BlockedSince` |
+| Nominated date | `FollowUpDate` |
+| Migration Status → Stage (1–4) | `WaveLinks` (App/Security wave references) |
+| Current State | Remarks/notes (seeded from FDO once, then portal-owned) |
+| `StageAgeDays` (per-stage day-count) | Ownership history (future) |
+| PM / CFTL / SA | |
+
+### Sub-phases
+
+| ID | Sub-phase | What | Status |
+|----|-----------|------|--------|
+| **A** | **Upsert-merge correctness** | Add `ExternalTaskId` (FDO "Task Id") as the stable key + index. Import matches by Task Id (falls back to `AccountId`+`Offering` to adopt legacy rows once), refreshes FDO-owned fields, and **preserves** portal-owned fields. Rows absent from a drop are **soft-withdrawn** (`NominationStatusType.Withdrawn`), never hard-deleted, so history + waves survive. `DataRefreshService` no longer `ExecuteDeleteAsync` on nominations. | ✅ **Done & verified** |
+| **B** | **In-app upload + dry-run preview** | File-picker upload (P4-10) with a preview showing Added / Updated / Unchanged / Missing counts **before** commit. | ☐ |
+| **C** | **Import audit + retention** | `ImportRun` table (id, startedUtc, source, counts) + optional `ImportChange` delta rows; prune history older than `ImportHistoryRetentionDays` (default **10**, keep 7–15) to stay small on SQLite/F1. | ☐ |
+| **D** | **Trend snapshots** | Periodic snapshots of utilization / blocked-age / stage-age for trend charts (P4-06), fed by the same ingestion. | ☐ |
+
+### Phase A — verification (done)
+
+Ran two consecutive refreshes with a portal edit in between:
+- Count stable **147 → 147**, **zero duplicate ids**, all **147 TPIDs** present.
+- A nomination's `Status=Blocked`, `BlockedReason=Access Pending`, `FollowUpDate`, and a `WaveLink`
+  (`WAVE-TEST-001`) **all survived** the second refresh — proving portal edits are no longer wiped.
+- New `Withdrawn = 8` status excluded from the SLA stale cadence.
+- Migration `AddNominationExternalTaskId` applied.
+
+### Change detection (Phase B/C design)
+
+Compute a content-hash of the FDO-owned fields per Task Id → classify **Added / Updated / Unchanged /
+Missing**. Missing → soft-withdraw. Store **deltas only** in `ImportChange` (entityType, externalKey,
+changeType, changed-fields JSON) to keep the audit tiny; prune beyond the retention window.
+
+> **Follow-up (out of Phase A scope):** `ResourceAccounts`, `LeaveFacts`, and `EngagementFacts` still
+> use wipe-and-rebuild on refresh. That's safe today (no portal edits on those, and no `LeaveCal.xlsx`
+> exists so leave isn't wiped), but if leave becomes portal-entered (P4-05) the `LeaveFacts` delete
+> must move to the same upsert-merge model before enabling it.

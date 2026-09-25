@@ -9,5 +9,6 @@ public enum NominationStatusType
     WaitingForCustomerAction = 4,
     CustomerDeferred = 5,
     WaitingOnFollowUp = 6,
-    Completed = 7
+    Completed = 7,
+    Withdrawn = 8
 }

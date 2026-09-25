@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   Dropdown,
   Input,
@@ -13,7 +14,7 @@ import {
   TableRow,
   Text,
 } from '@fluentui/react-components'
-import { AddRegular, DeleteRegular, EditRegular, LinkRegular } from '@fluentui/react-icons'
+import { AddRegular, ArrowDownloadRegular, DeleteRegular, EditRegular, LinkRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { ConfirmDialog, Modal } from '../components/Modal'
@@ -21,6 +22,7 @@ import { DataTable } from '../components/DataTable'
 import { ErrorText, FilterSelect, Loading, Panel, StatusBadge, UtilizationBar } from '../components/common'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
+import { useSearchParams } from 'react-router-dom'
 import type { Resource, ResourceUpsert } from '../types'
 
 const CAPACITY_STATUSES = ['Available', 'Partially Utilized', 'Fully Utilized', 'Overloaded']
@@ -54,10 +56,17 @@ export function ResourcesPage() {
   )
   const { data: regions } = useAsync(() => api.regions(), [])
   const { data: roles } = useAsync(() => api.roles(), [])
-  const [capacityFilter, setCapacityFilter] = useState('')
+  const [searchParams] = useSearchParams()
+  const [capacityFilter, setCapacityFilter] = useState(searchParams.get('capacity') ?? '')
+  const [activeFilter, setActiveFilter] = useState('Active')
   const rows = useMemo(
-    () => (capacityFilter ? data?.filter((r) => r.capacityStatus === capacityFilter) : data),
-    [data, capacityFilter],
+    () =>
+      (data ?? []).filter(
+        (r) =>
+          (!capacityFilter || r.capacityStatus === capacityFilter) &&
+          (!activeFilter || (activeFilter === 'Active' ? r.activeFlag : !r.activeFlag)),
+      ),
+    [data, capacityFilter, activeFilter],
   )
 
   const [form, setForm] = useState<ResourceUpsert | null>(null)
@@ -130,7 +139,11 @@ export function ResourcesPage() {
             <SearchBox placeholder="Search name / PSID" value={search} onChange={(_, d) => setSearch(d.value)} style={{ minWidth: 180 }} />
             <FilterSelect label="Roles" value={role} options={roles ?? []} onChange={setRole} />
             <FilterSelect label="Capacity" value={capacityFilter} options={CAPACITY_STATUSES} onChange={setCapacityFilter} minWidth={170} />
+            <FilterSelect label="Active" value={activeFilter} options={['Active', 'Inactive']} onChange={setActiveFilter} minWidth={130} />
             <SearchBox placeholder="Skill" value={skill} onChange={(_, d) => setSkill(d.value)} style={{ minWidth: 140 }} />
+            <Button as="a" href={api.exportUrl('resources', region)} appearance="secondary" icon={<ArrowDownloadRegular />}>
+              Export
+            </Button>
             <Button appearance="primary" icon={<AddRegular />} onClick={openCreate}>
               Add
             </Button>
@@ -154,6 +167,17 @@ export function ResourcesPage() {
               { key: 'role', header: 'Role', sortValue: (r) => r.role },
               { key: 'skill', header: 'Primary Skill', sortValue: (r) => r.primarySkill ?? '', render: (r) => r.primarySkill ?? '—' },
               { key: 'onboarding', header: 'Onboarding', sortValue: (r) => r.onboardingStatus, render: (r) => r.onboardingStatus },
+              {
+                key: 'active',
+                header: 'Active',
+                align: 'center',
+                sortValue: (r) => (r.activeFlag ? 1 : 0),
+                render: (r) => (
+                  <Badge appearance="tint" color={r.activeFlag ? 'success' : 'danger'} size="small">
+                    {r.activeFlag ? 'Active' : 'Inactive'}
+                  </Badge>
+                ),
+              },
               { key: 'accounts', header: 'Accounts', align: 'center', sortValue: (r) => r.accountCount, render: (r) => `${r.accountCount} / ${r.capacityLimit}` },
               { key: 'utilization', header: 'Utilization', minWidth: 140, sortValue: (r) => r.utilizationPercent, render: (r) => <UtilizationBar percent={r.utilizationPercent} /> },
               { key: 'status', header: 'Status', sortValue: (r) => r.capacityStatus, render: (r) => <StatusBadge status={r.capacityStatus} /> },

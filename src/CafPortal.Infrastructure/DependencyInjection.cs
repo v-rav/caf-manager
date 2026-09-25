@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IEngagementImportService, EngagementImportService>();
         services.AddScoped<INominationImportService, NominationImportService>();
         services.AddScoped<IDataRefreshService, DataRefreshService>();
+        services.AddScoped<IExportService, Export.ExportService>();
 
         // The web app is the system of record; the nightly import job is opt-in.
         if (configuration.GetValue("BackgroundRefresh:Enabled", false))

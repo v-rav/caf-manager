@@ -7,6 +7,8 @@ public class Nomination : AuditableEntity
 {
     public int Id { get; set; }
     public int? AccountId { get; set; }
+    /// <summary>Stable external key from the FDO export ("Task Id") used for upsert-merge across drops.</summary>
+    public string? ExternalTaskId { get; set; }
     public string? AccountName { get; set; }
     public string? Technology { get; set; }
     public string Region { get; set; } = string.Empty;
@@ -16,6 +18,8 @@ public class Nomination : AuditableEntity
 
     /// <summary>Raw migration status from the nomination export (e.g. "Executing Migration").</summary>
     public string? MigrationStatus { get; set; }
+    /// <summary>Days spent in the current migration stage (from that stage's day-count column in the export).</summary>
+    public int? StageAgeDays { get; set; }
     public string? CurrentState { get; set; }
     public string? SolutionArchitect { get; set; }
     public string? CftlPrimary { get; set; }

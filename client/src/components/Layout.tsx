@@ -10,6 +10,7 @@ import {
   SettingsRegular,
   StarRegular,
   ClipboardTaskListLtrRegular,
+  PersonStarRegular,
 } from '@fluentui/react-icons'
 import { useState, type ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
@@ -25,15 +26,29 @@ const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
   { to: '/leave', label: 'Leave', icon: <CalendarLtrRegular /> },
   { to: '/strategic', label: 'Strategic Accounts', icon: <StarRegular /> },
   { to: '/nominations', label: 'Nominations', icon: <ClipboardTaskListLtrRegular /> },
+  { to: '/performance', label: 'Performance', icon: <PersonStarRegular /> },
   { to: '/configuration', label: 'Configuration', icon: <SettingsRegular /> },
 ]
 
 const EXPANDED = 240
 const COLLAPSED = 56
 
+function timeAgo(iso?: string): string {
+  if (!iso) return 'never'
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return 'unknown'
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60000))
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.round(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.round(hrs / 24)}d ago`
+}
+
 export function Layout() {
   const { region, setRegion } = useRegion()
   const { data: regions } = useAsync(() => api.regions(), [])
+  const { data: status } = useAsync(() => api.adminStatus(), [])
   const [refreshing, setRefreshing] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('nav-collapsed') === '1')
 
@@ -137,6 +152,16 @@ export function Layout() {
             </Text>
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {status && (
+              <Tooltip
+                relationship="description"
+                content={`Resources ${status.resources} · Accounts ${status.accounts} · Nominations ${status.nominations} · Leave ${status.leaveRecords} · Reviews ${status.performanceReviews}`}
+              >
+                <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', whiteSpace: 'nowrap' }}>
+                  Updated {timeAgo(status.lastRefreshUtc)}
+                </Text>
+              </Tooltip>
+            )}
             <Dropdown
               placeholder="Global View"
               value={region ?? 'Global View'}

@@ -52,6 +52,7 @@ public class NominationConfiguration : IEntityTypeConfiguration<Nomination>
     {
         builder.HasKey(x => x.Id);
         builder.Property(x => x.AccountName).HasMaxLength(200);
+        builder.Property(x => x.ExternalTaskId).HasMaxLength(100);
         builder.Property(x => x.Technology).HasMaxLength(200);
         builder.Property(x => x.Region).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
@@ -67,6 +68,7 @@ public class NominationConfiguration : IEntityTypeConfiguration<Nomination>
         builder.HasMany(x => x.WaveLinks).WithOne(w => w.Nomination)
             .HasForeignKey(w => w.NominationId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => x.ExternalTaskId);
     }
 }
 
@@ -96,5 +98,20 @@ public class OwnershipHistoryConfiguration : IEntityTypeConfiguration<OwnershipH
         builder.HasOne(x => x.Account).WithMany(a => a.OwnershipHistory)
             .HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => x.AccountId);
+    }
+}
+
+public class PerformanceReviewConfiguration : IEntityTypeConfiguration<PerformanceReview>
+{
+    public void Configure(EntityTypeBuilder<PerformanceReview> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.PersonName).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.Role).HasMaxLength(200);
+        builder.Property(x => x.ReportingManager).HasMaxLength(200);
+        builder.Property(x => x.Region).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Comments).HasMaxLength(2000);
+        builder.HasIndex(x => new { x.PersonName, x.ReviewDate });
+        builder.HasIndex(x => x.Region);
     }
 }

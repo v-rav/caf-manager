@@ -112,6 +112,7 @@ export function DataTable<T>({
                       minWidth: c.minWidth,
                       textAlign: c.align,
                       whiteSpace: 'nowrap',
+                      fontSize: 12,
                     }}
                   >
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
@@ -137,7 +138,7 @@ export function DataTable<T>({
                 }}
               >
                 {columns.map((c) => (
-                  <TableCell key={c.key} style={{ textAlign: c.align, verticalAlign: 'middle' }}>
+                  <TableCell key={c.key} style={{ textAlign: c.align, verticalAlign: 'middle', fontSize: 12 }}>
                     {c.render ? c.render(row) : (c.sortValue?.(row) ?? '—')}
                   </TableCell>
                 ))}

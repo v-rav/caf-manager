@@ -12,4 +12,8 @@ public class AdminController(IDataRefreshService refresh) : ControllerBase
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh(CancellationToken ct)
         => Ok(await refresh.RefreshAsync(ct));
+
+    [HttpGet("status")]
+    public async Task<IActionResult> Status(CancellationToken ct)
+        => Ok(await refresh.GetStatusAsync(ct));
 }

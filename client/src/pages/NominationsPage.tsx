@@ -7,8 +7,9 @@ import {
   SearchBox,
   Text,
   Textarea,
+  Tooltip,
 } from '@fluentui/react-components'
-import { AddRegular, DeleteRegular, EditRegular } from '@fluentui/react-icons'
+import { AddRegular, ArrowDownloadRegular, DeleteRegular, EditRegular } from '@fluentui/react-icons'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { Modal } from '../components/Modal'
@@ -26,6 +27,22 @@ const STAGES = [
   { n: 3, label: 'Finalize Scope', match: 'finalize', tone: 'warning' as const },
   { n: 4, label: 'Executing Migration', match: 'executing migration', tone: 'brand' as const },
 ]
+
+// Migration Status text → numeric stage of the migration journey (1–4).
+function migrationStage(migrationStatus?: string): { n: number; label: string } | null {
+  const t = (migrationStatus ?? '').toLowerCase()
+  const s = STAGES.find((x) => t.includes(x.match))
+  return s ? { n: s.n, label: s.label } : null
+}
+
+// Current State text → Badge colour (on track / waiting / blocked).
+function stateColor(cs?: string): 'success' | 'warning' | 'danger' | 'informative' {
+  const t = (cs ?? '').toLowerCase()
+  if (t.includes('block')) return 'danger'
+  if (t.includes('waiting') || t.includes('follow')) return 'warning'
+  if (t.includes('on track')) return 'success'
+  return 'informative'
+}
 
 const STATUS_OPTIONS = [
   'Open',
@@ -74,11 +91,31 @@ const staleTone: Record<string, { label: string; color: string; bg: string }> = 
   Defer: { label: 'Defer', color: '#a4262c', bg: '#fde7e9' },
 }
 
+// >6 weeks in an execution stage (customer-driven) → Customer Deferred, per the governance cadence.
+const DEFER_WEEKS_DAYS = 42
+
+// Documented Day 3/5/10 action for a stale Stage 2–4 nomination (only set when an SLA tier applies).
+function recommendedAction(staleTier: string, ageDays: number): string | null {
+  if (!staleTier) return null
+  if (ageDays >= DEFER_WEEKS_DAYS) return 'Delayed >6 weeks — move to Customer Deferred & set follow-up'
+  switch (staleTier) {
+    case 'Warn':
+      return 'Day 3 — send reminder, then move to Blocked'
+    case 'Escalate':
+      return 'Day 5 — send 2nd reminder'
+    case 'Defer':
+      return 'Day 10 — final reminder, move to Customer Deferred & set follow-up'
+    default:
+      return null
+  }
+}
+
 export function NominationsPage() {
   const { region } = useRegion()
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
   const [currentStateFilter, setCurrentStateFilter] = useState('')
   const [migrationFilter, setMigrationFilter] = useState('')
+  const [slaFilter, setSlaFilter] = useState('')
   const [staleOnly, setStaleOnly] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounced(search)
@@ -110,10 +147,11 @@ export function NominationsPage() {
         (n) =>
           (!currentStateFilter || n.currentState === currentStateFilter) &&
           (!migrationFilter || n.migrationStatus === migrationFilter) &&
+          (!slaFilter || n.staleTier === slaFilter) &&
           (!staleOnly || !!n.staleTier) &&
           (!debouncedSearch || (n.accountName ?? '').toLowerCase().includes(debouncedSearch.toLowerCase())),
       ),
-    [data, currentStateFilter, migrationFilter, staleOnly, debouncedSearch],
+    [data, currentStateFilter, migrationFilter, slaFilter, staleOnly, debouncedSearch],
   )
 
   const openManage = (n: Nomination) => {
@@ -217,8 +255,12 @@ export function NominationsPage() {
                 >
                   Needs update
                 </Button>
-                <FilterSelect label="Current State" value={currentStateFilter} options={currentStateOptions} onChange={setCurrentStateFilter} minWidth={200} />
-                <FilterSelect label="Migration" value={migrationFilter} options={migrationOptions} onChange={setMigrationFilter} minWidth={200} />
+                <FilterSelect label="Stage" value={migrationFilter} options={migrationOptions} onChange={setMigrationFilter} minWidth={200} />
+                <FilterSelect label="Status" value={currentStateFilter} options={currentStateOptions} onChange={setCurrentStateFilter} minWidth={200} />
+                <FilterSelect label="SLA breach" value={slaFilter} options={['Warn', 'Escalate', 'Defer']} onChange={setSlaFilter} minWidth={150} />
+                <Button as="a" href={api.exportUrl('nominations', region)} appearance="secondary" icon={<ArrowDownloadRegular />}>
+                  Export
+                </Button>
               </div>
             }
           >
@@ -230,64 +272,84 @@ export function NominationsPage() {
               emptyMessage="No nominations match your filters."
               columns={[
                 { key: 'account', header: 'Account', sortValue: (n) => n.accountName ?? '', render: (n) => n.accountName ?? '—' },
+                { key: 'tpid', header: 'TPID', sortValue: (n) => n.tpid ?? '', render: (n) => n.tpid ?? '—' },
                 { key: 'offering', header: 'Offering', sortValue: (n) => n.technology ?? '', render: (n) => n.technology ?? '—' },
                 { key: 'region', header: 'Region', sortValue: (n) => n.region },
                 {
-                  key: 'status',
+                  key: 'stage',
+                  header: 'Stage',
+                  align: 'center',
+                  sortValue: (n) => migrationStage(n.migrationStatus)?.n ?? 0,
+                  render: (n) => {
+                    const s = migrationStage(n.migrationStatus)
+                    if (!s) return <span style={{ color: 'var(--colorNeutralForeground3)' }}>—</span>
+                    return (
+                      <Tooltip relationship="description" content={`Stage ${s.n}: ${s.label} — ${n.migrationStatus}`}>
+                        <Badge appearance="tint" color="brand" size="medium">
+                          {s.n}
+                        </Badge>
+                      </Tooltip>
+                    )
+                  },
+                },
+                {
+                  key: 'state',
                   header: 'Status',
-                  sortValue: (n) => n.status,
-                  render: (n) => {
-                    const blocked = BLOCKED_STATES.includes(n.status)
-                    return (
-                      <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <span style={{ color: blocked ? 'var(--colorPaletteRedForeground1)' : undefined, fontWeight: blocked ? 600 : undefined }}>
-                          {n.status}
-                        </span>
-                        {n.blockedReason && (
-                          <Badge appearance="tint" color="warning" size="small">
-                            {n.blockedReason}
-                          </Badge>
-                        )}
-                      </span>
-                    )
-                  },
-                },
-                {
-                  key: 'age',
-                  header: 'Age',
-                  sortValue: (n) => n.daysSinceUpdate,
-                  render: (n) => {
-                    const tone = staleTone[n.staleTier]
-                    return (
-                      <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                        <span>{n.daysSinceUpdate}d</span>
-                        {tone && (
-                          <span style={{ background: tone.bg, color: tone.color, borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 600 }}>
-                            {tone.label}
-                          </span>
-                        )}
-                      </span>
-                    )
-                  },
-                },
-                { key: 'followup', header: 'Follow-up', sortValue: (n) => n.followUpDate ?? '', render: (n) => n.followUpDate ?? '—' },
-                {
-                  key: 'waves',
-                  header: 'Waves',
-                  sortValue: (n) => n.waves.length,
+                  sortValue: (n) => n.currentState ?? '',
                   render: (n) =>
-                    n.waves.length === 0 ? (
-                      <span style={{ color: 'var(--colorNeutralForeground3)' }}>—</span>
+                    n.currentState ? (
+                      <Badge appearance="tint" color={stateColor(n.currentState)} size="small">
+                        {n.currentState}
+                      </Badge>
                     ) : (
-                      <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
-                        {n.waves.map((w) => (
-                          <Badge key={w.id} appearance="outline" size="small" title={`${w.waveType}: ${w.reference}`}>
-                            {w.waveType}
-                          </Badge>
-                        ))}
-                      </span>
+                      <span style={{ color: 'var(--colorNeutralForeground3)' }}>—</span>
                     ),
                 },
+                {
+                  key: 'summary',
+                  header: 'Summary',
+                  sortValue: (n) => n.staleTier || '',
+                  render: (n) => {
+                    const tone = staleTone[n.staleTier]
+                    const details = (n.remarks ?? '').replace(/\s+/g, ' ').trim()
+                    const age = n.stageAgeDays ?? n.daysSinceUpdate
+                    const action = recommendedAction(n.staleTier, age)
+                    return (
+                      <Tooltip
+                        relationship="description"
+                        content={
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 320 }}>
+                            {n.currentState && <div><b>State:</b> {n.currentState}</div>}
+                            {n.blockedReason && <div><b>Blocker:</b> {n.blockedReason}</div>}
+                            {n.blockedSince && <div><b>Blocked since:</b> {n.blockedSince}</div>}
+                            {n.followUpDate && <div><b>Follow-up:</b> {n.followUpDate}</div>}
+                            <div><b>Age in stage:</b> {age} days{n.staleTier ? ` · SLA ${n.staleTier}` : ''}</div>
+                            {action && <div style={{ color: 'var(--colorPaletteRedForeground1)' }}><b>Next step:</b> {action}</div>}
+                            {n.waves.length > 0 && <div><b>Waves:</b> {n.waves.map((w) => w.waveType).join(', ')}</div>}
+                            {details && <div><b>Details:</b> {details}</div>}
+                          </div>
+                        }
+                      >
+                        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', cursor: 'help', flexWrap: 'wrap' }}>
+                          {tone && (
+                            <span style={{ background: tone.bg, color: tone.color, borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 600 }}>
+                              SLA {tone.label}
+                            </span>
+                          )}
+                          {n.blockedReason && (
+                            <Badge appearance="tint" color="danger" size="small">
+                              {n.blockedReason}
+                            </Badge>
+                          )}
+                          <span style={{ color: 'var(--colorNeutralForeground3)' }}>{age}d in stage</span>
+                        </span>
+                      </Tooltip>
+                    )
+                  },
+                },
+                { key: 'pm', header: 'PM', sortValue: (n) => n.projectCoordinator ?? '', render: (n) => n.projectCoordinator ?? '—' },
+                { key: 'cftl', header: 'CFTL', sortValue: (n) => n.cftlPrimary ?? '', render: (n) => n.cftlPrimary ?? '—' },
+                { key: 'sa', header: 'SA', sortValue: (n) => n.solutionArchitect ?? '', render: (n) => n.solutionArchitect ?? '—' },
                 {
                   key: 'actions',
                   header: '',

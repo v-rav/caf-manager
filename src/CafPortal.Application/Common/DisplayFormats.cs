@@ -23,6 +23,7 @@ public static class DisplayFormats
         NominationStatusType.CustomerDeferred => "Customer Deferred",
         NominationStatusType.WaitingOnFollowUp => "Waiting on Follow-up",
         NominationStatusType.Completed => "Completed",
+        NominationStatusType.Withdrawn => "Withdrawn",
         _ => status.ToString()
     };
 

@@ -20,6 +20,15 @@ export interface ExecutiveDashboard {
   strategicAccountCoverage: NameValue[]
 }
 
+export interface DataStatus {
+  lastRefreshUtc?: string
+  resources: number
+  accounts: number
+  nominations: number
+  leaveRecords: number
+  performanceReviews: number
+}
+
 export interface Resource {
   resourceId: number
   psid?: string
@@ -149,12 +158,14 @@ export interface Nomination {
   id: number
   accountId?: number
   accountName?: string
+  tpid?: string
   technology?: string
   region: string
   status: string
   openedDate: string
   remarks?: string
   migrationStatus?: string
+  stageAgeDays?: number
   currentState?: string
   solutionArchitect?: string
   cftlPrimary?: string
@@ -220,6 +231,41 @@ export interface OperationsSetting {
   key: string
   value: string
   description?: string
+}
+
+export interface PerformanceReview {
+  id: number
+  personName: string
+  role?: string
+  reportingManager?: string
+  region: string
+  reviewDate: string
+  communicationVerbal?: number
+  communicationWritten?: number
+  attitude?: number
+  processUnderstanding?: number
+  offeringUnderstanding?: number
+  score?: number
+  pending: boolean
+  trainingNeeds: string[]
+  trendDelta?: number
+  previousScore?: number
+  reviewCount: number
+  comments?: string
+}
+
+export interface PerformanceReviewUpsert {
+  personName: string
+  role?: string
+  reportingManager?: string
+  region?: string
+  reviewDate?: string
+  communicationVerbal?: number
+  communicationWritten?: number
+  attitude?: number
+  processUnderstanding?: number
+  offeringUnderstanding?: number
+  comments?: string
 }
 
 export interface ResourceUpsert {

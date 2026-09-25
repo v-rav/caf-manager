@@ -23,6 +23,7 @@ public static class SeedData
         await SeedCapacityConfigAsync(db, ct);
         await SeedApplicationSettingsAsync(db, ct);
         await SeedVocabulariesAsync(db, ct);
+        await SeedPerformanceReviewsAsync(db, ct);
         await SeedAliasesAsync(db, ct);
         await SeedStrategicAccountsAsync(db, ct);
         await db.SaveChangesAsync(ct);
@@ -108,7 +109,8 @@ public static class SeedData
             ("StaleWarnDays", "3", "Days without update before a nomination is flagged for a warning"),
             ("StaleEscalateDays", "5", "Days without update before a nomination is escalated"),
             ("StaleDeferDays", "10", "Days without update before suggesting Customer Deferred"),
-            ("LeaveClashWindowDays", "30", "Upcoming-leave window used to detect coverage clashes")
+            ("LeaveClashWindowDays", "30", "Upcoming-leave window used to detect coverage clashes"),
+            ("PerformanceTrainingThreshold", "4", "Review dimension score below which a training need is flagged")
         };
         var existing = await db.ApplicationSettings.Select(s => s.Key).ToListAsync(ct);
         foreach (var (key, value, desc) in defaults)
@@ -132,6 +134,68 @@ public static class SeedData
             for (var i = 0; i < skills.Length; i++)
                 db.Skills.Add(new SkillConfiguration { Name = skills[i], SortOrder = i + 1 });
         }
+    }
+
+    private static async Task SeedPerformanceReviewsAsync(AppDbContext db, CancellationToken ct)
+    {
+        if (await db.PerformanceReviews.AnyAsync(ct))
+            return;
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        // Baseline EMEA snapshot. Nulls = not yet scored (person onboarding/pending review).
+        (string Name, string Role, string? Mgr, double? V, double? W, double? A, double? P, double? O)[] rows =
+        {
+            ("Ravinder Rana", "App Migration Pillar Lead", null, null, null, null, null, null),
+            ("Shyam Koleti", "Solution Architect - APPS (.Net, DevOps)", "Ravinder Rana", null, null, null, null, null),
+            ("Rakesh Kumar", "Solution Architect - APPS (.Net)", "Arun Kumar", 5, 5, 4, 4, 4),
+            ("Viswanatha Selvam P", "Solution Architect - APPS (AKS)", "Dhinakaran", 5, 5, 5, 5, 5),
+            ("Ahmed Gad", "Solution Architect - APPS (.Net, DevOps)", "Ritesh Sharma", 5, 5, 5, 4.5, 4),
+            ("Kiran Raj M C", "Solution Architect - APPS (.Net)", "Basavaraj", 5, 5, 4, 4, 4),
+            ("Seethai Paulsamy", "Solution Architect - APPS (.Net)", "Dhinakaran", 5, 5, 4, 4, 4),
+            ("Deepak D", "Architect - APP (.Net)", "Ravindra K Chandrashekar", 5, 5, 5, 4, 4.5),
+            ("Basavaraj Araballi", "Architect - APP (.Net, DevOps)", "Arun Kumar", 5, 5, 5, 5, 4.5),
+            ("Artem Tarasov", "Solution Architect", null, null, null, null, null, null),
+            ("Affish Mohammad", "Lead - DevOps", "Mrinmoy", 4.5, 4, 4, 4, 4),
+            ("Sushil Gupta", "ME - APP & DevOps (IaC)", "Mathumohan Vijayakumar", 5, 4.5, 4, 4, 4),
+            ("Yogaraj M", "ME - APP (Java, Spring Boot)", "Jagadish Kumar", 5, 5, 5, 5, 4.5),
+            ("Hanumanthakari Sai", "ME - DevOps", "Hari Kishore", null, null, null, null, null),
+            ("Renu Kumari", "SME - .Net, Azure", "Basavaraj", 5, 5, 5, 4.5, 4.5),
+            ("Deepa Murugesan", "SME - .Net, Azure", "Ravinder Rana", 5, 5, 5, 4, 4),
+            ("Manabendra Sardar", "SME - Java, Azure", "Sudheer Sreenivasa Murthy", 5, 5, 5, 5, 4.5),
+            ("Pradeep Kumar Mamidi", "Architect - APP", "Girish Babu N", 5, 5, 5, 5, 5),
+            ("PraveenChand Kopila", "SME - Java", "Arun Kumar", 5, 5, 5, 4.5, 4.5),
+            ("Rama Subbu Lakshmi", "SME - .Net", "Ravinder Rana", 5, 5, 4.5, 4.5, 4.5),
+            ("Sasmita Das", "SME", "Basavaraj", 5, 5, 5, 4, 4),
+            ("Shreya Soni", "SME - Java", "Pradeep Kumar Mamidi", null, null, null, null, null),
+            ("Dhinakaran", "Architect - .Net, Azure", "Arun Kumar", null, null, null, null, null),
+            ("Sudhir Kumar Trivedi", ".Net, Azure", "Ankan Pal", null, null, null, null, null),
+            ("Ramchandra Gosavi", "SME - DevOps", "Ravinder Rana", 5, 5, 5, 4, 3.5),
+            ("Noorbasha Sufiyan", "SME - DevOps", "Ravinder Rana", 5, 5, 5, 3.5, 3.5),
+            ("Rajnish Mishra", "Architect - .Net, Azure", "Abhishek Sarkar", null, null, null, null, null),
+            ("Gaurav Sharma", "Architect - Java, Azure", "Amit Satish Bengali", null, null, null, null, null),
+            ("Supratik Panda", "SME - Java", "Pradeep Hoigegudde Rao", null, null, null, null, null),
+            ("Abhinav Jain", "ME - Java", "Ravinder Rana", 5, 5, 5, 3.5, 3.5),
+            ("Swadhin Kumar Nayak", "ME - DevOps", "Ravinder Rana", 5, 5, 5, 3.5, 3.5),
+            ("DiveyShree", "SME - DevOps", "Rakesh Kumar", 5, 5, 3, 2, 3),
+            ("Debjyoti Biswas", "SME - DevOps", "Ravinder Rana", 5, 5, 5, 3.5, 3.5),
+            ("Pawan Avu", "SME - DevOps - Lead", "Sudheer Sreenivasa Murthy", 5, 5, 5, 4.5, 5),
+            ("Mathu Mohan", "SME - DevOps - Lead", "Ravinder Rana", 5, 5, 5, 5, 5)
+        };
+
+        foreach (var r in rows)
+            db.PerformanceReviews.Add(new PerformanceReview
+            {
+                PersonName = r.Name,
+                Role = r.Role,
+                ReportingManager = r.Mgr,
+                Region = "EMEA",
+                ReviewDate = today,
+                CommunicationVerbal = r.V,
+                CommunicationWritten = r.W,
+                Attitude = r.A,
+                ProcessUnderstanding = r.P,
+                OfferingUnderstanding = r.O
+            });
     }
 
     private static async Task SeedAliasesAsync(AppDbContext db, CancellationToken ct)

@@ -17,6 +17,7 @@ public interface IApplicationDbContext
     DbSet<Nomination> Nominations { get; }
     DbSet<WaveLink> WaveLinks { get; }
     DbSet<OwnershipHistory> OwnershipHistory { get; }
+    DbSet<PerformanceReview> PerformanceReviews { get; }
 
     DbSet<RegionConfiguration> Regions { get; }
     DbSet<RoleConfiguration> Roles { get; }

@@ -1,5 +1,7 @@
-import { SearchBox, Text } from '@fluentui/react-components'
+import { Button, SearchBox, Text } from '@fluentui/react-components'
+import { ArrowDownloadRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { ErrorText, FilterSelect, Loading, Panel, StatusBadge, UtilizationBar } from '../components/common'
@@ -16,12 +18,20 @@ const heat: Record<string, string> = {
 
 const CAPACITY_STATUSES = ['Available', 'Partially Utilized', 'Fully Utilized', 'Overloaded']
 
+const BANDS: { status: string; bg: string }[] = [
+  { status: 'Available', bg: 'var(--colorPaletteGreenBackground2)' },
+  { status: 'Partially Utilized', bg: 'var(--colorPaletteMarigoldBackground2)' },
+  { status: 'Fully Utilized', bg: 'var(--colorPaletteDarkOrangeBackground2)' },
+  { status: 'Overloaded', bg: 'var(--colorPaletteRedBackground2)' },
+]
+
 export function CapacityPage() {
   const { region } = useRegion()
   const { data, loading, error, reload } = useAsync(() => api.capacity(region), [region])
   const { data: clashes } = useAsync(() => api.leaveClashes(region), [region])
+  const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState(searchParams.get('status') ?? '')
   const debouncedSearch = useDebounced(search)
 
   const overloaded = (data ?? []).filter((c) => c.capacityStatus === 'Overloaded')
@@ -46,6 +56,44 @@ export function CapacityPage() {
         <KpiCard label="Overloaded resources" value={overloaded.length} tone={overloaded.length ? 'danger' : 'success'} />
         <KpiCard label="Leave-clash risks" value={clashes?.length ?? 0} tone={(clashes?.length ?? 0) ? 'warning' : 'success'} />
       </div>
+
+      {data && data.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {BANDS.map((b) => {
+            const count = data.filter((c) => c.capacityStatus === b.status).length
+            const active = status === b.status
+            const toggle = () => setStatus(active ? '' : b.status)
+            return (
+              <div
+                key={b.status}
+                onClick={toggle}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
+                title={`Filter to ${b.status}`}
+                style={{
+                  cursor: 'pointer',
+                  flex: '1 1 150px',
+                  minWidth: 140,
+                  borderRadius: 8,
+                  padding: '10px 14px',
+                  background: b.bg,
+                  border: active ? '2px solid var(--colorNeutralForeground1)' : '1px solid var(--colorNeutralStroke2)',
+                }}
+              >
+                <Text size={100} style={{ textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--colorNeutralForeground2)' }}>
+                  {b.status}
+                </Text>
+                <div>
+                  <Text size={700} weight="bold">
+                    {count}
+                  </Text>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {overloaded.length > 0 && (
         <Panel title={`Overloaded — needs rebalancing (${overloaded.length})`}>
@@ -93,6 +141,9 @@ export function CapacityPage() {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <SearchBox placeholder="Search resource" value={search} onChange={(_, d) => setSearch(d.value)} style={{ minWidth: 180 }} />
             <FilterSelect label="Status" value={status} options={CAPACITY_STATUSES} onChange={setStatus} minWidth={170} />
+            <Button as="a" href={api.exportUrl('capacity', region)} appearance="secondary" icon={<ArrowDownloadRegular />}>
+              Export
+            </Button>
           </div>
         }
       >

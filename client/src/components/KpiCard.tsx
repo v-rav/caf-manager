@@ -5,6 +5,7 @@ interface KpiCardProps {
   value: number | string
   tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'brand'
   blocked?: number
+  onClick?: () => void
 }
 
 const toneColor: Record<NonNullable<KpiCardProps['tone']>, string> = {
@@ -15,9 +16,14 @@ const toneColor: Record<NonNullable<KpiCardProps['tone']>, string> = {
   brand: 'var(--colorBrandForeground1)',
 }
 
-export function KpiCard({ label, value, tone = 'neutral', blocked }: KpiCardProps) {
+export function KpiCard({ label, value, tone = 'neutral', blocked, onClick }: KpiCardProps) {
   return (
     <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
+      title={onClick ? `View ${label}` : undefined}
       style={{
         position: 'relative',
         background: 'var(--colorNeutralBackground1)',
@@ -27,6 +33,7 @@ export function KpiCard({ label, value, tone = 'neutral', blocked }: KpiCardProp
         minWidth: 150,
         flex: '1 1 160px',
         boxShadow: 'var(--shadow2)',
+        cursor: onClick ? 'pointer' : 'default',
       }}
     >
       {blocked && blocked > 0 ? (

@@ -34,11 +34,16 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
 
         var h = ExcelHelpers.MapHeaders(rows[0]);
         var colTpid = ExcelHelpers.FindColumn(h, "TPID", "TP ID");
+        var colTaskId = ExcelHelpers.FindColumn(h, "Task Id", "TaskId");
         var colExtId = ExcelHelpers.FindColumn(h, "Account ID", "AccountId");
         var colCustomer = ExcelHelpers.FindColumn(h, "Customer Name", "Customer", "Account Name");
         var colOffering = ExcelHelpers.FindColumn(h, "Offering Name", "Offering", "Wave");
         var colNominated = ExcelHelpers.FindColumn(h, "Nominated date", "Nominated", "Wave Created");
         var colMigration = ExcelHelpers.FindColumn(h, "Migration Status");
+        var colStage1 = ExcelHelpers.FindColumn(h, "Validating & Initial Scope", "1 - Validating");
+        var colStage2 = ExcelHelpers.FindColumn(h, "Executing Pre-Requisites", "2 - Executing Pre");
+        var colStage3 = ExcelHelpers.FindColumn(h, "Finalize Scope", "3 - Finalize");
+        var colStage4 = ExcelHelpers.FindColumn(h, "Executing Migration", "4 - Executing Migration");
         var colApproval = ExcelHelpers.FindColumn(h, "Approval Status", "Nomination Approval");
         var colRegion = ExcelHelpers.FindColumn(h, "Region", "Area");
         var colSummary = ExcelHelpers.FindColumn(h, "Status Summary");
@@ -50,6 +55,12 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
 
         var resolver = new AccountResolver(_db);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenTaskIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // FDO drops are full snapshots keyed by Task Id — preload for upsert-merge.
+        var existing = await _db.Nominations.ToListAsync(ct);
+        var byTaskId = existing.Where(n => !string.IsNullOrWhiteSpace(n.ExternalTaskId))
+            .GroupBy(n => n.ExternalTaskId!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         var imported = 0;
 
         foreach (var row in rows.Skip(1))
@@ -74,31 +85,78 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             if (!seen.Add($"{account.AccountId}|{offering}"))
                 continue;
 
+            var taskId = Clean(ExcelHelpers.GetString(row, colTaskId));
             var migration = Clean(ExcelHelpers.GetString(row, colMigration));
+            var stageDays = new int?[]
+            {
+                ParseDays(ExcelHelpers.GetString(row, colStage1)),
+                ParseDays(ExcelHelpers.GetString(row, colStage2)),
+                ParseDays(ExcelHelpers.GetString(row, colStage3)),
+                ParseDays(ExcelHelpers.GetString(row, colStage4)),
+            };
+            var stageIdx = StageIndex(migration);
+            var stageAge = stageIdx is int si ? stageDays[si - 1] : null;
             var approval = Clean(ExcelHelpers.GetString(row, colApproval));
             var opened = ParseDate(row, colNominated) ?? DateOnly.FromDateTime(DateTime.UtcNow);
+            var regionValue = region == "UNSPECIFIED" ? account.Region : region;
 
-            _db.Nominations.Add(new Nomination
+            // Match by stable Task Id; fall back to (account + offering) to adopt legacy rows once.
+            Nomination? nom = null;
+            if (taskId is not null && byTaskId.TryGetValue(taskId, out var byId))
+                nom = byId;
+            nom ??= existing.FirstOrDefault(n => string.IsNullOrWhiteSpace(n.ExternalTaskId)
+                && n.AccountId == account.AccountId
+                && string.Equals(n.Technology, offering, StringComparison.OrdinalIgnoreCase));
+
+            if (nom is null)
             {
-                AccountId = account.AccountId,
-                AccountName = account.AccountName,
-                Technology = offering,
-                Region = region == "UNSPECIFIED" ? account.Region : region,
-                Status = MapStatus(migration, approval),
-                OpenedDate = opened,
-                Remarks = BuildRemarks(approval, migration,
-                    ExcelHelpers.GetString(row, colSummary) ?? ExcelHelpers.GetString(row, colNextAction)),
-                MigrationStatus = migration,
-                CurrentState = Truncate(Clean(ExcelHelpers.GetString(row, colCurrentState)), 2000),
-                SolutionArchitect = Clean(ExcelHelpers.GetString(row, colSolutionArchitect)),
-                CftlPrimary = Clean(ExcelHelpers.GetString(row, colCftl)),
-                ProjectCoordinator = Clean(ExcelHelpers.GetString(row, colProjectCoordinator))
-            });
+                nom = new Nomination { OpenedDate = opened, Status = MapStatus(migration, approval) };
+                _db.Nominations.Add(nom);
+                existing.Add(nom);
+            }
+
+            if (taskId is not null)
+            {
+                nom.ExternalTaskId = taskId;
+                byTaskId[taskId] = nom;
+                seenTaskIds.Add(taskId);
+            }
+
+            // FDO-owned fields — refreshed every drop.
+            nom.AccountId = account.AccountId;
+            nom.AccountName = account.AccountName;
+            nom.Technology = offering;
+            nom.Region = regionValue;
+            nom.MigrationStatus = migration;
+            nom.StageAgeDays = stageAge;
+            nom.CurrentState = Truncate(Clean(ExcelHelpers.GetString(row, colCurrentState)), 2000);
+            nom.SolutionArchitect = Clean(ExcelHelpers.GetString(row, colSolutionArchitect));
+            nom.CftlPrimary = Clean(ExcelHelpers.GetString(row, colCftl));
+            nom.ProjectCoordinator = Clean(ExcelHelpers.GetString(row, colProjectCoordinator));
+            // Portal-owned (Status, BlockedReason, BlockedSince, FollowUpDate, WaveLinks) preserved.
+            // Remarks: seed from FDO on first insert; keep portal edits thereafter.
+            if (string.IsNullOrWhiteSpace(nom.Remarks))
+                nom.Remarks = BuildRemarks(approval, migration,
+                    ExcelHelpers.GetString(row, colSummary) ?? ExcelHelpers.GetString(row, colNextAction));
+
             imported++;
         }
 
         await _db.SaveChangesAsync(ct);
-        _logger.LogInformation("NominationImportService imported {Count} nominations", imported);
+
+        // Missing from this drop → soft-withdraw (preserve history + waves; never hard-delete).
+        var withdrawnCount = 0;
+        foreach (var n in existing.Where(n => !string.IsNullOrWhiteSpace(n.ExternalTaskId)
+            && !seenTaskIds.Contains(n.ExternalTaskId!)
+            && n.Status is not NominationStatusType.Withdrawn and not NominationStatusType.Closed))
+        {
+            n.Status = NominationStatusType.Withdrawn;
+            withdrawnCount++;
+        }
+        if (withdrawnCount > 0)
+            await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation("NominationImportService: {Imported} upserted, {Withdrawn} withdrawn", imported, withdrawnCount);
         return imported;
     }
 
@@ -135,6 +193,25 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
         if (m.Contains("executing") || m.Contains("finalize"))
             return NominationStatusType.InProgress;
         return NominationStatusType.Open;
+    }
+
+    // Migration Status text → numeric stage (1–4) of the migration journey.
+    private static int? StageIndex(string? migration)
+    {
+        var m = migration?.ToLowerInvariant() ?? string.Empty;
+        if (m.Contains("validating")) return 1;
+        if (m.Contains("pre-requisite") || m.Contains("pre requisite") || m.Contains("prerequisite")) return 2;
+        if (m.Contains("finalize")) return 3;
+        if (m.Contains("executing migration")) return 4;
+        return null;
+    }
+
+    // Parses a leading integer out of a "N days" stage cell.
+    private static int? ParseDays(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var match = System.Text.RegularExpressions.Regex.Match(text, "-?\\d+");
+        return match.Success && int.TryParse(match.Value, out var n) ? n : null;
     }
 
     private static string BuildRemarks(string? approval, string? migration, string? detail)

@@ -15,7 +15,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
     {
         var (warn, escalate, defer) = await GetStaleTiersAsync(ct);
 
-        var query = _db.Nominations.AsNoTracking().Include(n => n.WaveLinks).AsQueryable();
+        var query = _db.Nominations.AsNoTracking().Include(n => n.WaveLinks).Include(n => n.Account).AsQueryable();
         if (!string.IsNullOrWhiteSpace(region))
             query = query.Where(n => n.Region == region);
         if (!string.IsNullOrWhiteSpace(status) && TryParseStatus(status, out var parsed))
@@ -27,18 +27,22 @@ public class NominationService(IApplicationDbContext db) : INominationService
         return items.Select(n =>
         {
             var lastTouch = n.UpdatedUtc ?? n.CreatedUtc;
-            var days = Math.Max(0, today.DayNumber - DateOnly.FromDateTime(lastTouch.UtcDateTime).DayNumber);
+            var updateDays = Math.Max(0, today.DayNumber - DateOnly.FromDateTime(lastTouch.UtcDateTime).DayNumber);
+            // Age = days in the current migration stage when available; else fall back to update recency.
+            var days = n.StageAgeDays ?? updateDays;
             return new NominationDto
             {
                 Id = n.Id,
                 AccountId = n.AccountId,
                 AccountName = n.AccountName ?? n.Account?.AccountName,
+                Tpid = n.Account?.Tpid,
                 Technology = n.Technology,
                 Region = n.Region,
                 Status = n.Status.ToDisplay(),
                 OpenedDate = n.OpenedDate,
                 Remarks = n.Remarks,
                 MigrationStatus = n.MigrationStatus,
+                StageAgeDays = n.StageAgeDays,
                 CurrentState = n.CurrentState,
                 SolutionArchitect = n.SolutionArchitect,
                 CftlPrimary = n.CftlPrimary,
@@ -47,7 +51,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 BlockedSince = n.BlockedSince,
                 FollowUpDate = n.FollowUpDate,
                 DaysSinceUpdate = days,
-                StaleTier = StaleTier(n.Status, days, warn, escalate, defer),
+                StaleTier = StaleTier(n.Status, StageIndex(n.MigrationStatus), days, warn, escalate, defer),
                 Waves = n.WaveLinks
                     .OrderBy(w => w.WaveType)
                     .Select(w => new WaveLinkDto { Id = w.Id, WaveType = w.WaveType.ToDisplay(), Reference = w.Reference, Notes = w.Notes })
@@ -119,10 +123,24 @@ public class NominationService(IApplicationDbContext db) : INominationService
         return (Get("StaleWarnDays", 3), Get("StaleEscalateDays", 5), Get("StaleDeferDays", 10));
     }
 
-    private static string StaleTier(NominationStatusType status, int days, int warn, int escalate, int defer)
+    // Migration Status text → numeric stage (1–4). The SLA cadence applies to execution stages 2–4.
+    private static int? StageIndex(string? migration)
     {
-        // Completed/closed/deferred items are settled — not chased.
-        if (status is NominationStatusType.Completed or NominationStatusType.Closed or NominationStatusType.CustomerDeferred)
+        var m = migration?.ToLowerInvariant() ?? string.Empty;
+        if (m.Contains("validating")) return 1;
+        if (m.Contains("pre-requisite") || m.Contains("pre requisite") || m.Contains("prerequisite")) return 2;
+        if (m.Contains("finalize")) return 3;
+        if (m.Contains("executing migration")) return 4;
+        return null;
+    }
+
+    private static string StaleTier(NominationStatusType status, int? stage, int days, int warn, int escalate, int defer)
+    {
+        // Documented cadence applies to execution stages 2–4 only (not initial validation/scoping).
+        if (stage is null or < 2)
+            return string.Empty;
+        // Completed/closed/deferred/withdrawn items are settled — not chased.
+        if (status is NominationStatusType.Completed or NominationStatusType.Closed or NominationStatusType.CustomerDeferred or NominationStatusType.Withdrawn)
             return string.Empty;
         if (days >= defer) return "Defer";
         if (days >= escalate) return "Escalate";

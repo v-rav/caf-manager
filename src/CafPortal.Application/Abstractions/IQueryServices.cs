@@ -64,3 +64,15 @@ public interface INominationService
     Task<WaveLinkDto?> AddWaveLinkAsync(int nominationId, WaveLinkUpsertDto input, CancellationToken ct = default);
     Task<bool> DeleteWaveLinkAsync(int nominationId, int waveLinkId, CancellationToken ct = default);
 }
+
+public interface IPerformanceReviewService
+{
+    /// <summary>Latest review per person, with trend vs their previous review and training flags.</summary>
+    Task<IReadOnlyList<PerformanceReviewDto>> GetLatestAsync(string? region, CancellationToken ct = default);
+
+    /// <summary>Full dated history for one person (oldest → newest).</summary>
+    Task<IReadOnlyList<PerformanceReviewDto>> GetHistoryAsync(string personName, CancellationToken ct = default);
+
+    /// <summary>Adds a new dated review snapshot.</summary>
+    Task<PerformanceReviewDto> CreateAsync(PerformanceReviewUpsertDto input, CancellationToken ct = default);
+}

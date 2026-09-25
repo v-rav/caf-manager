@@ -5,6 +5,7 @@ public class NominationDto
     public int Id { get; set; }
     public int? AccountId { get; set; }
     public string? AccountName { get; set; }
+    public string? Tpid { get; set; }
     public string? Technology { get; set; }
     public string Region { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
@@ -12,6 +13,8 @@ public class NominationDto
     public string? Remarks { get; set; }
 
     public string? MigrationStatus { get; set; }
+    /// <summary>Days spent in the current migration stage (from the stage's day-count column).</summary>
+    public int? StageAgeDays { get; set; }
     public string? CurrentState { get; set; }
     public string? SolutionArchitect { get; set; }
     public string? CftlPrimary { get; set; }

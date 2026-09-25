@@ -1,5 +1,6 @@
 using CafPortal.Application.Abstractions;
 using CafPortal.Application.Dtos;
+using CafPortal.Domain.Entities.Configuration;
 using CafPortal.Infrastructure.Options;
 using CafPortal.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -83,7 +84,7 @@ public class DataRefreshService(
 
             if (File.Exists(nominationPath))
             {
-                await _db.Nominations.ExecuteDeleteAsync(ct);
+                // Upsert-merge (keyed by Task Id) preserves portal edits; no destructive delete.
                 result.NominationRecords = await TryImportAsync(nominationPath, _nominationImport, "Nomination pipeline", result, ct);
             }
             else
@@ -107,7 +108,37 @@ public class DataRefreshService(
         }
 
         result.CompletedUtc = DateTimeOffset.UtcNow;
+        if (result.Success)
+            await StampRefreshAsync(result.CompletedUtc, ct);
         return result;
+    }
+
+    private const string LastRefreshKey = "LastDataRefreshUtc";
+
+    public async Task<DataStatusDto> GetStatusAsync(CancellationToken ct = default)
+    {
+        var setting = await _db.ApplicationSettings.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Key == LastRefreshKey, ct);
+        DateTimeOffset? last = DateTimeOffset.TryParse(setting?.Value, out var dt) ? dt : null;
+        return new DataStatusDto
+        {
+            LastRefreshUtc = last,
+            Resources = await _db.Resources.CountAsync(ct),
+            Accounts = await _db.Accounts.CountAsync(ct),
+            Nominations = await _db.Nominations.CountAsync(ct),
+            LeaveRecords = await _db.LeaveFacts.CountAsync(ct),
+            PerformanceReviews = await _db.PerformanceReviews.CountAsync(ct),
+        };
+    }
+
+    private async Task StampRefreshAsync(DateTimeOffset when, CancellationToken ct)
+    {
+        var setting = await _db.ApplicationSettings.FirstOrDefaultAsync(s => s.Key == LastRefreshKey, ct);
+        if (setting is null)
+            _db.ApplicationSettings.Add(new ApplicationSetting { Key = LastRefreshKey, Value = when.ToString("O"), Description = "Timestamp of the last successful data refresh." });
+        else
+            setting.Value = when.ToString("O");
+        await _db.SaveChangesAsync(ct);
     }
 
     private async Task<int> TryImportAsync(string path, dynamic service, string label,

@@ -5,6 +5,7 @@ import type {
   AccountUpsert,
   CapacityRow,
   ExecutiveDashboard,
+  DataStatus,
   LeaveClash,
   LeaveItem,
   LeaveUpsert,
@@ -12,6 +13,8 @@ import type {
   Nomination,
   NominationUpdate,
   OperationsSetting,
+  PerformanceReview,
+  PerformanceReviewUpsert,
   RegionOption,
   Resource,
   ResourceDetail,
@@ -29,6 +32,13 @@ const http = axios.create({ baseURL: '' })
 export const api = {
   dashboard: (region?: string) =>
     http.get<ExecutiveDashboard>('/api/dashboard/executive', { params: { region } }).then((r) => r.data),
+
+  adminStatus: () => http.get<DataStatus>('/api/admin/status').then((r) => r.data),
+
+  exportUrl: (
+    what: 'resources' | 'capacity' | 'nominations' | 'performance' | 'summary',
+    region?: string,
+  ) => `/api/export/${what}${region ? `?region=${encodeURIComponent(region)}` : ''}`,
 
   resources: (params: Record<string, string | undefined>) =>
     http.get<Resource[]>('/api/resources', { params }).then((r) => r.data),
@@ -124,6 +134,13 @@ export const api = {
     http.get<OperationsSetting[]>('/api/configuration/settings').then((r) => r.data),
   updateOperationsSettings: (updates: { key: string; value: string }[]) =>
     http.put<OperationsSetting[]>('/api/configuration/settings', updates).then((r) => r.data),
+
+  performance: (region?: string) =>
+    http.get<PerformanceReview[]>('/api/performance', { params: { region } }).then((r) => r.data),
+  performanceHistory: (personName: string) =>
+    http.get<PerformanceReview[]>(`/api/performance/${encodeURIComponent(personName)}/history`).then((r) => r.data),
+  addPerformanceReview: (input: PerformanceReviewUpsert) =>
+    http.post<PerformanceReview>('/api/performance', input).then((r) => r.data),
 
   refresh: () => http.post('/api/admin/refresh').then((r) => r.data),
 }

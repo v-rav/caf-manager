@@ -28,4 +28,7 @@ public interface INominationImportService
 public interface IDataRefreshService
 {
     Task<DataRefreshResultDto> RefreshAsync(CancellationToken ct = default);
+
+    /// <summary>Freshness + row counts for the header banner.</summary>
+    Task<DataStatusDto> GetStatusAsync(CancellationToken ct = default);
 }
