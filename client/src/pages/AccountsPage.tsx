@@ -7,8 +7,8 @@ import {
   Switch,
   Text,
 } from '@fluentui/react-components'
-import { AddRegular, DeleteRegular, EditRegular } from '@fluentui/react-icons'
-import { useState } from 'react'
+import { AddRegular, ArrowUploadRegular, DeleteRegular, EditRegular } from '@fluentui/react-icons'
+import { useRef, useState } from 'react'
 import { api } from '../api'
 import { ConfirmDialog, Modal } from '../components/Modal'
 import { DataTable } from '../components/DataTable'
@@ -35,6 +35,21 @@ export function AccountsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
   const [busy, setBusy] = useState(false)
   const [history, setHistory] = useState<OwnershipHistory[]>([])
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const onUploadMaster = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      await api.uploadData('accounts', file)
+      reload()
+    } finally {
+      setUploading(false)
+      if (fileInput.current) fileInput.current.value = ''
+    }
+  }
 
   const openCreate = () => {
     setEditId(null)
@@ -100,6 +115,16 @@ export function AccountsPage() {
         action={
           <div style={{ display: 'flex', gap: 8 }}>
             <SearchBox placeholder="Search account" value={search} onChange={(_, d) => setSearch(d.value)} style={{ minWidth: 200 }} />
+            <input ref={fileInput} type="file" accept=".xlsx" onChange={onUploadMaster} style={{ display: 'none' }} />
+            <Button
+              appearance="secondary"
+              icon={<ArrowUploadRegular />}
+              disabled={uploading}
+              onClick={() => fileInput.current?.click()}
+              title="Import the account master list (Segment / TPID / Customer Name / Account ID)"
+            >
+              {uploading ? 'Importing…' : 'Import master'}
+            </Button>
             <Button appearance="primary" icon={<AddRegular />} onClick={openCreate}>
               Add
             </Button>
@@ -119,6 +144,7 @@ export function AccountsPage() {
             emptyMessage="No accounts match your search."
             columns={[
               { key: 'account', header: 'Account', sortValue: (a) => a.accountName },
+              { key: 'tpid', header: 'TPID', sortValue: (a) => a.tpid ?? '', render: (a) => a.tpid ?? '—' },
               { key: 'region', header: 'Region', sortValue: (a) => a.region },
               { key: 'segment', header: 'Segment', sortValue: (a) => a.segment ?? '', render: (a) => a.segment ?? '—' },
               { key: 'resources', header: 'Resources', align: 'center', sortValue: (a) => a.resourceCount },

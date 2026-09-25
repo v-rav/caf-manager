@@ -96,6 +96,21 @@ import the **web app is the system of record**.
     documented governance action per tier (Day 3 remind → Blocked, Day 5 2nd remind, Day 10 →
     Customer Deferred) plus the **>6-week-in-stage** (`DEFER_WEEKS_DAYS=42`) Customer-Deferred rule are
     surfaced as the "Next step" line in the Summary hover (`recommendedAction()` in `NominationsPage`).
+    **Per-stage target days** (`StageTargetDays1..4`, defaults 10/10/5/23 from the FDO TARGET columns) are
+    editable in Configuration → Operations Settings; currently informational (config-only), not yet wired
+    into `StaleTier` (that swap is the PV-01 decision).
+- **Account master data** (single source of truth): `Account` carries identity (`AccountId`, `Tpid`,
+    `ExternalAccountId`, `AccountName`, `Segment`, `Region`, `Status`, `StrategicFlag`) + the ownership
+    matrix. `AccountMasterImportService` loads **`Nominations In-Flight.xlsx`** (Segment · TPID · Customer
+    Name · Account ID) — one row per in-flight nomination, so it **dedups by TPID** (→ Account ID →
+    alias-aware name) to one record per account, **upsert-merges** (sets canonical Name + Segment +
+    ExternalAccountId, adds missing, syncs the segment vocabulary), and is **additive — never deletes,
+    never touches ownership/region/status**. Upload kind **`accounts`** (Accounts page → *Import master*),
+    wired into `DataRefreshService` after nominations. The FDO nominations import **also creates accounts**
+    by TPID (`ResolveAccountAsync`) — but leaves **Segment blank**, which the master file backfills
+    (segment-present = "in master list"). New master accounts get `Region=UNSPECIFIED` (not in the file).
+    The **Accounts page** owns master + ownership actions only; associated info (resources, nominations,
+    engagements) lives on its own page.
 - **Regions**: Global Lead → EMEA (Ravinder Rana) / ASIA. Region scope flows from `region.tsx`.
 
 ## UI conventions
@@ -127,7 +142,24 @@ import the **web app is the system of record**.
 - `GET /api/admin/status` → counts + `lastRefreshUtc` (stamped by `DataRefreshService` on every
   successful import). Surfaced as "Updated Xm ago" in the header.
 - `GET /api/export/{resources|capacity|nominations|performance|summary}` → `.xlsx` (ClosedXML
-  `ExportService` in Infrastructure). Keep export columns in sync when grid columns change.
+  `ExportService` in Infrastructure). Keep export columns in sync when grid columns change. The
+  **nominations** export is filter-aware: it accepts the same query params as the grid
+  (`approval`, `migrationStatus`, `currentState`, `sla`, `links`, `search`, `region`) so the file
+  matches the on-screen view — the Export button passes the live filter state via
+  `api.exportUrl('nominations', region, {...})`. It writes a numeric **Stage** column (1–4), a frozen
+  header + autofilter, and a second **Analysis** sheet with pivot-style counts (by approval, stage,
+  region, SLA stale tier, wave linkage) of the filtered set.
+- **Backup & Restore** (`/backup` page, database icon in nav; `BackupService` in Infrastructure,
+  `BackupController`). `GET /api/backup/download` → a consistent, zipped SQLite snapshot via
+  `VACUUM INTO` (`cafdb_backup_<utc>.zip`, entry `cafdb.sqlite`); safe to run anytime. `POST
+  /api/backup/restore` (multipart, 100 MB cap) **replaces the live DB**: it extracts the DB from the
+  zip, **validates** it (`PRAGMA integrity_check` + confirms a `Nominations` table), keeps a
+  server-side safety copy `cafdb.sqlite.prerestore_<utc>` next to the DB, releases EF/SQLite handles
+  (`ChangeTracker.Clear` + `CloseConnection` + `SqliteConnection.ClearAllPools()` + GC), swaps the
+  file, deletes stale `-wal`/`-shm` sidecars, then runs `MigrateAsync` and returns post-restore
+  counts. The validation connection uses `Pooling=false` so the temp file can be deleted; an invalid
+  zip returns **400** with a message. ⚠ Restore is **unauthenticated** (like the rest pre-Entra) and
+  `prerestore_*` copies accumulate in `App_Data` (gitignored) — add auth + a keep-last-N prune later.
 
 ## Editing rules for agents
 - Read a file before editing; keep changes minimal and scoped to the request.
@@ -139,7 +171,9 @@ import the **web app is the system of record**.
 - Don't create extra markdown docs unless asked. This file is the exception (living guide).
 
 ## Roadmap
-See `DEVELOPMENT-PLAN.md` §6 (Phase 4). Shipped: data-freshness banner, Excel export, dashboard
-drill-through, capacity heat-band, Nominations restructure (Stage/Status/Summary/TPID/PM/CFTL/SA).
+See `DEVELOPMENT-PLAN.md` §6 (Phase 4). Shipped: data-freshness banner, Excel export (filter-aware
+nominations export + Analysis sheet), dashboard drill-through, capacity heat-band, Nominations
+restructure (Stage/Status/Summary/TPID/PM/CFTL/SA), approval-status default-Approved, DB
+backup/restore (`/backup`).
 Backlog: Leave intake data source, trends/snapshots, my-view, global search, Entra auth, in-app
 upload, API smoke tests.

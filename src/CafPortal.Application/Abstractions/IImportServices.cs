@@ -24,6 +24,12 @@ public interface INominationImportService
     Task<int> ImportAsync(Stream workbook, CancellationToken ct = default);
 }
 
+/// <summary>Loads the account master list ("Nominations In-Flight": Segment, TPID, Customer Name, Account ID).</summary>
+public interface IAccountMasterImportService
+{
+    Task<int> ImportAsync(Stream workbook, CancellationToken ct = default);
+}
+
 /// <summary>Orchestrates the nightly pipeline: load sources, transform, rebuild capacity facts.</summary>
 public interface IDataRefreshService
 {

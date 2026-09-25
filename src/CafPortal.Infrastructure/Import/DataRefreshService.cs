@@ -21,6 +21,7 @@ public class DataRefreshService(
     ILeaveImportService leaveImport,
     IEngagementImportService engagementImport,
     INominationImportService nominationImport,
+    IAccountMasterImportService accountMasterImport,
     ICapacityRebuildService capacityRebuild,
     IHostEnvironment env,
     IOptions<SourceFileOptions> sourceOptions,
@@ -31,6 +32,7 @@ public class DataRefreshService(
     private readonly ILeaveImportService _leaveImport = leaveImport;
     private readonly IEngagementImportService _engagementImport = engagementImport;
     private readonly INominationImportService _nominationImport = nominationImport;
+    private readonly IAccountMasterImportService _accountMasterImport = accountMasterImport;
     private readonly ICapacityRebuildService _capacityRebuild = capacityRebuild;
     private readonly IHostEnvironment _env = env;
     private readonly SourceFileOptions _sources = sourceOptions.Value;
@@ -50,6 +52,7 @@ public class DataRefreshService(
             var leavePath = Path.Combine(baseDir, _sources.LeaveFile);
             var engagementPath = Path.Combine(baseDir, _sources.EngagementFile);
             var nominationPath = Path.Combine(baseDir, _sources.NominationFile);
+            var accountMasterPath = Path.Combine(baseDir, _sources.AccountMasterFile);
 
             // Only clear a fact table when its source file exists; otherwise preserve seeded/manual data.
             if (File.Exists(resourcePath))
@@ -92,6 +95,16 @@ public class DataRefreshService(
                 result.Messages.Add($"Nomination pipeline: source file not found ({_sources.NominationFile}), preserved existing data.");
             }
 
+            // Account master list enriches accounts (canonical name + segment); additive upsert, runs after nominations.
+            if (File.Exists(accountMasterPath))
+            {
+                await TryImportAsync(accountMasterPath, _accountMasterImport, "Account master", result, ct);
+            }
+            else
+            {
+                result.Messages.Add($"Account master: source file not found ({_sources.AccountMasterFile}), preserved existing data.");
+            }
+
             result.AccountsImported = await _db.Accounts.CountAsync(ct);
             result.ResourceAccountLinks = await _db.ResourceAccounts.CountAsync(ct);
             await SyncStrategicFlagsAsync(ct);
@@ -126,6 +139,7 @@ public class DataRefreshService(
             "resources" or "resource" => _sources.ResourceFile,
             "leave" => _sources.LeaveFile,
             "engagement" => _sources.EngagementFile,
+            "accounts" or "account-master" or "accountmaster" => _sources.AccountMasterFile,
             _ => throw new InvalidOperationException($"Unknown upload kind '{kind}'.")
         };
 

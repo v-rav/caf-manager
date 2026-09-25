@@ -32,6 +32,8 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
                 StrategicFlag = a.StrategicFlag,
                 PriorityWeight = a.PriorityWeight,
                 Segment = a.Segment,
+                Tpid = a.Tpid,
+                ExternalAccountId = a.ExternalAccountId,
                 ProjectManager = a.ProjectManager,
                 SolutionArchitect = a.SolutionArchitect,
                 Cftl = a.Cftl,

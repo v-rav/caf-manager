@@ -9,6 +9,8 @@ public class AccountDto
     public bool StrategicFlag { get; set; }
     public int PriorityWeight { get; set; }
     public string? Segment { get; set; }
+    public string? Tpid { get; set; }
+    public string? ExternalAccountId { get; set; }
     public int ResourceCount { get; set; }
 
     public string? ProjectManager { get; set; }

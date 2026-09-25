@@ -11,4 +11,5 @@ public class SourceFileOptions
     public string LeaveFile { get; set; } = "LeaveCal.xlsx";
     public string EngagementFile { get; set; } = "Time-hunt_Tracking.xlsx";
     public string NominationFile { get; set; } = "Detail View.xlsx";
+    public string AccountMasterFile { get; set; } = "Nominations In-Flight.xlsx";
 }
