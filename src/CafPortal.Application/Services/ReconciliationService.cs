@@ -283,6 +283,76 @@ public class ReconciliationService(IApplicationDbContext db) : IReconciliationSe
         };
     }
 
+    public async Task<UnmatchedPeopleResultDto> GetUnmatchedPeopleAsync(string? region, CancellationToken ct = default)
+    {
+        var scoped = !string.IsNullOrWhiteSpace(region) && !region.Equals("Global", StringComparison.OrdinalIgnoreCase);
+
+        // Alias-aware set of portal resource names.
+        var resources = await _db.Resources.AsNoTracking()
+            .Select(r => new { r.Name, r.Aliases }).ToListAsync(ct);
+        var known = new HashSet<string>();
+        foreach (var r in resources)
+        {
+            var names = new List<string> { r.Name };
+            if (!string.IsNullOrWhiteSpace(r.Aliases))
+                names.AddRange(r.Aliases.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            foreach (var nm in names)
+            {
+                var k = Norm(nm);
+                if (k.Length > 0) known.Add(k);
+            }
+        }
+
+        // In-flight nominations carrying the three FDO ownership fields.
+        var noms = (await _db.Nominations.AsNoTracking()
+                .Where(n => n.ApprovalStatus == "Approved" && !Settled.Contains(n.Status))
+                .Select(n => new { n.Region, n.AccountName, n.SolutionArchitect, n.ProjectCoordinator, n.CftlPrimary })
+                .ToListAsync(ct))
+            .Where(n => !scoped || n.Region == region)
+            .ToList();
+
+        // (normalized name, role) -> aggregate of wave count, regions, sample accounts.
+        var agg = new Dictionary<(string Norm, string Role), (string Display, int Count, HashSet<string> Regions, HashSet<string> Accounts)>();
+        void Add(string? name, string role, string? regionVal, string? account)
+        {
+            var nm = (name ?? string.Empty).Trim();
+            if (nm.Length == 0) return;
+            var k = Norm(nm);
+            if (k.Length == 0 || known.Contains(k)) return; // already a portal resource
+            var key = (k, role);
+            if (!agg.TryGetValue(key, out var cur))
+                cur = (nm, 0, new HashSet<string>(StringComparer.OrdinalIgnoreCase), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+            cur.Count++;
+            if (!string.IsNullOrWhiteSpace(regionVal)) cur.Regions.Add(regionVal!);
+            if (!string.IsNullOrWhiteSpace(account)) cur.Accounts.Add(account!);
+            agg[key] = cur;
+        }
+        foreach (var n in noms)
+        {
+            Add(n.SolutionArchitect, "Solution Architect", n.Region, n.AccountName);
+            Add(n.ProjectCoordinator, "Project Coordinator (PM)", n.Region, n.AccountName);
+            Add(n.CftlPrimary, "CFTL", n.Region, n.AccountName);
+        }
+
+        var people = agg
+            .Select(kv => new UnmatchedPersonDto(
+                kv.Value.Display,
+                kv.Key.Role,
+                kv.Value.Count,
+                string.Join(", ", kv.Value.Regions.OrderBy(x => x)),
+                string.Join("; ", kv.Value.Accounts.Take(3))))
+            .OrderByDescending(p => p.WaveCount)
+            .ThenBy(p => p.Name)
+            .ToList();
+
+        return new UnmatchedPeopleResultDto
+        {
+            TotalPeople = people.Select(p => Norm(p.Name)).Distinct().Count(),
+            TotalReferences = people.Sum(p => p.WaveCount),
+            People = people
+        };
+    }
+
     // Resource role → delivery role for the seeded assignment (mirror of the picker's eligibility map).
     private static string MapRole(string? resourceRole)
     {

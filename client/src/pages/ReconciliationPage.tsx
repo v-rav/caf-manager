@@ -7,7 +7,7 @@ import { KpiCard } from '../components/KpiCard'
 import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
-import type { ReconciliationRow, SeedAssignmentResult } from '../types'
+import type { ReconciliationRow, SeedAssignmentResult, UnmatchedPerson } from '../types'
 
 const MATCH_TONE: Record<string, 'success' | 'warning' | 'danger'> = {
   Master: 'success',
@@ -23,6 +23,7 @@ const MATCH_LABEL: Record<string, string> = {
 export function ReconciliationPage() {
   const { region } = useRegion()
   const { data, loading, error, reload } = useAsync(() => api.reconciliation(region), [region])
+  const { data: gaps } = useAsync(() => api.unmatchedPeople(region), [region])
   const [matchFilter, setMatchFilter] = useState('')
   const [utilFilter, setUtilFilter] = useState('')
   const [search, setSearch] = useState('')
@@ -201,6 +202,41 @@ export function ReconciliationPage() {
                   {r.utilizationEffect}
                 </Badge>
               ),
+            },
+          ]}
+        />
+      </Panel>
+
+      <Panel title="FDO people not in the roster">
+        <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 10 }}>
+          Named in an FDO ownership field (SA / PM / CFTL) on in-flight waves but not a portal resource, so their
+          work isn't tracked. Add them on the Resource Hub (use an alias if the spelling differs) to close the gap.
+          {gaps ? ` ${gaps.totalPeople} people across ${gaps.totalReferences} references.` : ''}
+        </Text>
+        <DataTable<UnmatchedPerson>
+          ariaLabel="FDO people not in the roster"
+          rows={gaps?.people ?? []}
+          rowKey={(p) => `${p.role}-${p.name}`}
+          pageSize={25}
+          columns={[
+            { key: 'name', header: 'Name (FDO)', sortValue: (p) => p.name, render: (p) => p.name },
+            {
+              key: 'role',
+              header: 'Role',
+              sortValue: (p) => p.role,
+              render: (p) => (
+                <Badge appearance="tint" color={p.role.startsWith('Solution') ? 'brand' : 'informative'} size="small">
+                  {p.role}
+                </Badge>
+              ),
+            },
+            { key: 'waves', header: 'Waves', sortValue: (p) => p.waveCount, align: 'center', render: (p) => p.waveCount },
+            { key: 'regions', header: 'Regions', sortValue: (p) => p.regions, render: (p) => p.regions || '—' },
+            {
+              key: 'accounts',
+              header: 'Sample accounts',
+              sortValue: (p) => p.sampleAccounts,
+              render: (p) => p.sampleAccounts || '—',
             },
           ]}
         />

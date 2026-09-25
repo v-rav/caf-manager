@@ -12,6 +12,7 @@ import type {
   LeaveItem,
   ReconciliationReport,
   SeedAssignmentResult,
+  UnmatchedPeopleResult,
   LeaveUpsert,
   LeaveWindow,
   Nomination,
@@ -45,6 +46,11 @@ export const api = {
   seedAssignments: (region: string | undefined, apply: boolean) =>
     http
       .post<SeedAssignmentResult>('/api/reconciliation/seed', null, { params: { region, apply } })
+      .then((r) => r.data),
+
+  unmatchedPeople: (region?: string) =>
+    http
+      .get<UnmatchedPeopleResult>('/api/reconciliation/unmatched-people', { params: { region } })
       .then((r) => r.data),
 
   exportUrl: (

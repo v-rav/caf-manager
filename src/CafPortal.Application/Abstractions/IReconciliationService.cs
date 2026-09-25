@@ -15,4 +15,10 @@ public interface IReconciliationService
     /// Idempotent; pass apply=false for a read-only preview. Role is derived from the resource's own role.
     /// </summary>
     Task<SeedAssignmentResultDto> SeedAssignmentsAsync(string? region, bool apply, CancellationToken ct = default);
+
+    /// <summary>
+    /// List people named in FDO ownership fields (SA/PM/CFTL) on in-flight waves who have no matching
+    /// portal resource (by name or alias) — candidates to add to the roster. Read-only.
+    /// </summary>
+    Task<UnmatchedPeopleResultDto> GetUnmatchedPeopleAsync(string? region, CancellationToken ct = default);
 }

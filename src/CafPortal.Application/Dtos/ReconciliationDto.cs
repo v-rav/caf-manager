@@ -66,3 +66,19 @@ public class SeedAssignmentResultDto
     public int NominationsAffected { get; set; }
     public IReadOnlyList<SeedAssignmentRowDto> Sample { get; set; } = Array.Empty<SeedAssignmentRowDto>();
 }
+
+/// <summary>A person named in an FDO ownership field (SA/PM/CFTL) on in-flight waves who has no matching portal resource.</summary>
+public record UnmatchedPersonDto(
+    string Name,
+    string Role,          // Solution Architect | Project Coordinator (PM) | CFTL
+    int WaveCount,
+    string Regions,
+    string SampleAccounts);
+
+/// <summary>People referenced by FDO but absent from the resource roster — candidates to add so their work is tracked.</summary>
+public class UnmatchedPeopleResultDto
+{
+    public int TotalPeople { get; set; }
+    public int TotalReferences { get; set; }
+    public IReadOnlyList<UnmatchedPersonDto> People { get; set; } = Array.Empty<UnmatchedPersonDto>();
+}

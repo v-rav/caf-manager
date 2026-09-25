@@ -279,6 +279,20 @@ export interface SeedAssignmentResult {
   }[]
 }
 
+export interface UnmatchedPerson {
+  name: string
+  role: string
+  waveCount: number
+  regions: string
+  sampleAccounts: string
+}
+
+export interface UnmatchedPeopleResult {
+  totalPeople: number
+  totalReferences: number
+  people: UnmatchedPerson[]
+}
+
 export interface WaveLink {
   id: number
   waveType: string
