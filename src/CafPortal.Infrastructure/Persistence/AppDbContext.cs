@@ -18,6 +18,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WaveLink> WaveLinks => Set<WaveLink>();
     public DbSet<OwnershipHistory> OwnershipHistory => Set<OwnershipHistory>();
     public DbSet<PerformanceReview> PerformanceReviews => Set<PerformanceReview>();
+    public DbSet<ImportRun> ImportRuns => Set<ImportRun>();
+    public DbSet<ImportChange> ImportChanges => Set<ImportChange>();
 
     public DbSet<RegionConfiguration> Regions => Set<RegionConfiguration>();
     public DbSet<RoleConfiguration> Roles => Set<RoleConfiguration>();

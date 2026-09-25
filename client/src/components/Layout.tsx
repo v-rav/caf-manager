@@ -5,6 +5,7 @@ import {
   CalendarLtrRegular,
   DataPieRegular,
   GaugeRegular,
+  HistoryRegular,
   NavigationRegular,
   PeopleRegular,
   SettingsRegular,
@@ -27,6 +28,7 @@ const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
   { to: '/strategic', label: 'Strategic Accounts', icon: <StarRegular /> },
   { to: '/nominations', label: 'Nominations', icon: <ClipboardTaskListLtrRegular /> },
   { to: '/performance', label: 'Performance', icon: <PersonStarRegular /> },
+  { to: '/history', label: 'Import History', icon: <HistoryRegular /> },
   { to: '/configuration', label: 'Configuration', icon: <SettingsRegular /> },
 ]
 

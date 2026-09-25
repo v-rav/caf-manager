@@ -6,6 +6,8 @@ import type {
   CapacityRow,
   ExecutiveDashboard,
   DataStatus,
+  ImportChange,
+  ImportRun,
   LeaveClash,
   LeaveItem,
   LeaveUpsert,
@@ -149,4 +151,8 @@ export const api = {
     form.append('file', file)
     return http.post(`/api/admin/upload?kind=${kind}`, form).then((r) => r.data)
   },
+
+  imports: (take = 100) => http.get<ImportRun[]>('/api/imports', { params: { take } }).then((r) => r.data),
+  importChanges: (runId: number) =>
+    http.get<ImportChange[]>(`/api/imports/${runId}/changes`).then((r) => r.data),
 }

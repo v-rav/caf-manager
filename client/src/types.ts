@@ -29,6 +29,33 @@ export interface DataStatus {
   performanceReviews: number
 }
 
+export interface ImportRun {
+  id: number
+  startedUtc: string
+  completedUtc: string
+  source: string
+  fileName?: string
+  added: number
+  updated: number
+  withdrawn: number
+  unchanged: number
+}
+
+export interface FieldChange {
+  field: string
+  from?: string
+  to?: string
+}
+
+export interface ImportChange {
+  id: number
+  entityType: string
+  externalKey?: string
+  label?: string
+  changeType: string
+  changes: FieldChange[]
+}
+
 export interface Resource {
   resourceId: number
   psid?: string

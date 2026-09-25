@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using CafPortal.Application.Abstractions;
 using CafPortal.Domain.Entities;
 using CafPortal.Domain.Enums;
@@ -62,6 +63,8 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             .GroupBy(n => n.ExternalTaskId!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         var imported = 0;
+        var run = new ImportRun { StartedUtc = DateTime.UtcNow, Source = "nominations" };
+        var added = 0; var updated = 0; var unchanged = 0;
 
         foreach (var row in rows.Skip(1))
         {
@@ -108,7 +111,10 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
                 && n.AccountId == account.AccountId
                 && string.Equals(n.Technology, offering, StringComparison.OrdinalIgnoreCase));
 
-            if (nom is null)
+            var isNew = nom is null;
+            var before = isNew ? null : Snapshot(nom!);
+
+            if (isNew)
             {
                 nom = new Nomination { OpenedDate = opened, Status = MapStatus(migration, approval) };
                 _db.Nominations.Add(nom);
@@ -117,13 +123,13 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
 
             if (taskId is not null)
             {
-                nom.ExternalTaskId = taskId;
+                nom!.ExternalTaskId = taskId;
                 byTaskId[taskId] = nom;
                 seenTaskIds.Add(taskId);
             }
 
             // FDO-owned fields — refreshed every drop.
-            nom.AccountId = account.AccountId;
+            nom!.AccountId = account.AccountId;
             nom.AccountName = account.AccountName;
             nom.Technology = offering;
             nom.Region = regionValue;
@@ -139,6 +145,23 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
                 nom.Remarks = BuildRemarks(approval, migration,
                     ExcelHelpers.GetString(row, colSummary) ?? ExcelHelpers.GetString(row, colNextAction));
 
+            var label = $"{account.AccountName} \u00b7 {offering}";
+            if (isNew)
+            {
+                run.Changes.Add(new ImportChange { ExternalKey = taskId, Label = label, ChangeType = "Added" });
+                added++;
+            }
+            else
+            {
+                var diffs = DiffFields(before!, nom);
+                if (diffs is not null)
+                {
+                    run.Changes.Add(new ImportChange { ExternalKey = nom.ExternalTaskId, Label = label, ChangeType = "Updated", ChangedFields = diffs });
+                    updated++;
+                }
+                else unchanged++;
+            }
+
             imported++;
         }
 
@@ -151,13 +174,51 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             && n.Status is not NominationStatusType.Withdrawn and not NominationStatusType.Closed))
         {
             n.Status = NominationStatusType.Withdrawn;
+            run.Changes.Add(new ImportChange { ExternalKey = n.ExternalTaskId, Label = n.AccountName, ChangeType = "Withdrawn" });
             withdrawnCount++;
         }
         if (withdrawnCount > 0)
             await _db.SaveChangesAsync(ct);
 
-        _logger.LogInformation("NominationImportService: {Imported} upserted, {Withdrawn} withdrawn", imported, withdrawnCount);
+        // Record the import run + its changes for the History page.
+        run.Added = added;
+        run.Updated = updated;
+        run.Withdrawn = withdrawnCount;
+        run.Unchanged = unchanged;
+        run.CompletedUtc = DateTime.UtcNow;
+        _db.ImportRuns.Add(run);
+        await _db.SaveChangesAsync(ct);
+
+        // Retention: prune import history beyond the window (nominations are never hard-deleted here).
+        var cutoff = DateTime.UtcNow.AddDays(-HistoryRetentionDays);
+        await _db.ImportRuns.Where(r => r.StartedUtc < cutoff).ExecuteDeleteAsync(ct);
+
+        _logger.LogInformation("NominationImportService: {Added} added, {Updated} updated, {Unchanged} unchanged, {Withdrawn} withdrawn",
+            added, updated, unchanged, withdrawnCount);
         return imported;
+    }
+
+    private const int HistoryRetentionDays = 90;
+
+    private sealed record FdoSnapshot(string? Mig, string? State, int? Age, string? Sa, string? Cftl, string? Pm, string? Region, string? Tech, string? Name);
+
+    private static FdoSnapshot Snapshot(Nomination n) =>
+        new(n.MigrationStatus, n.CurrentState, n.StageAgeDays, n.SolutionArchitect, n.CftlPrimary, n.ProjectCoordinator, n.Region, n.Technology, n.AccountName);
+
+    private static string? DiffFields(FdoSnapshot b, Nomination a)
+    {
+        var diffs = new List<object>();
+        void D(string f, string? from, string? to) { if (!string.Equals(from, to, StringComparison.Ordinal)) diffs.Add(new { field = f, from, to }); }
+        D("Migration Status", b.Mig, a.MigrationStatus);
+        D("Current State", b.State, a.CurrentState);
+        D("Stage Age (days)", b.Age?.ToString(), a.StageAgeDays?.ToString());
+        D("Solution Architect", b.Sa, a.SolutionArchitect);
+        D("CFTL", b.Cftl, a.CftlPrimary);
+        D("Project Coordinator", b.Pm, a.ProjectCoordinator);
+        D("Region", b.Region, a.Region);
+        D("Offering", b.Tech, a.Technology);
+        D("Account Name", b.Name, a.AccountName);
+        return diffs.Count == 0 ? null : JsonSerializer.Serialize(diffs);
     }
 
     private async Task<Account> ResolveAccountAsync(AccountResolver resolver, string customer, string region,

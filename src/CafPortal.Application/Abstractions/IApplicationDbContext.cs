@@ -18,6 +18,8 @@ public interface IApplicationDbContext
     DbSet<WaveLink> WaveLinks { get; }
     DbSet<OwnershipHistory> OwnershipHistory { get; }
     DbSet<PerformanceReview> PerformanceReviews { get; }
+    DbSet<ImportRun> ImportRuns { get; }
+    DbSet<ImportChange> ImportChanges { get; }
 
     DbSet<RegionConfiguration> Regions { get; }
     DbSet<RoleConfiguration> Roles { get; }

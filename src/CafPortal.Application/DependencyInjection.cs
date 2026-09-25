@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<ILeaveService, LeaveService>();
         services.AddScoped<INominationService, NominationService>();
         services.AddScoped<IPerformanceReviewService, PerformanceReviewService>();
+        services.AddScoped<IImportHistoryService, ImportHistoryService>();
         return services;
     }
 }

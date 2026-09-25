@@ -141,7 +141,16 @@ public class DataRefreshService(
         File.Move(tmp, path, overwrite: true); // atomic swap; avoids partial reads mid-refresh
 
         _logger.LogInformation("Uploaded {Kind} workbook to {Path}; running refresh", kind, path);
-        return await RefreshAsync(ct);
+        var beforeRunId = await _db.ImportRuns.MaxAsync(r => (int?)r.Id, ct) ?? 0;
+        var result = await RefreshAsync(ct);
+        // Stamp the uploaded file name onto the run this import just created (best-effort).
+        var run = await _db.ImportRuns.OrderByDescending(r => r.Id).FirstOrDefaultAsync(ct);
+        if (run is not null && run.Id > beforeRunId)
+        {
+            run.FileName = Path.GetFileName(fileName);
+            await _db.SaveChangesAsync(ct);
+        }
+        return result;
     }
 
     public async Task<DataStatusDto> GetStatusAsync(CancellationToken ct = default)

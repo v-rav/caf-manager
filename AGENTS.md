@@ -98,6 +98,12 @@ import the **web app is the system of record**.
   `ExecuteDeleteAsync` nominations. See `NominationImportService` loop + `DEVELOPMENT-PLAN.md` §8.
   (⚠ `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` still wipe-and-rebuild — safe today; fix before
   portal-entered leave.)
+- **Nominations are NEVER hard-deleted by imports.** Absent-from-drop rows are soft-set `Withdrawn`;
+  hard delete is a manual, user-only action from the UI. Do not add auto-purge of nominations.
+- **Import history** (Phase 5C): every upload/refresh records an `ImportRun` (+ `ImportChange` deltas:
+  Added / Updated with field-level from→to / Withdrawn) via `NominationImportService`. Surfaced on the
+  **Import History** page (`/history`, `GET /api/imports`, `GET /api/imports/{id}/changes`). History rows
+  (not nominations) are pruned after `HistoryRetentionDays` (90). Upload filename is stamped onto the run.
 - `GET /api/admin/status` → counts + `lastRefreshUtc` (stamped by `DataRefreshService` on every
   successful import). Surfaced as "Updated Xm ago" in the header.
 - `GET /api/export/{resources|capacity|nominations|performance|summary}` → `.xlsx` (ClosedXML
