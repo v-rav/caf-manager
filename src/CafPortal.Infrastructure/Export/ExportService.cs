@@ -10,6 +10,7 @@ public class ExportService(
     ICapacityService capacity,
     INominationService nominations,
     IPerformanceReviewService performance,
+    IReconciliationService reconciliation,
     IDashboardService dashboard) : IExportService
 {
     private const string HeaderHtml = "#0F6CBD";
@@ -278,6 +279,57 @@ public class ExportService(
     {
         if (value.HasValue) cell.Value = value.Value;
         else cell.Value = "";
+    }
+
+    public async Task<byte[]> ReconciliationAsync(string? region, CancellationToken ct = default)
+    {
+        var report = await reconciliation.GetAsync(region, ct);
+        using var wb = new XLWorkbook();
+        var ws = wb.AddWorksheet("Reconciliation");
+        var headers = new[] { "Resource", "Region", "Account (linked)", "TPID", "Segment", "Relationship", "In Master", "In-Flight", "Match", "Suggested Account", "Suggested TPID", "Utilization" };
+        WriteHeader(ws, headers);
+        var r = 2;
+        foreach (var x in report.Rows)
+        {
+            ws.Cell(r, 1).Value = x.ResourceName;
+            ws.Cell(r, 2).Value = x.ResourceRegion;
+            ws.Cell(r, 3).Value = x.AccountName;
+            ws.Cell(r, 4).Value = x.Tpid ?? "";
+            ws.Cell(r, 5).Value = x.Segment ?? "";
+            ws.Cell(r, 6).Value = x.RelationshipType ?? "";
+            ws.Cell(r, 7).Value = x.InMaster ? "Yes" : "No";
+            ws.Cell(r, 8).Value = x.InFlight ? "Yes" : "No";
+            ws.Cell(r, 9).Value = x.MatchState;
+            ws.Cell(r, 10).Value = x.SuggestedAccountName ?? "";
+            ws.Cell(r, 11).Value = x.SuggestedTpid ?? "";
+            ws.Cell(r, 12).Value = x.UtilizationEffect;
+            r++;
+        }
+        ws.SheetView.FreezeRows(1);
+        ws.Columns(1, headers.Length).AdjustToContents();
+
+        var s = report.Summary;
+        var sum = wb.AddWorksheet("Summary");
+        WriteHeader(sum, new[] { "Metric", "Value" });
+        var metrics = new (string Label, int Value)[]
+        {
+            ("Total links", s.TotalLinks), ("Resources", s.Resources), ("Linked accounts", s.LinkedAccounts),
+            ("Master (has TPID)", s.Master), ("Suggest merge", s.SuggestMerge), ("Orphan", s.Orphan),
+            ("Keep (in-flight)", s.Keep), ("Drop (not in-flight)", s.Drop), ("In-flight accounts", s.InFlightAccounts)
+        };
+        var sr = 2;
+        foreach (var (label, value) in metrics)
+        {
+            sum.Cell(sr, 1).Value = label;
+            sum.Cell(sr, 2).Value = value;
+            sr++;
+        }
+        sum.SheetView.FreezeRows(1);
+        sum.Columns(1, 2).AdjustToContents();
+
+        using var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        return ms.ToArray();
     }
 
     private static void WriteHeader(IXLWorksheet ws, string[] headers, int startRow = 1)

@@ -12,6 +12,9 @@ public class NominationResource : AuditableEntity
     /// <summary>Delivery role on this nomination (e.g. Solution Architect, Migration Engineer, DevOps Engineer).</summary>
     public string? Role { get; set; }
 
+    /// <summary>Origin: "Seed" (reconciliation seed, re-created on re-seed) or "Portal" (manual, preserved).</summary>
+    public string? Source { get; set; }
+
     public Nomination? Nomination { get; set; }
     public Resource? Resource { get; set; }
 }

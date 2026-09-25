@@ -160,7 +160,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
             .FirstOrDefaultAsync(x => x.NominationId == nominationId && x.ResourceId == input.ResourceId, ct);
         if (link is null)
         {
-            link = new NominationResource { NominationId = nominationId, ResourceId = input.ResourceId, Role = role };
+            link = new NominationResource { NominationId = nominationId, ResourceId = input.ResourceId, Role = role, Source = "Portal" };
             _db.NominationResources.Add(link);
         }
         else

@@ -32,4 +32,8 @@ public class ExportController(IExportService export) : ControllerBase
     [HttpGet("summary")]
     public async Task<IActionResult> Summary([FromQuery] string? region, CancellationToken ct)
         => File(await export.ExecutiveSummaryAsync(region, ct), Xlsx, $"executive-summary_{Stamp}.xlsx");
+
+    [HttpGet("reconciliation")]
+    public async Task<IActionResult> Reconciliation([FromQuery] string? region, CancellationToken ct)
+        => File(await export.ReconciliationAsync(region, ct), Xlsx, $"reconciliation_{Stamp}.xlsx");
 }

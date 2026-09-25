@@ -1,0 +1,20 @@
+using CafPortal.Application.Abstractions;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CafPortal.Api.Controllers;
+
+/// <summary>Read-only data-quality view over the resource→account mappings that feed capacity.</summary>
+[ApiController]
+[Route("api/[controller]")]
+[Produces("application/json")]
+public class ReconciliationController(IReconciliationService reconciliation) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Get([FromQuery] string? region, CancellationToken ct)
+        => Ok(await reconciliation.GetAsync(region, ct));
+
+    /// <summary>Seed assignments from the in-flight links. Defaults to a read-only preview (apply=false).</summary>
+    [HttpPost("seed")]
+    public async Task<IActionResult> Seed([FromQuery] string? region, [FromQuery] bool apply, CancellationToken ct)
+        => Ok(await reconciliation.SeedAssignmentsAsync(region, apply, ct));
+}

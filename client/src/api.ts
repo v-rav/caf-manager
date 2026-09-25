@@ -10,6 +10,8 @@ import type {
   ImportRun,
   LeaveClash,
   LeaveItem,
+  ReconciliationReport,
+  SeedAssignmentResult,
   LeaveUpsert,
   LeaveWindow,
   Nomination,
@@ -37,8 +39,16 @@ export const api = {
 
   adminStatus: () => http.get<DataStatus>('/api/admin/status').then((r) => r.data),
 
+  reconciliation: (region?: string) =>
+    http.get<ReconciliationReport>('/api/reconciliation', { params: { region } }).then((r) => r.data),
+
+  seedAssignments: (region: string | undefined, apply: boolean) =>
+    http
+      .post<SeedAssignmentResult>('/api/reconciliation/seed', null, { params: { region, apply } })
+      .then((r) => r.data),
+
   exportUrl: (
-    what: 'resources' | 'capacity' | 'nominations' | 'performance' | 'summary',
+    what: 'resources' | 'capacity' | 'nominations' | 'performance' | 'summary' | 'reconciliation',
     region?: string,
     extra?: Record<string, string | undefined>,
   ) => {

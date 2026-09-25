@@ -219,6 +219,64 @@ export interface NominationResource {
   role?: string
 }
 
+export interface ReconciliationRow {
+  resourceId: number
+  resourceName: string
+  resourceRegion: string
+  accountId: number
+  accountName: string
+  tpid?: string
+  segment?: string
+  relationshipType?: string
+  inMaster: boolean
+  inFlight: boolean
+  matchState: string
+  suggestedAccountId?: number
+  suggestedAccountName?: string
+  suggestedTpid?: string
+  utilizationEffect: string
+}
+
+export interface ReconciliationSummary {
+  totalLinks: number
+  resources: number
+  linkedAccounts: number
+  master: number
+  suggestMerge: number
+  orphan: number
+  keep: number
+  drop: number
+  inFlightAccounts: number
+}
+
+export interface ReconciliationReport {
+  summary: ReconciliationSummary
+  rows: ReconciliationRow[]
+}
+
+export interface SeedAssignmentResult {
+  applied: boolean
+  inFlightLinks: number
+  candidates: number
+  wouldCreate: number
+  created: number
+  removedSeed: number
+  saCreated: number
+  engineerCreated: number
+  saUnmatchedWaves: number
+  skippedExisting: number
+  resourcesAffected: number
+  nominationsAffected: number
+  sample: {
+    nominationId: number
+    accountName?: string
+    resourceId: number
+    resourceName: string
+    role: string
+    alreadyExisted: boolean
+  }[]
+}
+
 export interface WaveLink {
   id: number
   waveType: string

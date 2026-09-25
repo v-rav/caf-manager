@@ -78,6 +78,7 @@ public class NominationResourceConfiguration : IEntityTypeConfiguration<Nominati
     {
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Role).HasMaxLength(50);
+        builder.Property(x => x.Source).HasMaxLength(20);
         builder.HasOne(x => x.Nomination).WithMany(n => n.ResourceAssignments)
             .HasForeignKey(x => x.NominationId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.Resource).WithMany()
