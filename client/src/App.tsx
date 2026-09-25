@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { AccountsPage } from './pages/AccountsPage'
+import { BackupPage } from './pages/BackupPage'
 import { CapacityPage } from './pages/CapacityPage'
 import { ConfigurationPage } from './pages/ConfigurationPage'
 import { DashboardPage } from './pages/DashboardPage'
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
       { path: 'performance', element: <PerformancePage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'configuration', element: <ConfigurationPage /> },
+      { path: 'backup', element: <BackupPage /> },
     ],
   },
 ])

@@ -3,6 +3,7 @@ import {
   ArrowClockwiseRegular,
   BuildingRegular,
   CalendarLtrRegular,
+  DatabaseRegular,
   DataPieRegular,
   GaugeRegular,
   HistoryRegular,
@@ -30,6 +31,7 @@ const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
   { to: '/performance', label: 'Performance', icon: <PersonStarRegular /> },
   { to: '/history', label: 'Import History', icon: <HistoryRegular /> },
   { to: '/configuration', label: 'Configuration', icon: <SettingsRegular /> },
+  { to: '/backup', label: 'Backup & Restore', icon: <DatabaseRegular /> },
 ]
 
 const EXPANDED = 240
