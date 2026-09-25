@@ -18,7 +18,61 @@ import { KpiCard } from '../components/KpiCard'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import { useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { Nomination, NominationUpdate } from '../types'
+
+// Read-only labelled value used in the Manage dialog's FDO context panel.
+function ReadField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block' }}>
+        {label}
+      </Text>
+      <Text size={300}>{children}</Text>
+    </div>
+  )
+}
+
+// Wave links are informational — no type is mandatory. These filters help find records to enrich.
+const LINK_FILTERS = ['No waves', 'Has any waves', 'Has DB', 'Has Security']
+
+// Present wave-type short labels for a nomination (empty = none linked yet).
+function presentWaves(n: Nomination): string[] {
+  const out: string[] = []
+  if (n.dbLinked) out.push('DB')
+  if (n.securityLinked) out.push('Sec')
+  if (n.alzLinked) out.push('ALZ')
+  return out
+}
+
+// Labelled full-width form field for the Manage dialog (keeps controls aligned).
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <Text size={200} weight="semibold" style={{ color: 'var(--colorNeutralForeground2)' }}>
+        {label}
+      </Text>
+      {children}
+    </div>
+  )
+}
+
+// Canonical Stage (Migration Status) values — editable in Manage; text matches migrationStage() keywords.
+const STAGE_OPTIONS = [
+  { value: '1 - Validating & Initial Scope', label: '1 — Validating' },
+  { value: '2 - Executing Pre-Requisites', label: '2 — Pre-Requisites' },
+  { value: '3 - Finalize Scope', label: '3 — Finalize Scope' },
+  { value: '4 - Executing Migration', label: '4 — Executing Migration' },
+]
+
+// Wave-presence chip: brand (blue) when the wave is linked, red when it isn't.
+function LinkChip({ label, linked }: { label: string; linked: boolean }) {
+  return (
+    <Badge appearance={linked ? 'filled' : 'tint'} color={linked ? 'brand' : 'danger'} size="small">
+      {label}
+    </Badge>
+  )
+}
 
 // The migration journey has four stages; the summary counts how many nominations sit in each.
 const STAGES = [
@@ -116,6 +170,7 @@ export function NominationsPage() {
   const [currentStateFilter, setCurrentStateFilter] = useState('')
   const [migrationFilter, setMigrationFilter] = useState('')
   const [slaFilter, setSlaFilter] = useState('')
+  const [linkFilter, setLinkFilter] = useState('')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounced(search)
 
@@ -147,6 +202,7 @@ export function NominationsPage() {
 
   const blockedTotal = (data ?? []).filter((n) => BLOCKED_STATES.includes(n.status)).length
   const staleCount = (tier: string) => (data ?? []).filter((n) => n.staleTier === tier).length
+  const noWaveTotal = (data ?? []).filter((n) => n.noWavesLinked).length
 
   const migrationOptions = useMemo(
     () => [...new Set((data ?? []).map((n) => n.migrationStatus).filter((v): v is string => !!v))].sort(),
@@ -163,19 +219,28 @@ export function NominationsPage() {
           (!currentStateFilter || n.currentState === currentStateFilter) &&
           (!migrationFilter || n.migrationStatus === migrationFilter) &&
           (!slaFilter || n.staleTier === slaFilter) &&
+          (!linkFilter ||
+            (linkFilter === 'No waves' && n.noWavesLinked) ||
+            (linkFilter === 'Has any waves' && !n.noWavesLinked) ||
+            (linkFilter === 'Has DB' && n.dbLinked) ||
+            (linkFilter === 'Has Security' && n.securityLinked)) &&
           (!debouncedSearch || (n.accountName ?? '').toLowerCase().includes(debouncedSearch.toLowerCase())),
       ),
-    [data, currentStateFilter, migrationFilter, slaFilter, debouncedSearch],
+    [data, currentStateFilter, migrationFilter, slaFilter, linkFilter, debouncedSearch],
   )
 
   const openManage = (n: Nomination) => {
     setEditing(n)
     setForm({
       status: n.status,
+      migrationStatus: n.migrationStatus ?? '',
       blockedReason: n.blockedReason ?? suggestBlocker(n.remarks ?? n.currentState),
       blockedSince: n.blockedSince,
       followUpDate: n.followUpDate,
       remarks: n.remarks ?? '',
+      projectCoordinator: n.projectCoordinator ?? '',
+      cftlPrimary: n.cftlPrimary ?? '',
+      solutionArchitect: n.solutionArchitect ?? '',
     })
     setWaveType('App')
     setWaveRef('')
@@ -250,6 +315,12 @@ export function NominationsPage() {
             <KpiCard label="Stale · Warn (3d+)" value={staleCount('Warn')} tone="warning" />
             <KpiCard label="Stale · Escalate (5d+)" value={staleCount('Escalate')} tone="warning" />
             <KpiCard label="Stale · Defer (10d+)" value={staleCount('Defer')} tone="danger" />
+            <KpiCard
+              label="No waves linked"
+              value={noWaveTotal}
+              tone="warning"
+              onClick={() => setLinkFilter(linkFilter === 'No waves' ? '' : 'No waves')}
+            />
           </div>
 
           <Panel
@@ -265,6 +336,7 @@ export function NominationsPage() {
                 <FilterSelect label="Stage" value={migrationFilter} options={migrationOptions} onChange={setMigrationFilter} minWidth={200} />
                 <FilterSelect label="Status" value={currentStateFilter} options={currentStateOptions} onChange={setCurrentStateFilter} minWidth={200} />
                 <FilterSelect label="SLA breach" value={slaFilter} options={['Warn', 'Escalate', 'Defer']} onChange={setSlaFilter} minWidth={150} />
+                <FilterSelect label="Links" value={linkFilter} options={LINK_FILTERS} onChange={setLinkFilter} minWidth={150} />
                 <input
                   ref={fileInput}
                   type="file"
@@ -373,12 +445,34 @@ export function NominationsPage() {
                 { key: 'cftl', header: 'CFTL', sortValue: (n) => n.cftlPrimary ?? '', render: (n) => n.cftlPrimary ?? '—' },
                 { key: 'sa', header: 'SA', sortValue: (n) => n.solutionArchitect ?? '', render: (n) => n.solutionArchitect ?? '—' },
                 {
+                  key: 'links',
+                  header: 'Waves',
+                  sortValue: (n) => n.waveCount,
+                  render: (n) => (
+                    <Tooltip
+                      relationship="description"
+                      content={
+                        n.noWavesLinked
+                          ? 'No waves linked — review and associate any related waves.'
+                          : `Linked waves: ${presentWaves(n).join(', ')}`
+                      }
+                    >
+                      <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
+                        <LinkChip label="DB" linked={n.dbLinked} />
+                        <LinkChip label="ALZ" linked={n.alzLinked} />
+                        <LinkChip label="Sec" linked={n.securityLinked} />
+                      </span>
+                    </Tooltip>
+                  ),
+                },
+                {
                   key: 'actions',
                   header: '',
+                  align: 'center',
                   render: (n) => (
-                    <Button appearance="subtle" size="small" icon={<EditRegular />} onClick={() => openManage(n)}>
-                      Manage
-                    </Button>
+                    <Tooltip relationship="label" content="Manage">
+                      <Button appearance="subtle" size="small" icon={<EditRegular />} aria-label="Manage" onClick={() => openManage(n)} />
+                    </Tooltip>
                   ),
                 },
               ]}
@@ -394,27 +488,85 @@ export function NominationsPage() {
         onSubmit={saveManage}
         submitLabel="Save"
         busy={busy}
+        maxWidth={640}
       >
-        <label>
-          Status
-          <Dropdown
-            value={form.status}
-            selectedOptions={[form.status]}
-            onOptionSelect={(_, d) => setForm((f) => ({ ...f, status: d.optionValue ?? f.status }))}
+        {editing && (
+          <div
+            style={{
+              background: 'var(--colorNeutralBackground2)',
+              border: '1px solid var(--colorNeutralStroke2)',
+              borderRadius: 6,
+              padding: 12,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
           >
-            {STATUS_OPTIONS.map((s) => (
-              <Option key={s} value={s}>
-                {s}
-              </Option>
-            ))}
-          </Dropdown>
-        </label>
+            <Text size={200} weight="semibold" style={{ color: 'var(--colorNeutralForeground3)' }}>
+              From FDO · refreshed on import (read-only)
+            </Text>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
+              <ReadField label="Current State">
+                {editing.currentState ? (
+                  <Badge appearance="tint" color={stateColor(editing.currentState)}>
+                    {editing.currentState}
+                  </Badge>
+                ) : (
+                  '—'
+                )}
+              </ReadField>
+              <ReadField label="Age in stage">
+                {editing.stageAgeDays != null ? `${editing.stageAgeDays}d` : '—'}
+              </ReadField>
+              <ReadField label="Offering">{editing.technology ?? '—'}</ReadField>
+              <ReadField label="TPID · Region">{`${editing.tpid ?? '—'} · ${editing.region ?? '—'}`}</ReadField>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Field label="Stage (Migration Status)">
+            <Dropdown
+              style={{ width: '100%', minWidth: 0 }}
+              value={
+                migrationStage(form.migrationStatus)
+                  ? STAGE_OPTIONS[migrationStage(form.migrationStatus)!.n - 1].label
+                  : form.migrationStatus ?? ''
+              }
+              selectedOptions={
+                migrationStage(form.migrationStatus) ? [STAGE_OPTIONS[migrationStage(form.migrationStatus)!.n - 1].value] : []
+              }
+              placeholder="Select stage"
+              onOptionSelect={(_, d) => setForm((f) => ({ ...f, migrationStatus: d.optionValue ?? f.migrationStatus }))}
+            >
+              {STAGE_OPTIONS.map((o) => (
+                <Option key={o.value} value={o.value}>
+                  {o.label}
+                </Option>
+              ))}
+            </Dropdown>
+          </Field>
+          <Field label="Status">
+            <Dropdown
+              style={{ width: '100%', minWidth: 0 }}
+              value={form.status}
+              selectedOptions={[form.status]}
+              onOptionSelect={(_, d) => setForm((f) => ({ ...f, status: d.optionValue ?? f.status }))}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <Option key={s} value={s}>
+                  {s}
+                </Option>
+              ))}
+            </Dropdown>
+          </Field>
+        </div>
 
         {isBlocked && (
-          <>
-            <label>
-              Blocker reason
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="Blocker reason">
               <Dropdown
+                style={{ width: '100%', minWidth: 0 }}
                 value={form.blockedReason ?? ''}
                 selectedOptions={form.blockedReason ? [form.blockedReason] : []}
                 placeholder="Select reason"
@@ -426,38 +578,60 @@ export function NominationsPage() {
                   </Option>
                 ))}
               </Dropdown>
-            </label>
-            <label>
-              Blocked since
+            </Field>
+            <Field label="Blocked since">
               <Input
                 type="date"
+                style={{ width: '100%' }}
                 value={form.blockedSince ?? ''}
                 onChange={(_, d) => setForm((f) => ({ ...f, blockedSince: d.value || undefined }))}
               />
-            </label>
-          </>
+            </Field>
+          </div>
         )}
 
-        <label>
-          Follow-up date
+        <Field label="Follow-up date">
           <Input
             type="date"
+            style={{ width: '100%' }}
             value={form.followUpDate ?? ''}
             onChange={(_, d) => setForm((f) => ({ ...f, followUpDate: d.value || undefined }))}
           />
-        </label>
+        </Field>
 
-        <label>
-          Remarks
+        <Field label="Remarks">
           <Textarea
+            style={{ width: '100%' }}
             value={form.remarks ?? ''}
             onChange={(_, d) => setForm((f) => ({ ...f, remarks: d.value }))}
             rows={2}
           />
-        </label>
+        </Field>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <Field label="PM">
+            <Input style={{ width: '100%' }} value={form.projectCoordinator ?? ''} onChange={(_, d) => setForm((f) => ({ ...f, projectCoordinator: d.value }))} />
+          </Field>
+          <Field label="CFTL">
+            <Input style={{ width: '100%' }} value={form.cftlPrimary ?? ''} onChange={(_, d) => setForm((f) => ({ ...f, cftlPrimary: d.value }))} />
+          </Field>
+          <Field label="SA">
+            <Input style={{ width: '100%' }} value={form.solutionArchitect ?? ''} onChange={(_, d) => setForm((f) => ({ ...f, solutionArchitect: d.value }))} />
+          </Field>
+        </div>
 
         <div style={{ borderTop: '1px solid var(--colorNeutralStroke2)', paddingTop: 10 }}>
           <Text weight="semibold">Related waves</Text>
+          {editing && (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', margin: '6px 0' }}>
+              <LinkChip label="DB" linked={editing.dbLinked} />
+              <LinkChip label="ALZ" linked={editing.alzLinked} />
+              <LinkChip label="Sec" linked={editing.securityLinked} />
+              <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+                {editing.noWavesLinked ? 'No waves linked yet — add any associated waves below.' : `Linked: ${presentWaves(editing).join(', ')}`}
+              </Text>
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '8px 0' }}>
             {(editing?.waves ?? []).length === 0 && (
               <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>

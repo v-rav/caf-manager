@@ -14,6 +14,8 @@ public class WaveLink : AuditableEntity
     /// <summary>Free reference to the linked wave/item (name, ID, or URL).</summary>
     public string Reference { get; set; } = string.Empty;
     public string? Notes { get; set; }
+    /// <summary>Origin of the link: "FDO" (imported, refreshed each drop) or "Portal" (manually added).</summary>
+    public string? Source { get; set; }
 
     public Nomination? Nomination { get; set; }
     public Account? Account { get; set; }

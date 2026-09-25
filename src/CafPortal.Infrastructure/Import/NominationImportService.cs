@@ -53,12 +53,17 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
         var colSolutionArchitect = ExcelHelpers.FindColumn(h, "Solution Architect Hierarchy - Solution Architect", "Solution Architect");
         var colCftl = ExcelHelpers.FindColumn(h, "CFTL Primary Hierarchy - CFTL Primary", "CFTL Primary");
         var colProjectCoordinator = ExcelHelpers.FindColumn(h, "Project Coordinator Hierarchy - Project Coordinator", "Project Coordinator");
+        // Wave linkage: "Linked to" (names) + "Linked to ID" (ids), each a ';'-separated list of related waves.
+        var colLinkedId = ExcelHelpers.FindColumn(h, "Linked to ID", "Linked to Id");
+        int? colLinkedTo = null;
+        foreach (var kv in h)
+            if (kv.Value != colLinkedId && kv.Key.Contains("Linked to", StringComparison.OrdinalIgnoreCase)) { colLinkedTo = kv.Value; break; }
 
         var resolver = new AccountResolver(_db);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenTaskIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         // FDO drops are full snapshots keyed by Task Id — preload for upsert-merge.
-        var existing = await _db.Nominations.ToListAsync(ct);
+        var existing = await _db.Nominations.Include(n => n.WaveLinks).ToListAsync(ct);
         var byTaskId = existing.Where(n => !string.IsNullOrWhiteSpace(n.ExternalTaskId))
             .GroupBy(n => n.ExternalTaskId!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
@@ -136,10 +141,18 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             nom.MigrationStatus = migration;
             nom.StageAgeDays = stageAge;
             nom.CurrentState = Truncate(Clean(ExcelHelpers.GetString(row, colCurrentState)), 2000);
-            nom.SolutionArchitect = Clean(ExcelHelpers.GetString(row, colSolutionArchitect));
-            nom.CftlPrimary = Clean(ExcelHelpers.GetString(row, colCftl));
-            nom.ProjectCoordinator = Clean(ExcelHelpers.GetString(row, colProjectCoordinator));
+            // Ownership (PM/CFTL/SA) is portal-owned once set: seed from FDO only when empty.
+            if (string.IsNullOrWhiteSpace(nom.SolutionArchitect))
+                nom.SolutionArchitect = Clean(ExcelHelpers.GetString(row, colSolutionArchitect));
+            if (string.IsNullOrWhiteSpace(nom.CftlPrimary))
+                nom.CftlPrimary = Clean(ExcelHelpers.GetString(row, colCftl));
+            if (string.IsNullOrWhiteSpace(nom.ProjectCoordinator))
+                nom.ProjectCoordinator = Clean(ExcelHelpers.GetString(row, colProjectCoordinator));
             // Portal-owned (Status, BlockedReason, BlockedSince, FollowUpDate, WaveLinks) preserved.
+            // Wave links: refresh FDO-sourced links from "Linked to"; keep portal-added links untouched.
+            SyncFdoWaveLinks(nom!, account.AccountId,
+                ExcelHelpers.GetString(row, colLinkedTo),
+                ExcelHelpers.GetString(row, colLinkedId));
             // Remarks: seed from FDO on first insert; keep portal edits thereafter.
             if (string.IsNullOrWhiteSpace(nom.Remarks))
                 nom.Remarks = BuildRemarks(approval, migration,
@@ -325,6 +338,51 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
 
     private static string? Truncate(string? value, int max)
         => value is not null && value.Length > max ? value[..max] : value;
+
+    // Splits a ';'-separated FDO list (e.g. "Security Nominations - Wave 2; SQL Migration - Wave 1").
+    private static List<string> SplitList(string? s)
+        => string.IsNullOrWhiteSpace(s)
+            ? new List<string>()
+            : s.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+    // Maps an FDO wave name to a hygiene wave type; App/self and unknown names return null (not tracked).
+    private static WaveType? ClassifyWave(string name)
+    {
+        var t = name.ToLowerInvariant();
+        if (t.Contains("security")) return WaveType.Security;
+        if (t.Contains("sql") || t.Contains("ossdb") || t.Contains("database") || t.Contains("db migration")) return WaveType.Db;
+        if (t.Contains("landing zone") || t.Contains("alz")) return WaveType.LandingZone;
+        if (t.Contains("dispatch")) return WaveType.Dispatch;
+        return null;
+    }
+
+    // Reconciles FDO-sourced wave links from the "Linked to" / "Linked to ID" columns; portal links are left as-is.
+    private void SyncFdoWaveLinks(Nomination nom, int accountId, string? linkedNames, string? linkedIds)
+    {
+        var names = SplitList(linkedNames);
+        var ids = SplitList(linkedIds);
+        var desired = new List<(WaveType Type, string Reference, string? Note)>();
+        for (var i = 0; i < names.Count; i++)
+        {
+            var wt = ClassifyWave(names[i]);
+            if (wt is null) continue;
+            var reference = Truncate(names[i], 300)!;
+            var note = i < ids.Count ? Truncate(ids[i], 1000) : null;
+            if (!desired.Any(d => d.Type == wt.Value && string.Equals(d.Reference, reference, StringComparison.OrdinalIgnoreCase)))
+                desired.Add((wt.Value, reference, note));
+        }
+
+        foreach (var w in nom.WaveLinks.Where(w => w.Source == "FDO").ToList())
+            if (!desired.Any(d => d.Type == w.WaveType && string.Equals(d.Reference, w.Reference, StringComparison.OrdinalIgnoreCase)))
+            {
+                nom.WaveLinks.Remove(w);
+                _db.WaveLinks.Remove(w);
+            }
+
+        foreach (var d in desired)
+            if (!nom.WaveLinks.Any(w => w.Source == "FDO" && w.WaveType == d.Type && string.Equals(w.Reference, d.Reference, StringComparison.OrdinalIgnoreCase)))
+                nom.WaveLinks.Add(new WaveLink { WaveType = d.Type, Reference = d.Reference, Notes = d.Note, Source = "FDO", AccountId = accountId });
+    }
 
     /// <summary>Drops the boilerplate "App Modernization Nominations - " prefix so the wave shows on its own.</summary>
     private static string CleanOffering(string? raw)

@@ -18,13 +18,14 @@ interface ModalProps {
   submitLabel?: string
   submitDisabled?: boolean
   busy?: boolean
+  maxWidth?: number
 }
 
 /** Reusable form modal with Cancel / primary action. */
-export function Modal({ open, title, children, onClose, onSubmit, submitLabel = 'Save', submitDisabled, busy }: ModalProps) {
+export function Modal({ open, title, children, onClose, onSubmit, submitLabel = 'Save', submitDisabled, busy, maxWidth }: ModalProps) {
   return (
     <Dialog open={open} onOpenChange={(_, d) => !d.open && onClose()}>
-      <DialogSurface>
+      <DialogSurface style={maxWidth ? { maxWidth, width: '90vw' } : undefined}>
         <DialogBody>
           <DialogTitle>{title}</DialogTitle>
           <DialogContent>

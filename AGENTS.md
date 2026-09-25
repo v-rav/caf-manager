@@ -69,7 +69,22 @@ import the **web app is the system of record**.
 - **TPID** lives on `Account` (external master key), surfaced onto `NominationDto.Tpid` via
   `Include(n => n.Account)` in `NominationService`.
 - **Ownership short names** used in the Nominations grid: **PM** = `ProjectCoordinator`,
-  **CFTL** = `CftlPrimary`, **SA** = `SolutionArchitect`.
+  **CFTL** = `CftlPrimary`, **SA** = `SolutionArchitect`. These are **portal-owned** (editable in the
+  Manage dialog); the FDO import only **seeds them when empty** (never overwrites a portal edit).
+- **Wave linkage (informational, NOT required)**: a nomination may legitimately have **no waves**;
+  no wave type is mandatory (a DB wave is only sometimes relevant, and many apps have no DB). Wave
+  links come from the FDO export's **`Linked to` / `Linked to ID`** columns (';'-separated), which
+  `NominationImportService` parses and classifies by name → `WaveType` (`security`→Security,
+  `sql`/`ossdb`/`database`→Db, `landing zone`/`alz`→LandingZone, `dispatch`→Dispatch; App/unknown are
+  skipped). FDO links carry `WaveLink.Source="FDO"` and are **refreshed every drop**; portal-added
+  links (`Source="Portal"`, via the Manage dialog) are **preserved**. `NominationService` derives
+  `DbLinked`/`AlzLinked`/`SecurityLinked`, `WaveCount`, and `NoWavesLinked` (WaveCount==0). Surfaced as
+  a **Waves** column (present-type chips, or a neutral "None"), a **No waves linked** KPI
+  (drill-through) whose only purpose is to **find records to enrich**, a **Links** filter
+  (No waves / Has any waves / Has DB / Has Security), a checklist in the Manage dialog, and a
+  **Wave Types** export column. The current FDO export contains only App/Security/SQL(DB)/OSSDB(DB)
+  waves — there is **no Landing Zone/Dispatch/ALZ wave** in the data, so ALZ stays empty unless added
+  in the portal.
 - **Stale cadence** (configurable via `ApplicationSetting`): Warn `StaleWarnDays=3` ·
     Escalate `StaleEscalateDays=5` · Defer `StaleDeferDays=10`. **Applies to execution Stages 2–4
     only** (not Stage 1 Validating) — gated in `NominationService.StaleTier` via `StageIndex`. The

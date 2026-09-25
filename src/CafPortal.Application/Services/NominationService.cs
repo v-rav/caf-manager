@@ -30,6 +30,11 @@ public class NominationService(IApplicationDbContext db) : INominationService
             var updateDays = Math.Max(0, today.DayNumber - DateOnly.FromDateTime(lastTouch.UtcDateTime).DayNumber);
             // Age = days in the current migration stage when available; else fall back to update recency.
             var days = n.StageAgeDays ?? updateDays;
+            // Wave links are informational (no required type); surface presence so empty records can be found.
+            var waveTypes = n.WaveLinks.Select(w => w.WaveType).ToHashSet();
+            var dbLinked = waveTypes.Contains(WaveType.Db);
+            var alzLinked = waveTypes.Contains(WaveType.LandingZone) || waveTypes.Contains(WaveType.Dispatch);
+            var securityLinked = waveTypes.Contains(WaveType.Security);
             return new NominationDto
             {
                 Id = n.Id,
@@ -52,6 +57,11 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 FollowUpDate = n.FollowUpDate,
                 DaysSinceUpdate = days,
                 StaleTier = StaleTier(n.Status, StageIndex(n.MigrationStatus), days, warn, escalate, defer),
+                DbLinked = dbLinked,
+                AlzLinked = alzLinked,
+                SecurityLinked = securityLinked,
+                WaveCount = n.WaveLinks.Count,
+                NoWavesLinked = n.WaveLinks.Count == 0,
                 Waves = n.WaveLinks
                     .OrderBy(w => w.WaveType)
                     .Select(w => new WaveLinkDto { Id = w.Id, WaveType = w.WaveType.ToDisplay(), Reference = w.Reference, Notes = w.Notes })
@@ -68,11 +78,20 @@ public class NominationService(IApplicationDbContext db) : INominationService
         if (TryParseStatus(input.Status, out var status))
             n.Status = status;
 
+        // Stage (Migration Status) is portal-editable as a manual override; FDO re-applies it on next import.
+        if (!string.IsNullOrWhiteSpace(input.MigrationStatus))
+            n.MigrationStatus = input.MigrationStatus.Trim();
+
         n.BlockedReason = ParseBlockerReason(input.BlockedReason);
         n.BlockedSince = input.BlockedSince;
         n.FollowUpDate = input.FollowUpDate;
         if (!string.IsNullOrWhiteSpace(input.Remarks))
             n.Remarks = input.Remarks.Trim();
+
+        // Ownership (PM/CFTL/SA) is portal-editable; edits are preserved across FDO imports.
+        n.ProjectCoordinator = string.IsNullOrWhiteSpace(input.ProjectCoordinator) ? null : input.ProjectCoordinator.Trim();
+        n.CftlPrimary = string.IsNullOrWhiteSpace(input.CftlPrimary) ? null : input.CftlPrimary.Trim();
+        n.SolutionArchitect = string.IsNullOrWhiteSpace(input.SolutionArchitect) ? null : input.SolutionArchitect.Trim();
 
         // Stamp a blocked-since date automatically when moving into a blocked/waiting state without one.
         if (IsBlockedState(n.Status) && n.BlockedSince is null)
@@ -98,7 +117,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
             AccountId = n.AccountId,
             WaveType = ParseWaveType(input.WaveType),
             Reference = input.Reference.Trim(),
-            Notes = string.IsNullOrWhiteSpace(input.Notes) ? null : input.Notes.Trim()
+            Notes = string.IsNullOrWhiteSpace(input.Notes) ? null : input.Notes.Trim(),
+            Source = "Portal"
         };
         _db.WaveLinks.Add(link);
         await _db.SaveChangesAsync(ct);

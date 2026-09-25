@@ -80,6 +80,7 @@ public class WaveLinkConfiguration : IEntityTypeConfiguration<WaveLink>
         builder.Property(x => x.WaveType).HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.Reference).HasMaxLength(300).IsRequired();
         builder.Property(x => x.Notes).HasMaxLength(1000);
+        builder.Property(x => x.Source).HasMaxLength(20);
         builder.HasOne(x => x.Account).WithMany()
             .HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.SetNull);
         builder.HasIndex(x => x.NominationId);

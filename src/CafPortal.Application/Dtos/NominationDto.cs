@@ -29,6 +29,15 @@ public class NominationDto
     /// <summary>"", "Warn", "Escalate" or "Defer" per the Day 3/5/10 cadence.</summary>
     public string StaleTier { get; set; } = string.Empty;
 
+    // Wave links are informational — no wave type is mandatory. These flags surface what's present so
+    // records with no waves can be found and enriched; they are never a validation error.
+    public bool DbLinked { get; set; }
+    public bool AlzLinked { get; set; }
+    public bool SecurityLinked { get; set; }
+    public int WaveCount { get; set; }
+    /// <summary>True when no waves are linked yet — the "review &amp; associate waves" signal.</summary>
+    public bool NoWavesLinked { get; set; }
+
     public IReadOnlyList<WaveLinkDto> Waves { get; set; } = Array.Empty<WaveLinkDto>();
 }
 
@@ -36,10 +45,14 @@ public class NominationDto
 public class NominationUpdateDto
 {
     public string Status { get; set; } = "Open";
+    public string? MigrationStatus { get; set; }
     public string? BlockedReason { get; set; }
     public DateOnly? BlockedSince { get; set; }
     public DateOnly? FollowUpDate { get; set; }
     public string? Remarks { get; set; }
+    public string? ProjectCoordinator { get; set; }
+    public string? CftlPrimary { get; set; }
+    public string? SolutionArchitect { get; set; }
 }
 
 public class WaveLinkDto

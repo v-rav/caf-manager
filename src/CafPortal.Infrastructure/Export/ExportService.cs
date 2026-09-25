@@ -70,7 +70,7 @@ public class ExportService(
         var rows = await nominations.GetAsync(region, status: null, ct);
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("Nominations");
-        var headers = new[] { "Account", "TPID", "Technology", "Region", "Migration Status", "Current State", "Status", "PM", "CFTL", "SA", "Blocker Reason", "Blocked Since", "Follow-up", "Age In Stage (days)", "Stale Tier", "Waves", "Remarks" };
+        var headers = new[] { "Account", "TPID", "Technology", "Region", "Migration Status", "Current State", "Status", "PM", "CFTL", "SA", "Blocker Reason", "Blocked Since", "Follow-up", "Age In Stage (days)", "Stale Tier", "Waves", "Wave Types", "Remarks" };
         WriteHeader(ws, headers);
         var r = 2;
         foreach (var x in rows)
@@ -91,7 +91,8 @@ public class ExportService(
             ws.Cell(r, 14).Value = x.DaysSinceUpdate;
             ws.Cell(r, 15).Value = x.StaleTier;
             ws.Cell(r, 16).Value = string.Join(", ", x.Waves.Select(w => $"{w.WaveType}:{w.Reference}"));
-            ws.Cell(r, 17).Value = x.Remarks ?? "";
+            ws.Cell(r, 17).Value = x.WaveCount == 0 ? "None" : string.Join(", ", x.Waves.Select(w => w.WaveType).Distinct());
+            ws.Cell(r, 18).Value = x.Remarks ?? "";
             r++;
         }
         return Finish(wb, ws, headers.Length);

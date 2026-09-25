@@ -202,6 +202,11 @@ export interface Nomination {
   followUpDate?: string
   daysSinceUpdate: number
   staleTier: string
+  dbLinked: boolean
+  alzLinked: boolean
+  securityLinked: boolean
+  waveCount: number
+  noWavesLinked: boolean
   waves: WaveLink[]
 }
 
@@ -214,10 +219,14 @@ export interface WaveLink {
 
 export interface NominationUpdate {
   status: string
+  migrationStatus?: string
   blockedReason?: string
   blockedSince?: string
   followUpDate?: string
   remarks?: string
+  projectCoordinator?: string
+  cftlPrimary?: string
+  solutionArchitect?: string
 }
 
 export interface WaveLinkUpsert {
