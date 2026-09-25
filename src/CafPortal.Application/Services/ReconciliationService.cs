@@ -353,6 +353,50 @@ public class ReconciliationService(IApplicationDbContext db) : IReconciliationSe
         };
     }
 
+    public async Task<LinkCleanupResultDto> CleanupLinksAsync(string? region, bool apply, CancellationToken ct = default)
+    {
+        var report = await GetAsync(region, ct);
+        var merges = report.Rows
+            .Where(r => r.MatchState == "SuggestMerge" && r.SuggestedAccountId is > 0)
+            .ToList();
+
+        var repointed = 0;
+        var deduped = 0;
+        if (apply)
+        {
+            foreach (var m in merges)
+            {
+                var link = await _db.ResourceAccounts
+                    .FirstOrDefaultAsync(x => x.ResourceId == m.ResourceId && x.AccountId == m.AccountId, ct);
+                if (link is null)
+                    continue;
+                var target = m.SuggestedAccountId!.Value;
+                var targetLinked = await _db.ResourceAccounts
+                    .AnyAsync(x => x.ResourceId == m.ResourceId && x.AccountId == target, ct);
+                if (targetLinked)
+                {
+                    _db.ResourceAccounts.Remove(link); // master already linked — drop the duplicate
+                    deduped++;
+                }
+                else
+                {
+                    link.AccountId = target;
+                    repointed++;
+                }
+            }
+            await _db.SaveChangesAsync(ct);
+        }
+
+        return new LinkCleanupResultDto
+        {
+            Applied = apply,
+            Mergeable = merges.Count,
+            Repointed = apply ? repointed : 0,
+            Deduped = apply ? deduped : 0,
+            Orphans = report.Summary.Orphan
+        };
+    }
+
     // Resource role → delivery role for the seeded assignment (mirror of the picker's eligibility map).
     private static string MapRole(string? resourceRole)
     {

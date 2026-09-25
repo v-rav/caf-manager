@@ -22,4 +22,9 @@ public class ReconciliationController(IReconciliationService reconciliation) : C
     [HttpGet("unmatched-people")]
     public async Task<IActionResult> UnmatchedPeople([FromQuery] string? region, CancellationToken ct)
         => Ok(await reconciliation.GetUnmatchedPeopleAsync(region, ct));
+
+    /// <summary>Repoint near-duplicate resource→account links onto their master. Preview by default (apply=false).</summary>
+    [HttpPost("cleanup")]
+    public async Task<IActionResult> Cleanup([FromQuery] string? region, [FromQuery] bool apply, CancellationToken ct)
+        => Ok(await reconciliation.CleanupLinksAsync(region, apply, ct));
 }

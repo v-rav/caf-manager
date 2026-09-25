@@ -293,6 +293,14 @@ export interface UnmatchedPeopleResult {
   people: UnmatchedPerson[]
 }
 
+export interface LinkCleanupResult {
+  applied: boolean
+  mergeable: number
+  repointed: number
+  deduped: number
+  orphans: number
+}
+
 export interface WaveLink {
   id: number
   waveType: string

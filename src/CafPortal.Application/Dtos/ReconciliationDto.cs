@@ -82,3 +82,13 @@ public class UnmatchedPeopleResultDto
     public int TotalReferences { get; set; }
     public IReadOnlyList<UnmatchedPersonDto> People { get; set; } = Array.Empty<UnmatchedPersonDto>();
 }
+
+/// <summary>Outcome of repointing near-duplicate resource→account links onto their master account.</summary>
+public class LinkCleanupResultDto
+{
+    public bool Applied { get; set; }
+    public int Mergeable { get; set; }
+    public int Repointed { get; set; }
+    public int Deduped { get; set; }
+    public int Orphans { get; set; }
+}

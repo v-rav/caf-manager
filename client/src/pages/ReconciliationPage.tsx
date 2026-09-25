@@ -7,7 +7,7 @@ import { KpiCard } from '../components/KpiCard'
 import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
-import type { ReconciliationRow, SeedAssignmentResult, UnmatchedPerson } from '../types'
+import type { ReconciliationRow, SeedAssignmentResult, UnmatchedPerson, LinkCleanupResult } from '../types'
 
 const MATCH_TONE: Record<string, 'success' | 'warning' | 'danger'> = {
   Master: 'success',
@@ -31,6 +31,28 @@ export function ReconciliationPage() {
   // Seed flow: preview (read-only) then apply.
   const [seedPreview, setSeedPreview] = useState<SeedAssignmentResult | null>(null)
   const [seeding, setSeeding] = useState(false)
+  // Link-cleanup flow: preview then apply (repoints duplicate links to their master).
+  const [cleanPreview, setCleanPreview] = useState<LinkCleanupResult | null>(null)
+  const [cleaning, setCleaning] = useState(false)
+
+  const previewClean = async () => {
+    setCleaning(true)
+    try {
+      setCleanPreview(await api.cleanupLinks(region, false))
+    } finally {
+      setCleaning(false)
+    }
+  }
+  const applyClean = async () => {
+    setCleaning(true)
+    try {
+      await api.cleanupLinks(region, true)
+      setCleanPreview(null)
+      await reload()
+    } finally {
+      setCleaning(false)
+    }
+  }
 
   const previewSeed = async () => {
     setSeeding(true)
@@ -82,12 +104,40 @@ export function ReconciliationPage() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Button appearance="secondary" icon={<ArrowClockwiseRegular />} onClick={reload}>Refresh</Button>
+          <Button appearance="secondary" onClick={previewClean} disabled={cleaning}>Merge duplicate links</Button>
           <Button appearance="secondary" onClick={previewSeed} disabled={seeding}>Seed assignments</Button>
           <Button as="a" href={api.exportUrl('reconciliation', region)} appearance="primary" icon={<ArrowDownloadRegular />}>
             Export
           </Button>
         </div>
       </div>
+
+      {cleanPreview && (
+        <div
+          style={{
+            border: '1px solid var(--colorNeutralStroke2)',
+            background: 'var(--colorNeutralBackground2)',
+            borderRadius: 6,
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Text size={300}>
+            Will repoint <b>{cleanPreview.mergeable}</b> near-duplicate link(s) onto their master account (deduping
+            where the master is already linked). {cleanPreview.orphans} orphan link(s) have no master and are left as-is.
+            Nominations are untouched; re-seed afterwards to bake corrected engineers into assignments.
+          </Text>
+          <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+            <Button appearance="secondary" onClick={() => setCleanPreview(null)} disabled={cleaning}>Cancel</Button>
+            <Button appearance="primary" onClick={applyClean} disabled={cleaning || cleanPreview.mergeable === 0}>
+              {cleaning ? 'Merging…' : 'Apply'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {seedPreview && (
         <div

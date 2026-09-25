@@ -21,4 +21,10 @@ public interface IReconciliationService
     /// portal resource (by name or alias) — candidates to add to the roster. Read-only.
     /// </summary>
     Task<UnmatchedPeopleResultDto> GetUnmatchedPeopleAsync(string? region, CancellationToken ct = default);
+
+    /// <summary>
+    /// Repoint near-duplicate resource→account links (SuggestMerge) onto their master account,
+    /// deduping where the master is already linked. Idempotent; pass apply=false for a preview.
+    /// </summary>
+    Task<LinkCleanupResultDto> CleanupLinksAsync(string? region, bool apply, CancellationToken ct = default);
 }
