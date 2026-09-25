@@ -29,6 +29,16 @@ export interface DataStatus {
   performanceReviews: number
 }
 
+export interface RestoreResult {
+  success: boolean
+  message: string
+  restoredBytes: number
+  restoredUtc: string
+  nominations: number
+  resources: number
+  accounts: number
+}
+
 export interface ImportRun {
   id: number
   startedUtc: string
@@ -107,6 +117,8 @@ export interface Account {
   strategicFlag: boolean
   priorityWeight: number
   segment?: string
+  tpid?: string
+  externalAccountId?: string
   resourceCount: number
   projectManager?: string
   solutionArchitect?: string

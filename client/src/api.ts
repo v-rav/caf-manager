@@ -21,6 +21,7 @@ import type {
   Resource,
   ResourceDetail,
   ResourceUpsert,
+  RestoreResult,
   RoleCapacity,
   SegmentOption,
   StrategicAccount,
@@ -40,7 +41,14 @@ export const api = {
   exportUrl: (
     what: 'resources' | 'capacity' | 'nominations' | 'performance' | 'summary',
     region?: string,
-  ) => `/api/export/${what}${region ? `?region=${encodeURIComponent(region)}` : ''}`,
+    extra?: Record<string, string | undefined>,
+  ) => {
+    const qs = new URLSearchParams()
+    if (region) qs.set('region', region)
+    if (extra) for (const [k, v] of Object.entries(extra)) if (v) qs.set(k, v)
+    const q = qs.toString()
+    return `/api/export/${what}${q ? `?${q}` : ''}`
+  },
 
   resources: (params: Record<string, string | undefined>) =>
     http.get<Resource[]>('/api/resources', { params }).then((r) => r.data),
@@ -146,7 +154,7 @@ export const api = {
 
   refresh: () => http.post('/api/admin/refresh').then((r) => r.data),
 
-  uploadData: (kind: 'nominations' | 'resources' | 'leave' | 'engagement', file: File) => {
+  uploadData: (kind: 'nominations' | 'resources' | 'leave' | 'engagement' | 'accounts', file: File) => {
     const form = new FormData()
     form.append('file', file)
     return http.post(`/api/admin/upload?kind=${kind}`, form).then((r) => r.data)
@@ -155,4 +163,11 @@ export const api = {
   imports: (take = 100) => http.get<ImportRun[]>('/api/imports', { params: { take } }).then((r) => r.data),
   importChanges: (runId: number) =>
     http.get<ImportChange[]>(`/api/imports/${runId}/changes`).then((r) => r.data),
+
+  backupUrl: () => '/api/backup/download',
+  restoreDatabase: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return http.post<RestoreResult>('/api/backup/restore', form).then((r) => r.data)
+  },
 }
