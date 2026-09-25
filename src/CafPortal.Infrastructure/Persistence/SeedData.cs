@@ -109,6 +109,10 @@ public static class SeedData
             ("StaleWarnDays", "3", "Days without update before a nomination is flagged for a warning"),
             ("StaleEscalateDays", "5", "Days without update before a nomination is escalated"),
             ("StaleDeferDays", "10", "Days without update before suggesting Customer Deferred"),
+            ("StageTargetDays1", "10", "Target days for Stage 1 - Validating & Initial Scope"),
+            ("StageTargetDays2", "10", "Target days for Stage 2 - Executing Pre-Requisites"),
+            ("StageTargetDays3", "5", "Target days for Stage 3 - Finalize Scope"),
+            ("StageTargetDays4", "23", "Target days for Stage 4 - Executing Migration"),
             ("LeaveClashWindowDays", "30", "Upcoming-leave window used to detect coverage clashes"),
             ("PerformanceTrainingThreshold", "4", "Review dimension score below which a training need is flagged")
         };

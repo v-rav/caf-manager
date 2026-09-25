@@ -290,9 +290,22 @@ const SETTING_LABELS: Record<string, string> = {
   StaleWarnDays: 'Stale · Warn after (days)',
   StaleEscalateDays: 'Stale · Escalate after (days)',
   StaleDeferDays: 'Stale · Suggest Deferred after (days)',
+  StageTargetDays1: 'Stage 1 target · Validating (days)',
+  StageTargetDays2: 'Stage 2 target · Pre-Requisites (days)',
+  StageTargetDays3: 'Stage 3 target · Finalize Scope (days)',
+  StageTargetDays4: 'Stage 4 target · Executing Migration (days)',
   LeaveClashWindowDays: 'Leave-clash window (days)',
 }
-const SETTING_ORDER = ['StaleWarnDays', 'StaleEscalateDays', 'StaleDeferDays', 'LeaveClashWindowDays']
+const SETTING_ORDER = [
+  'StaleWarnDays',
+  'StaleEscalateDays',
+  'StaleDeferDays',
+  'StageTargetDays1',
+  'StageTargetDays2',
+  'StageTargetDays3',
+  'StageTargetDays4',
+  'LeaveClashWindowDays',
+]
 
 function OperationsSettingsPanel() {
   const { data, loading, error, reload } = useAsync(() => api.operationsSettings(), [])

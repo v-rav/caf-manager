@@ -215,7 +215,8 @@ public class ConfigurationController(
     [HttpGet("settings")]
     public async Task<IActionResult> GetSettings(CancellationToken ct)
     {
-        string[] keys = ["StaleWarnDays", "StaleEscalateDays", "StaleDeferDays", "LeaveClashWindowDays"];
+        string[] keys = ["StaleWarnDays", "StaleEscalateDays", "StaleDeferDays",
+            "StageTargetDays1", "StageTargetDays2", "StageTargetDays3", "StageTargetDays4", "LeaveClashWindowDays"];
         return Ok(await db.ApplicationSettings.AsNoTracking()
             .Where(s => keys.Contains(s.Key))
             .Select(s => new { s.Key, s.Value, s.Description })
@@ -226,7 +227,8 @@ public class ConfigurationController(
     public async Task<IActionResult> UpdateSettings([FromBody] IReadOnlyList<SettingUpsert> updates, CancellationToken ct)
     {
         if (updates is null || updates.Count == 0) return BadRequest("No settings supplied.");
-        string[] allowed = ["StaleWarnDays", "StaleEscalateDays", "StaleDeferDays", "LeaveClashWindowDays"];
+        string[] allowed = ["StaleWarnDays", "StaleEscalateDays", "StaleDeferDays",
+            "StageTargetDays1", "StageTargetDays2", "StageTargetDays3", "StageTargetDays4", "LeaveClashWindowDays"];
         var rows = await db.ApplicationSettings.Where(s => allowed.Contains(s.Key)).ToListAsync(ct);
         foreach (var u in updates)
         {
