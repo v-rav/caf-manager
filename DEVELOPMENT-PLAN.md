@@ -125,7 +125,7 @@ gap. Priority: 🔴 Now · 🟠 Next · ⚪ Later.
 | P4-07 | **"My view"** — a lead's personalized landing filtered to their region/reports with only their action items (stale noms, clashes, training needs) | Turns the portal into a personal worklist | 🟠 | ☐ |
 | P4-08 | **Global search** — top-bar people/account/nomination lookup | Faster navigation across 78 resources / 262 accounts | ⚪ | ☐ |
 | P4-09 | **Entra ID auth** (spec Phase 2) — protect performance scores + governance data on a public App Service URL | Security before wider rollout | ⚪ | ☐ |
-| P4-10 | **In-app import upload** — replace the server-file dependency with a file picker | Self-service refresh without server access | ⚪ | ☐ |
+| P4-10 | **In-app import upload** — replace the server-file dependency with a file picker | Self-service refresh without server access | ⚪ | ✅ |
 | P4-11 | **API smoke tests** — capacity math, stale tiers, clash window | No automated tests today | ⚪ | ☐ |
 | P4-12 | **Repo hygiene** — remove stray root logs; confirm `*.log` ignored | Noise / minor leak risk | 🔴 | ✅ |
 
@@ -171,7 +171,7 @@ governance/operational overlay. On each drop we **upsert-merge** (never wipe), k
 | ID | Sub-phase | What | Status |
 |----|-----------|------|--------|
 | **A** | **Upsert-merge correctness** | Add `ExternalTaskId` (FDO "Task Id") as the stable key + index. Import matches by Task Id (falls back to `AccountId`+`Offering` to adopt legacy rows once), refreshes FDO-owned fields, and **preserves** portal-owned fields. Rows absent from a drop are **soft-withdrawn** (`NominationStatusType.Withdrawn`), never hard-deleted, so history + waves survive. `DataRefreshService` no longer `ExecuteDeleteAsync` on nominations. | ✅ **Done & verified** |
-| **B** | **In-app upload + dry-run preview** | File-picker upload (P4-10) with a preview showing Added / Updated / Unchanged / Missing counts **before** commit. | ☐ |
+| **B** | **In-app upload + dry-run preview** | File-picker upload (P4-10) with a preview showing Added / Updated / Unchanged / Missing counts **before** commit. | ◠ **Upload done** (header “Upload FDO” → `POST /api/admin/upload?kind=nominations`, atomic temp-swap then upsert-refresh). Dry-run preview still ☐ |
 | **C** | **Import audit + retention** | `ImportRun` table (id, startedUtc, source, counts) + optional `ImportChange` delta rows; prune history older than `ImportHistoryRetentionDays` (default **10**, keep 7–15) to stay small on SQLite/F1. | ☐ |
 | **D** | **Trend snapshots** | Periodic snapshots of utilization / blocked-age / stage-age for trend charts (P4-06), fed by the same ingestion. | ☐ |
 

@@ -143,4 +143,10 @@ export const api = {
     http.post<PerformanceReview>('/api/performance', input).then((r) => r.data),
 
   refresh: () => http.post('/api/admin/refresh').then((r) => r.data),
+
+  uploadData: (kind: 'nominations' | 'resources' | 'leave' | 'engagement', file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return http.post(`/api/admin/upload?kind=${kind}`, form).then((r) => r.data)
+  },
 }

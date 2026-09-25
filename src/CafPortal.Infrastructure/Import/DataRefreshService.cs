@@ -115,6 +115,35 @@ public class DataRefreshService(
 
     private const string LastRefreshKey = "LastDataRefreshUtc";
 
+    public async Task<DataRefreshResultDto> UploadAndRefreshAsync(string kind, Stream content, string fileName, CancellationToken ct = default)
+    {
+        if (!fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Only .xlsx workbooks are supported.");
+
+        var target = kind?.Trim().ToLowerInvariant() switch
+        {
+            "nominations" or "nomination" => _sources.NominationFile,
+            "resources" or "resource" => _sources.ResourceFile,
+            "leave" => _sources.LeaveFile,
+            "engagement" => _sources.EngagementFile,
+            _ => throw new InvalidOperationException($"Unknown upload kind '{kind}'.")
+        };
+
+        var baseDir = Path.IsPathRooted(_sources.Directory)
+            ? _sources.Directory
+            : Path.Combine(_env.ContentRootPath, _sources.Directory);
+        Directory.CreateDirectory(baseDir);
+        var path = Path.Combine(baseDir, target);
+        var tmp = Path.Combine(baseDir, target + ".upload.tmp");
+
+        await using (var file = File.Create(tmp))
+            await content.CopyToAsync(file, ct);
+        File.Move(tmp, path, overwrite: true); // atomic swap; avoids partial reads mid-refresh
+
+        _logger.LogInformation("Uploaded {Kind} workbook to {Path}; running refresh", kind, path);
+        return await RefreshAsync(ct);
+    }
+
     public async Task<DataStatusDto> GetStatusAsync(CancellationToken ct = default)
     {
         var setting = await _db.ApplicationSettings.AsNoTracking()

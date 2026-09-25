@@ -9,7 +9,7 @@ import {
   Textarea,
   Tooltip,
 } from '@fluentui/react-components'
-import { AddRegular, ArrowDownloadRegular, DeleteRegular, EditRegular } from '@fluentui/react-icons'
+import { AddRegular, ArrowDownloadRegular, ArrowUploadRegular, DeleteRegular, EditRegular } from '@fluentui/react-icons'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { Modal } from '../components/Modal'
@@ -17,7 +17,7 @@ import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { Nomination, NominationUpdate } from '../types'
 
 // The migration journey has four stages; the summary counts how many nominations sit in each.
@@ -116,7 +116,6 @@ export function NominationsPage() {
   const [currentStateFilter, setCurrentStateFilter] = useState('')
   const [migrationFilter, setMigrationFilter] = useState('')
   const [slaFilter, setSlaFilter] = useState('')
-  const [staleOnly, setStaleOnly] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounced(search)
 
@@ -126,6 +125,22 @@ export function NominationsPage() {
   const [waveType, setWaveType] = useState('App')
   const [waveRef, setWaveRef] = useState('')
   const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  const runUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file
+    if (!file) return
+    setUploading(true)
+    try {
+      await api.uploadData('nominations', file)
+      window.location.reload()
+    } catch {
+      setUploading(false)
+      alert('Upload failed. Ensure the file is the FDO “Detail View” .xlsx export.')
+    }
+  }
 
   const stageCount = (match: string) =>
     (data ?? []).filter((n) => (n.migrationStatus ?? '').toLowerCase().includes(match)).length
@@ -148,10 +163,9 @@ export function NominationsPage() {
           (!currentStateFilter || n.currentState === currentStateFilter) &&
           (!migrationFilter || n.migrationStatus === migrationFilter) &&
           (!slaFilter || n.staleTier === slaFilter) &&
-          (!staleOnly || !!n.staleTier) &&
           (!debouncedSearch || (n.accountName ?? '').toLowerCase().includes(debouncedSearch.toLowerCase())),
       ),
-    [data, currentStateFilter, migrationFilter, slaFilter, staleOnly, debouncedSearch],
+    [data, currentStateFilter, migrationFilter, slaFilter, debouncedSearch],
   )
 
   const openManage = (n: Nomination) => {
@@ -248,16 +262,24 @@ export function NominationsPage() {
                   onChange={(_, d) => setSearch(d.value)}
                   style={{ minWidth: 200 }}
                 />
-                <Button
-                  appearance={staleOnly ? 'primary' : 'secondary'}
-                  size="small"
-                  onClick={() => setStaleOnly((v) => !v)}
-                >
-                  Needs update
-                </Button>
                 <FilterSelect label="Stage" value={migrationFilter} options={migrationOptions} onChange={setMigrationFilter} minWidth={200} />
                 <FilterSelect label="Status" value={currentStateFilter} options={currentStateOptions} onChange={setCurrentStateFilter} minWidth={200} />
                 <FilterSelect label="SLA breach" value={slaFilter} options={['Warn', 'Escalate', 'Defer']} onChange={setSlaFilter} minWidth={150} />
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept=".xlsx"
+                  style={{ display: 'none' }}
+                  onChange={runUpload}
+                />
+                <Button
+                  appearance="primary"
+                  icon={<ArrowUploadRegular />}
+                  disabled={uploading}
+                  onClick={() => fileInput.current?.click()}
+                >
+                  {uploading ? 'Uploading…' : 'Upload Data'}
+                </Button>
                 <Button as="a" href={api.exportUrl('nominations', region)} appearance="secondary" icon={<ArrowDownloadRegular />}>
                   Export
                 </Button>
