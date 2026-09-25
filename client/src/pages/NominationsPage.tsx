@@ -453,7 +453,19 @@ export function NominationsPage() {
                 >
                   {uploading ? 'Uploading…' : 'Upload'}
                 </Button>
-                <Button as="a" href={api.exportUrl('nominations', region)} appearance="secondary" icon={<ArrowDownloadRegular />}>
+                <Button
+                  as="a"
+                  href={api.exportUrl('nominations', region, {
+                    approval: approvalFilter,
+                    migrationStatus: migrationFilter,
+                    currentState: currentStateFilter,
+                    sla: slaFilter,
+                    links: linkFilter,
+                    search: debouncedSearch,
+                  })}
+                  appearance="secondary"
+                  icon={<ArrowDownloadRegular />}
+                >
                   Export
                 </Button>
               </div>

@@ -65,38 +65,129 @@ public class ExportService(
         return Finish(wb, ws, headers.Length);
     }
 
-    public async Task<byte[]> NominationsAsync(string? region, CancellationToken ct = default)
+    public async Task<byte[]> NominationsAsync(string? region, string? approval = null, string? migrationStatus = null,
+        string? currentState = null, string? sla = null, string? links = null, string? search = null, CancellationToken ct = default)
     {
-        var rows = await nominations.GetAsync(region, status: null, ct);
+        var all = await nominations.GetAsync(region, status: null, ct);
+        // Apply the same filters the Nominations grid uses, so the export matches the on-screen view.
+        var rows = all.Where(x =>
+            (string.IsNullOrEmpty(approval) || string.Equals(x.ApprovalStatus ?? "", approval, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(migrationStatus) || string.Equals(x.MigrationStatus, migrationStatus, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(currentState) || string.Equals(x.CurrentState, currentState, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(sla) || string.Equals(x.StaleTier, sla, StringComparison.OrdinalIgnoreCase)) &&
+            MatchLinks(x, links) &&
+            (string.IsNullOrEmpty(search) || (x.AccountName ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("Nominations");
-        var headers = new[] { "Account", "TPID", "Technology", "Region", "Migration Status", "Current State", "Status", "Approval", "PM", "CFTL", "SA", "Blocker Reason", "Blocked Since", "Follow-up", "Age In Stage (days)", "Stale Tier", "Waves", "Wave Types", "Remarks" };
+        var headers = new[] { "Account", "TPID", "Technology", "Region", "Stage", "Migration Status", "Current State", "Status", "Approval", "PM", "CFTL", "SA", "Blocker Reason", "Blocked Since", "Follow-up", "Age In Stage (days)", "Stale Tier", "Waves", "Wave Types", "Remarks" };
         WriteHeader(ws, headers);
         var r = 2;
         foreach (var x in rows)
         {
-            ws.Cell(r, 1).Value = x.AccountName ?? "";
-            ws.Cell(r, 2).Value = x.Tpid ?? "";
-            ws.Cell(r, 3).Value = x.Technology ?? "";
-            ws.Cell(r, 4).Value = x.Region;
-            ws.Cell(r, 5).Value = x.MigrationStatus ?? "";
-            ws.Cell(r, 6).Value = x.CurrentState ?? "";
-            ws.Cell(r, 7).Value = x.Status;
-            ws.Cell(r, 8).Value = x.ApprovalStatus ?? "";
-            ws.Cell(r, 9).Value = x.ProjectCoordinator ?? "";
-            ws.Cell(r, 10).Value = x.CftlPrimary ?? "";
-            ws.Cell(r, 11).Value = x.SolutionArchitect ?? "";
-            ws.Cell(r, 12).Value = x.BlockedReason ?? "";
-            ws.Cell(r, 13).Value = x.BlockedSince?.ToString("yyyy-MM-dd") ?? "";
-            ws.Cell(r, 14).Value = x.FollowUpDate?.ToString("yyyy-MM-dd") ?? "";
-            ws.Cell(r, 15).Value = x.DaysSinceUpdate;
-            ws.Cell(r, 16).Value = x.StaleTier;
-            ws.Cell(r, 17).Value = string.Join(", ", x.Waves.Select(w => $"{w.WaveType}:{w.Reference}"));
-            ws.Cell(r, 18).Value = x.WaveCount == 0 ? "None" : string.Join(", ", x.Waves.Select(w => w.WaveType).Distinct());
-            ws.Cell(r, 19).Value = x.Remarks ?? "";
+            var c = 1;
+            ws.Cell(r, c++).Value = x.AccountName ?? "";
+            ws.Cell(r, c++).Value = x.Tpid ?? "";
+            ws.Cell(r, c++).Value = x.Technology ?? "";
+            ws.Cell(r, c++).Value = x.Region;
+            var stage = StageNumber(x.MigrationStatus);
+            if (stage is int sn) ws.Cell(r, c++).Value = sn; else ws.Cell(r, c++).Value = "";
+            ws.Cell(r, c++).Value = x.MigrationStatus ?? "";
+            ws.Cell(r, c++).Value = x.CurrentState ?? "";
+            ws.Cell(r, c++).Value = x.Status;
+            ws.Cell(r, c++).Value = x.ApprovalStatus ?? "";
+            ws.Cell(r, c++).Value = x.ProjectCoordinator ?? "";
+            ws.Cell(r, c++).Value = x.CftlPrimary ?? "";
+            ws.Cell(r, c++).Value = x.SolutionArchitect ?? "";
+            ws.Cell(r, c++).Value = x.BlockedReason ?? "";
+            ws.Cell(r, c++).Value = x.BlockedSince?.ToString("yyyy-MM-dd") ?? "";
+            ws.Cell(r, c++).Value = x.FollowUpDate?.ToString("yyyy-MM-dd") ?? "";
+            ws.Cell(r, c++).Value = x.DaysSinceUpdate;
+            ws.Cell(r, c++).Value = x.StaleTier;
+            ws.Cell(r, c++).Value = string.Join(", ", x.Waves.Select(w => $"{w.WaveType}:{w.Reference}"));
+            ws.Cell(r, c++).Value = x.WaveCount == 0 ? "None" : string.Join(", ", x.Waves.Select(w => w.WaveType).Distinct());
+            ws.Cell(r, c++).Value = x.Remarks ?? "";
             r++;
         }
+        ws.Range(1, 1, rows.Count + 1, headers.Length).SetAutoFilter();
+
+        BuildNominationAnalysis(wb, rows, region, approval);
         return Finish(wb, ws, headers.Length);
+    }
+
+    // Migration Status text → 1–4 stage number (matches the grid), or null when no stage is recognised.
+    private static int? StageNumber(string? migration)
+    {
+        var t = (migration ?? "").ToLowerInvariant();
+        if (t.Contains("validating")) return 1;
+        if (t.Contains("pre-requisite")) return 2;
+        if (t.Contains("finalize")) return 3;
+        if (t.Contains("executing migration")) return 4;
+        return null;
+    }
+
+    private static bool MatchLinks(NominationDto x, string? links) => links switch
+    {
+        null or "" => true,
+        "No waves" => x.NoWavesLinked,
+        "Has any waves" => !x.NoWavesLinked,
+        "Has DB" => x.DbLinked,
+        "Has Security" => x.SecurityLinked,
+        _ => true,
+    };
+
+    // Second sheet: pivot-style counts of the filtered rows so a lead gets a one-glance breakdown.
+    private void BuildNominationAnalysis(XLWorkbook wb, IReadOnlyList<NominationDto> rows, string? region, string? approval)
+    {
+        var ws = wb.AddWorksheet("Analysis");
+        var r = 1;
+        ws.Cell(r, 1).Value = "Nomination Analysis";
+        ws.Cell(r, 1).Style.Font.Bold = true;
+        ws.Cell(r, 1).Style.Font.FontSize = 14;
+        r += 2;
+        ws.Cell(r++, 1).Value = $"Scope: {(string.IsNullOrEmpty(region) ? "All regions" : region)} \u00b7 {(string.IsNullOrEmpty(approval) ? "All approvals" : approval)}";
+        ws.Cell(r++, 1).Value = $"Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC";
+        ws.Cell(r++, 1).Value = $"Total nominations in scope: {rows.Count}";
+        r++;
+
+        void Section(string title, IEnumerable<(string Label, int Count)> items)
+        {
+            ws.Cell(r, 1).Value = title;
+            var head = ws.Range(r, 1, r, 2);
+            head.Style.Font.Bold = true;
+            head.Style.Fill.BackgroundColor = XLColor.FromHtml(HeaderHtml);
+            head.Style.Font.FontColor = XLColor.White;
+            r++;
+            foreach (var it in items) { ws.Cell(r, 1).Value = it.Label; ws.Cell(r, 2).Value = it.Count; r++; }
+            r++;
+        }
+
+        Section("By approval status", rows
+            .GroupBy(x => string.IsNullOrEmpty(x.ApprovalStatus) ? "(blank)" : x.ApprovalStatus!)
+            .OrderByDescending(g => g.Count()).Select(g => (g.Key, g.Count())));
+
+        var stageItems = new[] { 1, 2, 3, 4 }
+            .Select(n => ($"Stage {n}", rows.Count(x => StageNumber(x.MigrationStatus) == n))).ToList();
+        stageItems.Add(("No stage", rows.Count(x => StageNumber(x.MigrationStatus) == null)));
+        Section("By migration stage", stageItems);
+
+        Section("By region", rows
+            .GroupBy(x => string.IsNullOrEmpty(x.Region) ? "(blank)" : x.Region)
+            .OrderByDescending(g => g.Count()).Select(g => (g.Key, g.Count())));
+
+        var slaItems = new List<(string, int)> { ("On track", rows.Count(x => string.IsNullOrEmpty(x.StaleTier))) };
+        slaItems.AddRange(new[] { "Warn", "Escalate", "Defer" }.Select(t => (t, rows.Count(x => x.StaleTier == t))));
+        Section("By SLA stale tier", slaItems);
+
+        Section("Wave linkage", new[]
+        {
+            ("DB linked", rows.Count(x => x.DbLinked)),
+            ("Security linked", rows.Count(x => x.SecurityLinked)),
+            ("No waves linked", rows.Count(x => x.NoWavesLinked)),
+        });
+
+        ws.Columns(1, 2).AdjustToContents();
     }
 
     public async Task<byte[]> PerformanceAsync(string? region, CancellationToken ct = default)
