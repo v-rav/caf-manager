@@ -47,6 +47,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 OpenedDate = n.OpenedDate,
                 Remarks = n.Remarks,
                 MigrationStatus = n.MigrationStatus,
+                ApprovalStatus = n.ApprovalStatus,
                 StageAgeDays = n.StageAgeDays,
                 CurrentState = n.CurrentState,
                 SolutionArchitect = n.SolutionArchitect,

@@ -13,6 +13,7 @@ public class NominationDto
     public string? Remarks { get; set; }
 
     public string? MigrationStatus { get; set; }
+    public string? ApprovalStatus { get; set; }
     /// <summary>Days spent in the current migration stage (from the stage's day-count column).</summary>
     public int? StageAgeDays { get; set; }
     public string? CurrentState { get; set; }

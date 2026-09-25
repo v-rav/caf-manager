@@ -58,6 +58,7 @@ public class NominationConfiguration : IEntityTypeConfiguration<Nomination>
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.Remarks).HasMaxLength(1000);
         builder.Property(x => x.MigrationStatus).HasMaxLength(100);
+        builder.Property(x => x.ApprovalStatus).HasMaxLength(60);
         builder.Property(x => x.CurrentState).HasMaxLength(2000);
         builder.Property(x => x.SolutionArchitect).HasMaxLength(200);
         builder.Property(x => x.CftlPrimary).HasMaxLength(200);

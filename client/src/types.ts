@@ -192,6 +192,7 @@ export interface Nomination {
   openedDate: string
   remarks?: string
   migrationStatus?: string
+  approvalStatus?: string
   stageAgeDays?: number
   currentState?: string
   solutionArchitect?: string

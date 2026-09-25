@@ -18,6 +18,8 @@ public class Nomination : AuditableEntity
 
     /// <summary>Raw migration status from the nomination export (e.g. "Executing Migration").</summary>
     public string? MigrationStatus { get; set; }
+    /// <summary>FDO nomination approval status (e.g. "Approved", "Declined"). Blank when not set.</summary>
+    public string? ApprovalStatus { get; set; }
     /// <summary>Days spent in the current migration stage (from that stage's day-count column in the export).</summary>
     public int? StageAgeDays { get; set; }
     public string? CurrentState { get; set; }

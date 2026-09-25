@@ -70,7 +70,7 @@ public class ExportService(
         var rows = await nominations.GetAsync(region, status: null, ct);
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("Nominations");
-        var headers = new[] { "Account", "TPID", "Technology", "Region", "Migration Status", "Current State", "Status", "PM", "CFTL", "SA", "Blocker Reason", "Blocked Since", "Follow-up", "Age In Stage (days)", "Stale Tier", "Waves", "Wave Types", "Remarks" };
+        var headers = new[] { "Account", "TPID", "Technology", "Region", "Migration Status", "Current State", "Status", "Approval", "PM", "CFTL", "SA", "Blocker Reason", "Blocked Since", "Follow-up", "Age In Stage (days)", "Stale Tier", "Waves", "Wave Types", "Remarks" };
         WriteHeader(ws, headers);
         var r = 2;
         foreach (var x in rows)
@@ -82,17 +82,18 @@ public class ExportService(
             ws.Cell(r, 5).Value = x.MigrationStatus ?? "";
             ws.Cell(r, 6).Value = x.CurrentState ?? "";
             ws.Cell(r, 7).Value = x.Status;
-            ws.Cell(r, 8).Value = x.ProjectCoordinator ?? "";
-            ws.Cell(r, 9).Value = x.CftlPrimary ?? "";
-            ws.Cell(r, 10).Value = x.SolutionArchitect ?? "";
-            ws.Cell(r, 11).Value = x.BlockedReason ?? "";
-            ws.Cell(r, 12).Value = x.BlockedSince?.ToString("yyyy-MM-dd") ?? "";
-            ws.Cell(r, 13).Value = x.FollowUpDate?.ToString("yyyy-MM-dd") ?? "";
-            ws.Cell(r, 14).Value = x.DaysSinceUpdate;
-            ws.Cell(r, 15).Value = x.StaleTier;
-            ws.Cell(r, 16).Value = string.Join(", ", x.Waves.Select(w => $"{w.WaveType}:{w.Reference}"));
-            ws.Cell(r, 17).Value = x.WaveCount == 0 ? "None" : string.Join(", ", x.Waves.Select(w => w.WaveType).Distinct());
-            ws.Cell(r, 18).Value = x.Remarks ?? "";
+            ws.Cell(r, 8).Value = x.ApprovalStatus ?? "";
+            ws.Cell(r, 9).Value = x.ProjectCoordinator ?? "";
+            ws.Cell(r, 10).Value = x.CftlPrimary ?? "";
+            ws.Cell(r, 11).Value = x.SolutionArchitect ?? "";
+            ws.Cell(r, 12).Value = x.BlockedReason ?? "";
+            ws.Cell(r, 13).Value = x.BlockedSince?.ToString("yyyy-MM-dd") ?? "";
+            ws.Cell(r, 14).Value = x.FollowUpDate?.ToString("yyyy-MM-dd") ?? "";
+            ws.Cell(r, 15).Value = x.DaysSinceUpdate;
+            ws.Cell(r, 16).Value = x.StaleTier;
+            ws.Cell(r, 17).Value = string.Join(", ", x.Waves.Select(w => $"{w.WaveType}:{w.Reference}"));
+            ws.Cell(r, 18).Value = x.WaveCount == 0 ? "None" : string.Join(", ", x.Waves.Select(w => w.WaveType).Distinct());
+            ws.Cell(r, 19).Value = x.Remarks ?? "";
             r++;
         }
         return Finish(wb, ws, headers.Length);

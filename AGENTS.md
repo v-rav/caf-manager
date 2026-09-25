@@ -68,7 +68,12 @@ import the **web app is the system of record**.
     > basis as final.
 - **TPID** lives on `Account` (external master key), surfaced onto `NominationDto.Tpid` via
   `Include(n => n.Account)` in `NominationService`.
-- **Ownership short names** used in the Nominations grid: **PM** = `ProjectCoordinator`,
+- **Approval status** (`Nomination.ApprovalStatus`, FDO-owned): from the FDO "Nomination Approval
+  Status" column (values seen: Approved · Declined · Provisionally Approved · Active Concierge). The
+  Nominations grid **defaults to `Approved` only** via an **Approval** `FilterSelect` (default state
+  `'Approved'`, "All Approval" clears it); the approval scope drives both the KPIs and the grid so
+  counts match. Surfaced as an **Approval** export column. (Declined also maps to `Status=Withdrawn`
+  via `MapStatus` on first insert.)- **Ownership short names** used in the Nominations grid: **PM** = `ProjectCoordinator`,
   **CFTL** = `CftlPrimary`, **SA** = `SolutionArchitect`. These are **portal-owned** (editable in the
   Manage dialog); the FDO import only **seeds them when empty** (never overwrites a portal edit).
 - **Wave linkage (informational, NOT required)**: a nomination may legitimately have **no waves**;

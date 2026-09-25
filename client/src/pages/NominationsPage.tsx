@@ -14,7 +14,6 @@ import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { Modal } from '../components/Modal'
 import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
-import { KpiCard } from '../components/KpiCard'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import { useMemo, useRef, useState } from 'react'
@@ -71,6 +70,79 @@ function LinkChip({ label, linked }: { label: string; linked: boolean }) {
     <Badge appearance={linked ? 'filled' : 'tint'} color={linked ? 'brand' : 'danger'} size="small">
       {label}
     </Badge>
+  )
+}
+
+type StatTone = 'neutral' | 'success' | 'warning' | 'danger' | 'brand'
+const STAT_TONE: Record<StatTone, string> = {
+  neutral: 'var(--colorNeutralForeground1)',
+  success: 'var(--colorPaletteGreenForeground1)',
+  warning: 'var(--colorPaletteDarkOrangeForeground1)',
+  danger: 'var(--colorPaletteRedForeground1)',
+  brand: 'var(--colorBrandForeground1)',
+}
+
+interface Stat {
+  label: string
+  value: number
+  tone?: StatTone
+  active?: boolean
+  onClick?: () => void
+}
+
+// One metric inside a SummaryCard; clickable stats act as drill-through filters.
+function StatCell({ label, value, tone = 'neutral', active, onClick }: Stat) {
+  return (
+    <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
+      title={onClick ? `Filter by ${label}` : undefined}
+      style={{
+        border: '1px solid',
+        borderColor: active ? 'var(--colorBrandStroke1)' : 'var(--colorNeutralStroke2)',
+        background: active ? 'var(--colorBrandBackground2)' : 'transparent',
+        borderRadius: 6,
+        padding: '6px 10px',
+        cursor: onClick ? 'pointer' : 'default',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+      }}
+    >
+      <span style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.1, color: STAT_TONE[tone] }}>{value}</span>
+      <span style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)' }}>{label}</span>
+    </div>
+  )
+}
+
+// A titled summary card holding a small grid of related stats.
+function SummaryCard({ title, items, columns = 2 }: { title: string; items: Stat[]; columns?: number }) {
+  return (
+    <div
+      style={{
+        flex: '1 1 240px',
+        minWidth: 220,
+        background: 'var(--colorNeutralBackground1)',
+        border: '1px solid var(--colorNeutralStroke2)',
+        borderRadius: 8,
+        padding: 12,
+        boxShadow: 'var(--shadow2)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+      }}
+    >
+      <Text size={200} weight="semibold" style={{ color: 'var(--colorNeutralForeground3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>
+        {title}
+      </Text>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 6 }}>
+        {items.map((it) => (
+          <StatCell key={it.label} {...it} />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -171,6 +243,8 @@ export function NominationsPage() {
   const [migrationFilter, setMigrationFilter] = useState('')
   const [slaFilter, setSlaFilter] = useState('')
   const [linkFilter, setLinkFilter] = useState('')
+  // Default the pipeline to Approved nominations; other statuses are opt-in via the Approval filter.
+  const [approvalFilter, setApprovalFilter] = useState('Approved')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounced(search)
 
@@ -197,12 +271,26 @@ export function NominationsPage() {
     }
   }
 
-  const stageCount = (match: string) =>
-    (data ?? []).filter((n) => (n.migrationStatus ?? '').toLowerCase().includes(match)).length
+  // Approval scope drives both the KPIs and the grid so counts match what's shown.
+  const scoped = useMemo(
+    () => (data ?? []).filter((n) => !approvalFilter || (n.approvalStatus ?? '') === approvalFilter),
+    [data, approvalFilter],
+  )
 
-  const blockedTotal = (data ?? []).filter((n) => BLOCKED_STATES.includes(n.status)).length
-  const staleCount = (tier: string) => (data ?? []).filter((n) => n.staleTier === tier).length
-  const noWaveTotal = (data ?? []).filter((n) => n.noWavesLinked).length
+  const stageCount = (match: string) =>
+    scoped.filter((n) => (n.migrationStatus ?? '').toLowerCase().includes(match)).length
+
+  const blockedTotal = scoped.filter((n) => BLOCKED_STATES.includes(n.status)).length
+  const staleCount = (tier: string) => scoped.filter((n) => n.staleTier === tier).length
+  const noWaveTotal = scoped.filter((n) => n.noWavesLinked).length
+  // Approval counts span ALL nominations (not the approval-scoped set) so the card shows the full split.
+  const approvalCount = (s: string) => (data ?? []).filter((n) => (n.approvalStatus ?? '') === s).length
+  const toggleApproval = (s: string) => setApprovalFilter(approvalFilter === s ? '' : s)
+
+  const approvalOptions = useMemo(
+    () => [...new Set(['Approved', 'Declined', ...(data ?? []).map((n) => n.approvalStatus).filter((v): v is string => !!v)])],
+    [data],
+  )
 
   const migrationOptions = useMemo(
     () => [...new Set((data ?? []).map((n) => n.migrationStatus).filter((v): v is string => !!v))].sort(),
@@ -214,7 +302,7 @@ export function NominationsPage() {
   )
   const rows = useMemo(
     () =>
-      (data ?? []).filter(
+      scoped.filter(
         (n) =>
           (!currentStateFilter || n.currentState === currentStateFilter) &&
           (!migrationFilter || n.migrationStatus === migrationFilter) &&
@@ -226,7 +314,7 @@ export function NominationsPage() {
             (linkFilter === 'Has Security' && n.securityLinked)) &&
           (!debouncedSearch || (n.accountName ?? '').toLowerCase().includes(debouncedSearch.toLowerCase())),
       ),
-    [data, currentStateFilter, migrationFilter, slaFilter, linkFilter, debouncedSearch],
+    [scoped, currentStateFilter, migrationFilter, slaFilter, linkFilter, debouncedSearch],
   )
 
   const openManage = (n: Nomination) => {
@@ -304,27 +392,39 @@ export function NominationsPage() {
       ) : (
         <>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <KpiCard label="Total" value={data?.length ?? 0} tone="brand" />
-            {STAGES.map((s) => (
-              <KpiCard key={s.n} label={`Stage ${s.n} · ${s.label}`} value={stageCount(s.match)} tone={s.tone} />
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <KpiCard label="Blocked / Waiting" value={blockedTotal} tone="warning" />
-            <KpiCard label="Stale · Warn (3d+)" value={staleCount('Warn')} tone="warning" />
-            <KpiCard label="Stale · Escalate (5d+)" value={staleCount('Escalate')} tone="warning" />
-            <KpiCard label="Stale · Defer (10d+)" value={staleCount('Defer')} tone="danger" />
-            <KpiCard
-              label="No waves linked"
-              value={noWaveTotal}
-              tone="warning"
-              onClick={() => setLinkFilter(linkFilter === 'No waves' ? '' : 'No waves')}
+            <SummaryCard
+              title={`Approval status · ${data?.length ?? 0} total`}
+              items={[
+                { label: 'Approved', value: approvalCount('Approved'), tone: 'success', active: approvalFilter === 'Approved', onClick: () => toggleApproval('Approved') },
+                { label: 'Prov. Approved', value: approvalCount('Provisionally Approved'), tone: 'brand', active: approvalFilter === 'Provisionally Approved', onClick: () => toggleApproval('Provisionally Approved') },
+                { label: 'Active Concierge', value: approvalCount('Active Concierge'), tone: 'neutral', active: approvalFilter === 'Active Concierge', onClick: () => toggleApproval('Active Concierge') },
+                { label: 'Declined', value: approvalCount('Declined'), tone: 'danger', active: approvalFilter === 'Declined', onClick: () => toggleApproval('Declined') },
+              ]}
+            />
+            <SummaryCard
+              title="Migration stage"
+              items={STAGES.map((s) => ({ label: `${s.n} · ${s.label}`, value: stageCount(s.match), tone: s.tone }))}
+            />
+            <SummaryCard
+              title="Health"
+              items={[
+                { label: 'Blocked / Waiting', value: blockedTotal, tone: 'warning' },
+                { label: 'Warn (3d+)', value: staleCount('Warn'), tone: 'warning', active: slaFilter === 'Warn', onClick: () => setSlaFilter(slaFilter === 'Warn' ? '' : 'Warn') },
+                { label: 'Escalate (5d+)', value: staleCount('Escalate'), tone: 'warning', active: slaFilter === 'Escalate', onClick: () => setSlaFilter(slaFilter === 'Escalate' ? '' : 'Escalate') },
+                { label: 'Defer (10d+)', value: staleCount('Defer'), tone: 'danger', active: slaFilter === 'Defer', onClick: () => setSlaFilter(slaFilter === 'Defer' ? '' : 'Defer') },
+              ]}
+            />
+            <SummaryCard
+              title={`Linkage · ${scoped.length} shown`}
+              items={[
+                { label: 'No waves', value: noWaveTotal, tone: 'warning', active: linkFilter === 'No waves', onClick: () => setLinkFilter(linkFilter === 'No waves' ? '' : 'No waves') },
+                { label: 'Has waves', value: scoped.length - noWaveTotal, tone: 'success', active: linkFilter === 'Has any waves', onClick: () => setLinkFilter(linkFilter === 'Has any waves' ? '' : 'Has any waves') },
+              ]}
             />
           </div>
 
           <Panel
-            title={`Nominations${rows ? ` (${rows.length})` : ''}`}
+            title="Nominations"
             action={
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <SearchBox
@@ -333,6 +433,7 @@ export function NominationsPage() {
                   onChange={(_, d) => setSearch(d.value)}
                   style={{ minWidth: 200 }}
                 />
+                <FilterSelect label="Approval" value={approvalFilter} options={approvalOptions} onChange={setApprovalFilter} minWidth={150} />
                 <FilterSelect label="Stage" value={migrationFilter} options={migrationOptions} onChange={setMigrationFilter} minWidth={200} />
                 <FilterSelect label="Status" value={currentStateFilter} options={currentStateOptions} onChange={setCurrentStateFilter} minWidth={200} />
                 <FilterSelect label="SLA breach" value={slaFilter} options={['Warn', 'Escalate', 'Defer']} onChange={setSlaFilter} minWidth={150} />
@@ -350,7 +451,7 @@ export function NominationsPage() {
                   disabled={uploading}
                   onClick={() => fileInput.current?.click()}
                 >
-                  {uploading ? 'Uploading…' : 'Upload Data'}
+                  {uploading ? 'Uploading…' : 'Upload'}
                 </Button>
                 <Button as="a" href={api.exportUrl('nominations', region)} appearance="secondary" icon={<ArrowDownloadRegular />}>
                   Export

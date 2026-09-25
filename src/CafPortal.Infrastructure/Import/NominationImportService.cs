@@ -139,6 +139,7 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             nom.Technology = offering;
             nom.Region = regionValue;
             nom.MigrationStatus = migration;
+            nom.ApprovalStatus = approval;
             nom.StageAgeDays = stageAge;
             nom.CurrentState = Truncate(Clean(ExcelHelpers.GetString(row, colCurrentState)), 2000);
             // Ownership (PM/CFTL/SA) is portal-owned once set: seed from FDO only when empty.
