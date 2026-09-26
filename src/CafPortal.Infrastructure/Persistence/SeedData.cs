@@ -26,6 +26,7 @@ public static class SeedData
         await SeedPerformanceReviewsAsync(db, ct);
         await SeedAliasesAsync(db, ct);
         await SeedResourceAliasesAsync(db, ct);
+        await SeedResourceEmailsAsync(db, ct);
         await SeedStrategicAccountsAsync(db, ct);
         await db.SaveChangesAsync(ct);
 
@@ -213,6 +214,67 @@ public static class SeedData
             new AccountAlias { Alias = "TSN", StandardAccountName = "Skills Network" },
             new AccountAlias { Alias = "MB", StandardAccountName = "Mercedes-Benz" },
             new AccountAlias { Alias = "KPC", StandardAccountName = "Kuwait Petroleum Corporation" });
+    }
+
+    // Known team emails (name -> address). Filled by name/alias match, only when the resource has no email yet.
+    private static readonly Dictionary<string, string> ResourceEmailSeed = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Ravinder Rana"] = "v-ravrana@microsoft.com",
+        ["Shyam Koleti"] = "v-skoleti@microsoft.com",
+        ["Rakesh Kumar"] = "v-rakkumar1@microsoft.com",
+        ["Viswanatha Selvam P"] = "v-viswp@microsoft.com",
+        ["Ahmed Gad"] = "v-agad@microsoft.com",
+        ["Kiran Raj M C"] = "v-kiranrajmc@microsoft.com",
+        ["Seethai Paulsamy"] = "v-spaulsamy@microsoft.com",
+        ["Deepak D"] = "v-deepd@microsoft.com",
+        ["Basavaraj Araballi"] = "v-baraballi@microsoft.com",
+        ["Affish Mohammad"] = "v-affishmo@microsoft.com",
+        ["Abhishek Anand"] = "v-anabhishek@microsoft.com",
+        ["Artem Tarasov"] = "v-artarasov@microsoft.com",
+        ["Dinesh Mahenderkar"] = "v-dineshmah@microsoft.com",
+        ["Ramchandra Gosavi"] = "v-ramgosavi@microsoft.com",
+        ["Noorbasha Sufiyan"] = "v-nsufiyan@microsoft.com",
+        ["Supratik Panda"] = "v-suppanda@microsoft.com",
+        ["Nandhini P"] = "v-pnandhini@microsoft.com",
+        ["Gaurav Sharma"] = "v-gaursha@microsoft.com",
+        ["Rajnish Kumar Singh"] = "v-rajnishs@microsoft.com",
+        ["Rajnish Mishra"] = "v-rajnmishra@microsoft.com",
+        ["Abhinav Jain"] = "v-jainabhina@microsoft.com",
+        ["Kandasamy Kandavel"] = "v-kakandavel@microsoft.com",
+        ["Rachi Paliwal"] = "v-rpaliwal@microsoft.com",
+        ["Ashish Anand"] = "v-ashianand@microsoft.com",
+        ["Debjyoti Biswas"] = "v-debiswas@microsoft.com",
+        ["Swadhin Kumar Nayak"] = "v-swadnayak@microsoft.com",
+        ["Prasanta Pan"] = "v-praspan@microsoft.com",
+        ["Priydarshi Sharma"] = "v-priyadshar@microsoft.com",
+        ["Xuejun Li"] = "v-lixuejun@microsoft.com",
+        ["Yangcheng Sen"] = "v-yangcshen@microsoft.com",
+    };
+
+    private static async Task SeedResourceEmailsAsync(AppDbContext db, CancellationToken ct)
+    {
+        // Normalized (case/punctuation-insensitive) lookup so name variants still match.
+        static string Norm(string? s) => new string((s ?? string.Empty).ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+        var byNorm = ResourceEmailSeed.ToDictionary(kv => Norm(kv.Key), kv => kv.Value);
+
+        var all = await db.Resources.ToListAsync(ct);
+        var changed = false;
+        foreach (var r in all)
+        {
+            if (!string.IsNullOrWhiteSpace(r.Email))
+                continue;
+            var keys = new List<string> { Norm(r.Name) };
+            if (!string.IsNullOrWhiteSpace(r.Aliases))
+                keys.AddRange(r.Aliases.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(Norm));
+            var email = keys.Select(k => byNorm.TryGetValue(k, out var e) ? e : null).FirstOrDefault(e => e is not null);
+            if (email is not null)
+            {
+                r.Email = email;
+                changed = true;
+            }
+        }
+        if (changed)
+            await db.SaveChangesAsync(ct);
     }
 
     // Known FDO name variants -> canonical roster name. Fills Aliases only when empty (never overwrites a manual edit).

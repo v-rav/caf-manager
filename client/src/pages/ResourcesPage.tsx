@@ -165,6 +165,7 @@ export function ResourcesPage() {
             emptyMessage="No resources match your filters."
             columns={[
               { key: 'name', header: 'Name', sortValue: (r) => r.name },
+              { key: 'email', header: 'Email', sortValue: (r) => r.email ?? '', render: (r) => r.email ?? '—' },
               { key: 'region', header: 'Region', sortValue: (r) => r.region },
               { key: 'role', header: 'Role', sortValue: (r) => r.role },
               { key: 'skill', header: 'Primary Skill', sortValue: (r) => r.primarySkill ?? '', render: (r) => r.primarySkill ?? '—' },
