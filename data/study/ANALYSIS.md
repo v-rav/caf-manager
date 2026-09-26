@@ -41,7 +41,7 @@ All ACR columns are **cumulative** (running totals across the fiscal year).
 
 | Column | Meaning | Reverse-engineered formula (verified all 12 months) |
 |--------|---------|------------------------------------------------------|
-| `Target` | Cumulative ACR plan curve | Linear early (**305,545.21 / month** Jul–Sep), then accelerates; **FY total ≈ 26.96M**. |
+| `Target` | Cumulative ACR plan curve | Linear early (**305,545.21 / month** Jul–Sep), then accelerates; **annual endpoint ≈ $4.17M** (Jun cumulative). The **$26.96M "Total" row is a Power BI sum-of-cumulative artifact** — NOT the annual target. |
 | `Inflight Approved ACR` | Cumulative approved-but-not-completed ACR | source measure |
 | `Completed Approved ACR` | Cumulative completed ACR | frozen at **422,353** after Sep (= current month; nothing completes in the future) |
 | `VTT` | **Velocity-to-Target** (per the glossary; the ACR gap to plan) | **`VTT = Target − (Completed + Inflight)`** ✔ (positive = behind plan; negative = ahead) |
@@ -80,8 +80,7 @@ in-flight ACR by fiscal month (Trends). The **only missing input is the monthly 
 source (annual FY target + a spread rule, or an imported target column). Surface as either:
 - a new **Attainment** section on the Analytics page (target line overlaid on the ACR trend), or
 - extra columns on the existing Trends table when `measure=acr`.
-**Open question:** where does the Target curve come from? (`305,545.21/mo` early, `~26.96M` FY total — is
-that a flat annual target spread, or an imported plan?)
+**Resolved:** the FDO Target line ends at **~$4.17M** (Jun cumulative) = the annual NNR-landed target; the `~26.96M` "Total" is a Power BI sum artifact. The portal **Attainment view** instead measures our **Total ACR** against the **$50M** target configured per FY (a bigger, gross-ACR target) — a self-consistent lens, separate from the FDO $4.17M NNR deck.
 
 ### P2 — Velocity / cycle-time (also closes PV-01)
 The `Velocity` file confirms the business tracks **avg business days in stage vs target days per stage** —
