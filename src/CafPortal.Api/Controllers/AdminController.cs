@@ -29,6 +29,16 @@ public class AdminController(IDataRefreshService refresh) : ControllerBase
     public async Task<IActionResult> UnparkAccounts(CancellationToken ct = default)
         => Ok(await refresh.UnparkAllAccountsAsync(ct));
 
+    [HttpPost("import-offerings")]
+    [RequestSizeLimit(52_428_800)] // 50 MB
+    public async Task<IActionResult> ImportOfferings([FromForm] IFormFile file, [FromQuery] bool apply = false, CancellationToken ct = default)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest("No file uploaded.");
+        await using var stream = file.OpenReadStream();
+        return Ok(await refresh.ImportOfferingsAsync(stream, apply, ct));
+    }
+
     [HttpPost("upload")]
     [RequestSizeLimit(52_428_800)] // 50 MB
     public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromQuery] string kind = "nominations", CancellationToken ct = default)

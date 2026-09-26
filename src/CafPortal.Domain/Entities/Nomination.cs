@@ -34,6 +34,13 @@ public class Nomination : AuditableEntity
     /// <summary>Next follow-up date for deferred/waiting items.</summary>
     public DateOnly? FollowUpDate { get; set; }
 
+    // One-time enrichment from "Summary of All Offerings" (loaded by TPID + Task Id).
+    public string? PrimaryMigrationPath { get; set; }
+    public string? PartnerName { get; set; }
+    public int? TotalCores { get; set; }
+    public bool? IsToolAttached { get; set; }
+    public bool? IsAutomationUsed { get; set; }
+
     public Account? Account { get; set; }
     public ICollection<WaveLink> WaveLinks { get; set; } = new List<WaveLink>();
     public ICollection<NominationResource> ResourceAssignments { get; set; } = new List<NominationResource>();

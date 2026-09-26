@@ -4,6 +4,7 @@ using CafPortal.Domain.Entities;
 using CafPortal.Domain.Entities.Configuration;
 using CafPortal.Infrastructure.Options;
 using CafPortal.Infrastructure.Persistence;
+using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -489,6 +490,127 @@ public class DataRefreshService(
             _logger.LogError(ex, "Unpark accounts failed");
             result.Success = false;
             result.Messages.Add($"Unpark failed: {ex.Message}");
+        }
+        result.CompletedUtc = DateTimeOffset.UtcNow;
+        return result;
+    }
+
+    // One-time enrichment from "Summary of All Offerings": matches nominations by TPID + Task Id and sets the
+    // offering fields; updates Account.Segment by TPID. apply=false previews match/update counts only.
+    public async Task<DataRefreshResultDto> ImportOfferingsAsync(Stream workbook, bool apply, CancellationToken ct = default)
+    {
+        var result = new DataRefreshResultDto { StartedUtc = DateTimeOffset.UtcNow };
+        try
+        {
+            using var ms = new MemoryStream();
+            await workbook.CopyToAsync(ms, ct);
+            ms.Position = 0;
+            using var wb = new XLWorkbook(ms);
+            var ws = wb.Worksheets.First();
+            var rowsUsed = ws.RowsUsed().ToList();
+            if (rowsUsed.Count < 2)
+            {
+                result.Success = true;
+                result.Messages.Add("No data rows in the Offerings workbook.");
+                result.CompletedUtc = DateTimeOffset.UtcNow;
+                return result;
+            }
+
+            var h = ExcelHelpers.MapHeaders(rowsUsed[0]);
+            var colTpid = ExcelHelpers.FindColumn(h, "TPID", "TP ID");
+            var colTask = ExcelHelpers.FindColumn(h, "Task ID", "Task Id");
+            var colSegment = ExcelHelpers.FindColumn(h, "Segment");
+            var colPath = ExcelHelpers.FindColumn(h, "Primary Migration Path");
+            var colPartner = ExcelHelpers.FindColumn(h, "Partner Name");
+            var colCores = ExcelHelpers.FindColumn(h, "Total Cores");
+            var colTool = ExcelHelpers.FindColumn(h, "Is Tool Attached");
+            var colAuto = ExcelHelpers.FindColumn(h, "Is Automation Used");
+            if (colTpid is null || colTask is null)
+            {
+                result.Success = false;
+                result.Messages.Add("Required columns 'TPID' and/or 'Task ID' were not found in the workbook.");
+                result.CompletedUtc = DateTimeOffset.UtcNow;
+                return result;
+            }
+
+            // Nominations keyed by (TPID, Task Id); accounts by TPID.
+            var noms = await _db.Nominations.Include(n => n.Account).ToListAsync(ct);
+            var byKey = new Dictionary<(string Tpid, string Task), Nomination>();
+            foreach (var n in noms.Where(x => !string.IsNullOrWhiteSpace(x.ExternalTaskId)))
+                byKey.TryAdd(((n.Account?.Tpid ?? string.Empty).Trim(), n.ExternalTaskId!.Trim()), n);
+            var taskOnly = noms.Where(x => !string.IsNullOrWhiteSpace(x.ExternalTaskId))
+                .GroupBy(x => x.ExternalTaskId!.Trim()).ToDictionary(g => g.Key, g => g.First());
+            var accountsByTpid = (await _db.Accounts.Where(a => a.Tpid != null && a.Tpid != "").ToListAsync(ct))
+                .GroupBy(a => a.Tpid!.Trim()).ToDictionary(g => g.Key, g => g.First());
+            var knownSegments = new HashSet<string>(await _db.Segments.Select(s => s.Name).ToListAsync(ct), StringComparer.OrdinalIgnoreCase);
+            var maxSort = await _db.Segments.AnyAsync(ct) ? await _db.Segments.MaxAsync(s => s.SortOrder, ct) : 0;
+
+            static bool? ParseYesNo(string? v) =>
+                string.IsNullOrWhiteSpace(v) ? null
+                : v.Trim().Equals("Yes", StringComparison.OrdinalIgnoreCase) ? true
+                : v.Trim().Equals("No", StringComparison.OrdinalIgnoreCase) ? false
+                : null;
+
+            int nomMatched = 0, taskNotFound = 0, tpidMismatch = 0, segUpdated = 0, tpidNotInMaster = 0;
+            var segByTpid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // first non-blank segment per TPID
+
+            foreach (var row in rowsUsed.Skip(1))
+            {
+                if (ExcelHelpers.IsEmptyRow(row)) continue;
+                var tpid = (ExcelHelpers.GetString(row, colTpid) ?? string.Empty).Trim();
+                var task = (ExcelHelpers.GetString(row, colTask) ?? string.Empty).Trim();
+                var segment = ExcelHelpers.GetString(row, colSegment);
+
+                if (tpid.Length > 0 && !string.IsNullOrWhiteSpace(segment) && !segByTpid.ContainsKey(tpid))
+                    segByTpid[tpid] = segment!;
+
+                if (task.Length == 0) continue;
+                if (!byKey.TryGetValue((tpid, task), out var nom))
+                {
+                    if (taskOnly.ContainsKey(task)) tpidMismatch++; else taskNotFound++;
+                    continue;
+                }
+                nomMatched++;
+                if (apply)
+                {
+                    nom.PrimaryMigrationPath = ExcelHelpers.GetString(row, colPath);
+                    nom.PartnerName = ExcelHelpers.GetString(row, colPartner);
+                    var coresStr = ExcelHelpers.GetString(row, colCores);
+                    nom.TotalCores = coresStr is not null && double.TryParse(coresStr,
+                        System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var cores)
+                        ? (int)Math.Round(cores) : null;
+                    nom.IsToolAttached = ParseYesNo(ExcelHelpers.GetString(row, colTool));
+                    nom.IsAutomationUsed = ParseYesNo(ExcelHelpers.GetString(row, colAuto));
+                }
+            }
+
+            foreach (var (tpid, segment) in segByTpid)
+            {
+                if (!accountsByTpid.TryGetValue(tpid, out var acct)) { tpidNotInMaster++; continue; }
+                if (!string.Equals(acct.Segment, segment, StringComparison.OrdinalIgnoreCase))
+                {
+                    segUpdated++;
+                    if (apply)
+                    {
+                        acct.Segment = segment;
+                        if (knownSegments.Add(segment))
+                            _db.Segments.Add(new SegmentConfiguration { Name = segment, SortOrder = ++maxSort });
+                    }
+                }
+            }
+
+            if (apply)
+                await _db.SaveChangesAsync(ct);
+            result.Success = true;
+            result.Messages.Add($"{(apply ? "Applied" : "Preview")}: nominations matched (TPID+TaskId)={nomMatched}, " +
+                $"task-id not found={taskNotFound}, tpid-mismatch={tpidMismatch}; account Segment updates={segUpdated}, " +
+                $"tpid not in master={tpidNotInMaster}. Data rows={rowsUsed.Count - 1}.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Offerings import failed");
+            result.Success = false;
+            result.Messages.Add($"Offerings import failed: {ex.Message}");
         }
         result.CompletedUtc = DateTimeOffset.UtcNow;
         return result;

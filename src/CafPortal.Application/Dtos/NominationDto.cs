@@ -25,6 +25,13 @@ public class NominationDto
     public DateOnly? BlockedSince { get; set; }
     public DateOnly? FollowUpDate { get; set; }
 
+    // Enrichment from "Summary of All Offerings" (TPID + Task Id).
+    public string? PrimaryMigrationPath { get; set; }
+    public string? PartnerName { get; set; }
+    public int? TotalCores { get; set; }
+    public bool? IsToolAttached { get; set; }
+    public bool? IsAutomationUsed { get; set; }
+
     /// <summary>Whole days since last update. Drives stale detection.</summary>
     public int DaysSinceUpdate { get; set; }
     /// <summary>"", "Warn", "Escalate" or "Defer" per the Day 3/5/10 cadence.</summary>

@@ -204,6 +204,11 @@ export interface Nomination {
   blockedReason?: string
   blockedSince?: string
   followUpDate?: string
+  primaryMigrationPath?: string
+  partnerName?: string
+  totalCores?: number
+  isToolAttached?: boolean
+  isAutomationUsed?: boolean
   daysSinceUpdate: number
   staleTier: string
   dbLinked: boolean
