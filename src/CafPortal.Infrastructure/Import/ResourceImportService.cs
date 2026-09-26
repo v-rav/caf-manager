@@ -258,6 +258,10 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
             resource = await _db.Resources.FirstOrDefaultAsync(r => r.Email == email, ct);
         if (resource is null && !string.IsNullOrWhiteSpace(name))
             resource = await _db.Resources.FirstOrDefaultAsync(r => r.Name == name, ct);
+        // Alias-aware, case/punctuation-insensitive fallback so a name variant matches an
+        // existing record (via Name or Aliases) instead of creating a duplicate on every refresh.
+        if (resource is null && !string.IsNullOrWhiteSpace(name))
+            resource = await FindByNormalizedNameOrAliasAsync(name, ct);
 
         if (resource is null)
         {
@@ -265,6 +269,28 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
             _db.Resources.Add(resource);
         }
         return resource;
+    }
+
+    private static string NormName(string? s) => new string((s ?? string.Empty).ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+
+    private static bool MatchesNameOrAlias(Resource r, string norm)
+    {
+        if (NormName(r.Name) == norm)
+            return true;
+        return !string.IsNullOrWhiteSpace(r.Aliases)
+            && r.Aliases.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Any(a => NormName(a) == norm);
+    }
+
+    private async Task<Resource?> FindByNormalizedNameOrAliasAsync(string name, CancellationToken ct)
+    {
+        var norm = NormName(name);
+        if (norm.Length == 0)
+            return null;
+        var local = _db.Resources.Local.FirstOrDefault(r => MatchesNameOrAlias(r, norm));
+        if (local is not null)
+            return local;
+        var all = await _db.Resources.ToListAsync(ct);
+        return all.FirstOrDefault(r => MatchesNameOrAlias(r, norm));
     }
 
     private async Task EnsureRegionAsync(string code, CancellationToken ct)
