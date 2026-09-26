@@ -41,6 +41,9 @@ public interface IDataRefreshService
     /// <summary>Re-runs the one-time seed on demand (configuration + resource enrichments). Normally seeding runs only once.</summary>
     Task<DataRefreshResultDto> ReseedAsync(CancellationToken ct = default);
 
+    /// <summary>Merges casing/punctuation-variant duplicate accounts into the TPID-bearing master (apply=false previews).</summary>
+    Task<DataRefreshResultDto> MergeDuplicateAccountsAsync(bool apply, CancellationToken ct = default);
+
     /// <summary>Freshness + row counts for the header banner.</summary>
     Task<DataStatusDto> GetStatusAsync(CancellationToken ct = default);
 }

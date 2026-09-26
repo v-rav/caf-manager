@@ -218,6 +218,106 @@ public class DataRefreshService(
         return result;
     }
 
+    // Merges casing/punctuation-variant duplicate accounts into the TPID-bearing master.
+    // Skips non-Latin names (normalize to empty) and any group with >=2 distinct TPIDs. apply=false previews.
+    public async Task<DataRefreshResultDto> MergeDuplicateAccountsAsync(bool apply, CancellationToken ct = default)
+    {
+        static string Norm(string? s) => new string((s ?? string.Empty).ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+        var result = new DataRefreshResultDto { StartedUtc = DateTimeOffset.UtcNow };
+        try
+        {
+            var accounts = await _db.Accounts.ToListAsync(ct);
+            var groups = accounts
+                .Where(a => Norm(a.AccountName).Length > 0) // skip non-Latin names that normalize to empty (avoids CJK false positives)
+                .GroupBy(a => Norm(a.AccountName))
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            int merged = 0, skipped = 0, noms = 0, links = 0, waves = 0, engs = 0, owns = 0, strat = 0;
+            foreach (var g in groups)
+            {
+                var tpidHolders = g.Where(a => !string.IsNullOrWhiteSpace(a.Tpid)).ToList();
+                var distinctTpids = tpidHolders.Select(a => a.Tpid!.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+                if (distinctTpids >= 2)
+                {
+                    skipped++;
+                    result.Messages.Add($"Skipped '{g.First().AccountName}' — {distinctTpids} distinct TPIDs (treated as separate accounts).");
+                    continue;
+                }
+                var survivor = tpidHolders.Count == 1
+                    ? tpidHolders[0]
+                    : g.OrderBy(a => a.AccountId).First();
+                var casualties = g.Where(a => a.AccountId != survivor.AccountId).ToList();
+
+                var survivorResourceIds = (await _db.ResourceAccounts.Where(ra => ra.AccountId == survivor.AccountId)
+                    .Select(ra => ra.ResourceId).ToListAsync(ct)).ToHashSet();
+
+                foreach (var cas in casualties)
+                {
+                    foreach (var n in await _db.Nominations.Where(x => x.AccountId == cas.AccountId).ToListAsync(ct))
+                    { if (apply) n.AccountId = survivor.AccountId; noms++; }
+                    foreach (var w in await _db.WaveLinks.Where(x => x.AccountId == cas.AccountId).ToListAsync(ct))
+                    { if (apply) w.AccountId = survivor.AccountId; waves++; }
+                    foreach (var e in await _db.EngagementFacts.Where(x => x.AccountId == cas.AccountId).ToListAsync(ct))
+                    { if (apply) e.AccountId = survivor.AccountId; engs++; }
+                    foreach (var o in await _db.OwnershipHistory.Where(x => x.AccountId == cas.AccountId).ToListAsync(ct))
+                    { if (apply) o.AccountId = survivor.AccountId; owns++; }
+                    foreach (var s in await _db.StrategicAccountConfigurations.Where(x => x.AccountId == cas.AccountId).ToListAsync(ct))
+                    { if (apply) s.AccountId = survivor.AccountId; strat++; }
+
+                    foreach (var link in await _db.ResourceAccounts.Where(x => x.AccountId == cas.AccountId).ToListAsync(ct))
+                    {
+                        if (survivorResourceIds.Contains(link.ResourceId))
+                        { if (apply) _db.ResourceAccounts.Remove(link); } // dedup: survivor already linked to this resource
+                        else
+                        { if (apply) { link.AccountId = survivor.AccountId; survivorResourceIds.Add(link.ResourceId); } links++; }
+                    }
+
+                    if (apply)
+                    {
+                        var aliases = (survivor.Aliases ?? string.Empty)
+                            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                        void AddAlias(string? a)
+                        {
+                            if (!string.IsNullOrWhiteSpace(a) && !aliases.Any(x => string.Equals(x, a, StringComparison.OrdinalIgnoreCase)))
+                                aliases.Add(a.Trim());
+                        }
+                        AddAlias(cas.AccountName);
+                        foreach (var ca in (cas.Aliases ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                            AddAlias(ca);
+                        survivor.Aliases = aliases.Count > 0 ? string.Join("; ", aliases) : null;
+
+                        if (string.IsNullOrWhiteSpace(survivor.Tpid) && !string.IsNullOrWhiteSpace(cas.Tpid)) survivor.Tpid = cas.Tpid;
+                        if (string.IsNullOrWhiteSpace(survivor.Segment) && !string.IsNullOrWhiteSpace(cas.Segment)) survivor.Segment = cas.Segment;
+                        if ((string.IsNullOrWhiteSpace(survivor.Region) || survivor.Region == "UNSPECIFIED") && !string.IsNullOrWhiteSpace(cas.Region))
+                            survivor.Region = cas.Region;
+
+                        _db.Accounts.Remove(cas);
+                    }
+                    merged++;
+                    result.Messages.Add($"{(apply ? "Merged" : "Would merge")} '{cas.AccountName}' -> '{survivor.AccountName}' (tpid {survivor.Tpid ?? cas.Tpid}).");
+                }
+            }
+
+            if (apply && merged > 0)
+            {
+                await _db.SaveChangesAsync(ct);
+                await SyncStrategicFlagsAsync(ct);
+                await _capacityRebuild.RebuildAllAsync(ct);
+            }
+            result.Success = true;
+            result.Messages.Add($"{(apply ? "Merged" : "Preview")}: {merged} account(s), {skipped} group(s) skipped. Re-pointed noms={noms}, links={links}, waves={waves}, engagements={engs}, ownership={owns}, strategic={strat}.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Account merge failed");
+            result.Success = false;
+            result.Messages.Add($"Account merge failed: {ex.Message}");
+        }
+        result.CompletedUtc = DateTimeOffset.UtcNow;
+        return result;
+    }
+
     public async Task<DataStatusDto> GetStatusAsync(CancellationToken ct = default)
     {
         var setting = await _db.ApplicationSettings.AsNoTracking()

@@ -17,6 +17,10 @@ public class AdminController(IDataRefreshService refresh) : ControllerBase
     public async Task<IActionResult> Seed(CancellationToken ct)
         => Ok(await refresh.ReseedAsync(ct));
 
+    [HttpPost("merge-accounts")]
+    public async Task<IActionResult> MergeAccounts([FromQuery] bool apply = false, CancellationToken ct = default)
+        => Ok(await refresh.MergeDuplicateAccountsAsync(apply, ct));
+
     [HttpPost("upload")]
     [RequestSizeLimit(52_428_800)] // 50 MB
     public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromQuery] string kind = "nominations", CancellationToken ct = default)
