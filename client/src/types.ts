@@ -170,6 +170,7 @@ export interface CapacityRow {
   region: string
   role: string
   accountCount: number
+  accounts?: string[]
   capacityLimit: number
   utilizationPercent: number
   capacityStatus: string

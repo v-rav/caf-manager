@@ -7,6 +7,8 @@ public class CapacityRowDto
     public string Region { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public int AccountCount { get; set; }
+    /// <summary>Names of the in-flight accounts this resource is assigned to (for the Accounts hover).</summary>
+    public IReadOnlyList<string> Accounts { get; set; } = [];
     public int CapacityLimit { get; set; }
     public double UtilizationPercent { get; set; }
     public string CapacityStatus { get; set; } = string.Empty;

@@ -33,6 +33,21 @@ public class CapacityService(IApplicationDbContext db, ICapacityCalculationServi
             .ToListAsync(ct);
         var countByResource = pairs.GroupBy(p => p.ResourceId).ToDictionary(g => g.Key, g => g.Count());
 
+        // Account names for the Accounts hover (which accounts each resource is actually assigned to).
+        var accountIds = pairs.Select(p => p.AccountId).Distinct().ToList();
+        var accountNames = await _db.Accounts.AsNoTracking()
+            .Where(a => accountIds.Contains(a.AccountId))
+            .Select(a => new { a.AccountId, a.AccountName })
+            .ToDictionaryAsync(a => a.AccountId, a => a.AccountName, ct);
+        var accountsByResource = pairs
+            .GroupBy(p => p.ResourceId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<string>)g
+                    .Select(p => accountNames.TryGetValue(p.AccountId, out var n) ? n : $"#{p.AccountId}")
+                    .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                    .ToList());
+
         var resources = _db.Resources.AsNoTracking().Where(r => r.ActiveFlag);
         if (!string.IsNullOrWhiteSpace(region))
             resources = resources.Where(r => r.Region == region);
@@ -56,6 +71,7 @@ public class CapacityService(IApplicationDbContext db, ICapacityCalculationServi
                 Region = r.Region ?? string.Empty,
                 Role = r.Role,
                 AccountCount = accountCount,
+                Accounts = accountsByResource.TryGetValue(r.ResourceId, out var accs) ? accs : [],
                 CapacityLimit = limit,
                 UtilizationPercent = utilization,
                 CapacityStatus = status.ToDisplay(),

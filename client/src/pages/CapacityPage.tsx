@@ -1,4 +1,4 @@
-import { Button, SearchBox, Text } from '@fluentui/react-components'
+import { Button, SearchBox, Text, Tooltip } from '@fluentui/react-components'
 import { ArrowDownloadRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -17,6 +17,33 @@ const heat: Record<string, string> = {
 }
 
 const CAPACITY_STATUSES = ['Available', 'Partially Utilized', 'Fully Utilized', 'Overloaded']
+
+// Accounts count with a hover listing the actual in-flight accounts the resource is assigned to.
+function accountsCell(c: CapacityRow) {
+  const list = c.accounts ?? []
+  return (
+    <Tooltip
+      relationship="label"
+      withArrow
+      content={
+        list.length ? (
+          <div style={{ maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Text size={200} weight="semibold">{`${list.length} account${list.length === 1 ? '' : 's'}`}</Text>
+            {list.map((a) => (
+              <span key={a}>{a}</span>
+            ))}
+          </div>
+        ) : (
+          'No accounts assigned'
+        )
+      }
+    >
+      <span style={{ cursor: c.accountCount ? 'help' : 'default', textDecoration: c.accountCount ? 'underline dotted' : 'none' }}>
+        {c.accountCount}
+      </span>
+    </Tooltip>
+  )
+}
 
 const BANDS: { status: string; bg: string }[] = [
   { status: 'Available', bg: 'var(--colorPaletteGreenBackground2)' },
@@ -107,7 +134,7 @@ export function CapacityPage() {
               { key: 'resource', header: 'Resource', sortValue: (c) => c.resourceName },
               { key: 'region', header: 'Region', sortValue: (c) => c.region },
               { key: 'role', header: 'Role', sortValue: (c) => c.role },
-              { key: 'accounts', header: 'Accounts', align: 'center', sortValue: (c) => c.accountCount },
+              { key: 'accounts', header: 'Accounts', align: 'center', sortValue: (c) => c.accountCount, render: accountsCell },
               { key: 'limit', header: 'Limit', align: 'center', sortValue: (c) => c.capacityLimit },
               { key: 'utilization', header: 'Utilization', minWidth: 140, sortValue: (c) => c.utilizationPercent, render: (c) => <UtilizationBar percent={c.utilizationPercent} /> },
             ]}
@@ -163,7 +190,7 @@ export function CapacityPage() {
               { key: 'resource', header: 'Resource', sortValue: (c) => c.resourceName },
               { key: 'region', header: 'Region', sortValue: (c) => c.region },
               { key: 'role', header: 'Role', sortValue: (c) => c.role },
-              { key: 'accounts', header: 'Accounts', align: 'center', sortValue: (c) => c.accountCount },
+              { key: 'accounts', header: 'Accounts', align: 'center', sortValue: (c) => c.accountCount, render: accountsCell },
               { key: 'limit', header: 'Limit', align: 'center', sortValue: (c) => c.capacityLimit },
               { key: 'utilization', header: 'Utilization', minWidth: 140, sortValue: (c) => c.utilizationPercent, render: (c) => <UtilizationBar percent={c.utilizationPercent} /> },
               { key: 'status', header: 'Status', sortValue: (c) => c.capacityStatus, render: (c) => <StatusBadge status={c.capacityStatus} /> },
