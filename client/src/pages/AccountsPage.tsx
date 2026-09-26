@@ -8,11 +8,11 @@ import {
   Text,
 } from '@fluentui/react-components'
 import { AddRegular, ArrowUploadRegular, DeleteRegular, EditRegular } from '@fluentui/react-icons'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { ConfirmDialog, Modal } from '../components/Modal'
 import { DataTable } from '../components/DataTable'
-import { ErrorText, Loading, Panel } from '../components/common'
+import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import type { Account, AccountUpsert, OwnershipHistory } from '../types'
@@ -29,6 +29,22 @@ export function AccountsPage() {
   const { data, loading, error, reload } = useAsync(() => api.accounts(debouncedSearch || undefined, region), [debouncedSearch, region])
   const { data: regions } = useAsync(() => api.regions(), [])
   const { data: segments } = useAsync(() => api.segments(), [])
+
+  const [segmentFilter, setSegmentFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [tpidFilter, setTpidFilter] = useState('')
+  const segmentOptions = useMemo(() => [...new Set((data ?? []).map((a) => a.segment).filter((s): s is string => !!s))].sort(), [data])
+  const statusOptions = useMemo(() => [...new Set((data ?? []).map((a) => a.status).filter((s): s is string => !!s))].sort(), [data])
+  const rows = useMemo(
+    () =>
+      (data ?? []).filter(
+        (a) =>
+          (!segmentFilter || a.segment === segmentFilter) &&
+          (!statusFilter || a.status === statusFilter) &&
+          (!tpidFilter || (tpidFilter === 'With TPID' ? !!a.tpid : !a.tpid)),
+      ),
+    [data, segmentFilter, statusFilter, tpidFilter],
+  )
 
   const [form, setForm] = useState<AccountUpsert | null>(null)
   const [editId, setEditId] = useState<number | null>(null)
@@ -112,10 +128,13 @@ export function AccountsPage() {
         Account Hub
       </Text>
       <Panel
-        title={`Accounts${data ? ` (${data.length})` : ''}`}
+        title={`Accounts${data ? ` (${rows.length})` : ''}`}
         action={
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <SearchBox placeholder="Search account" value={search} onChange={(_, d) => setSearch(d.value)} style={{ minWidth: 200 }} />
+            <FilterSelect label="Segment" value={segmentFilter} options={segmentOptions} onChange={setSegmentFilter} minWidth={150} />
+            <FilterSelect label="Status" value={statusFilter} options={statusOptions} onChange={setStatusFilter} minWidth={130} />
+            <FilterSelect label="TPID" value={tpidFilter} options={['With TPID', 'No TPID']} onChange={setTpidFilter} minWidth={130} />
             <input ref={fileInput} type="file" accept=".xlsx" onChange={onUploadMaster} style={{ display: 'none' }} />
             <Button
               appearance="secondary"
@@ -139,10 +158,10 @@ export function AccountsPage() {
         ) : (
           <DataTable<Account>
             ariaLabel="Accounts"
-            rows={data ?? []}
+            rows={rows}
             rowKey={(a) => a.accountId}
             defaultSort={{ key: 'account', dir: 'asc' }}
-            emptyMessage="No accounts match your search."
+            emptyMessage="No accounts match your filters."
             columns={[
               { key: 'account', header: 'Account', sortValue: (a) => a.accountName },
               { key: 'tpid', header: 'TPID', sortValue: (a) => a.tpid ?? '', render: (a) => a.tpid ?? '—' },

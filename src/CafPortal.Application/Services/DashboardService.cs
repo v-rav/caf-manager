@@ -49,7 +49,7 @@ public class DashboardService(IApplicationDbContext db) : IDashboardService
         var totalResources = resourceIds.Count;
         var resourcesOnLeave = await leave.Select(l => l.ResourceId).Distinct().CountAsync(ct);
         var activeAccounts = await accounts.CountAsync(ct);
-        var strategicAccounts = await accounts.CountAsync(a => a.StrategicFlag, ct);
+        var strategicAccounts = await accounts.CountAsync(a => a.Segment == "Strategic", ct);
         var openNominations = await nominations.CountAsync(n => n.ApprovalStatus == "Approved" && !Settled.Contains(n.Status), ct);
 
         var regionDistribution = await resources
@@ -70,11 +70,9 @@ public class DashboardService(IApplicationDbContext db) : IDashboardService
             new("Overloaded", overloaded)
         };
 
-        // Top strategic accounts by staffing depth (distinct resources on Approved, in-flight nominations).
+        // Top strategic accounts (FDO segment) by staffing depth (distinct resources on Approved, in-flight nominations).
         var strategicList = await accounts
-            .Where(a => a.StrategicFlag)
-            .OrderByDescending(a => a.PriorityWeight)
-            .Take(10)
+            .Where(a => a.Segment == "Strategic")
             .Select(a => new { a.AccountId, a.AccountName })
             .ToListAsync(ct);
         var strategicIds = strategicList.Select(a => a.AccountId).ToList();
@@ -90,6 +88,9 @@ public class DashboardService(IApplicationDbContext db) : IDashboardService
             .ToDictionary(g => g.Key, g => g.Count());
         var strategicCoverage = strategicList
             .Select(a => new NameValueDto(a.AccountName, coverage.TryGetValue(a.AccountId, out var c) ? c : 0))
+            .OrderByDescending(x => x.Value)
+            .ThenBy(x => x.Name)
+            .Take(10)
             .ToList();
 
         return new ExecutiveDashboardDto
