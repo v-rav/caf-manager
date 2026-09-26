@@ -148,6 +148,14 @@ and are best done as follow-ups once the cockpit changes prove out.
   non-canonical rows to a reversible `ParkedAccount` table, skipping any a nomination references.
 - **Consistent search + filters** — Accounts hub gains Segment/Status/TPID filters (parity with the
   other grids).
+- **Migration Analytics** (`/analytics`, `GET /api/analytics?region=`) — headline KPIs (in-flight, Total/NNR
+  ACR, cores, tool/automation adoption) + stage/health/SLA/region/segment/path/mode/wave distributions and
+  ACR/cores value cuts, over Approved nominations (`AnalyticsService` reuses `INominationService`).
+- **Nomination enrichment** — offering fields (ACR, cores, tool/automation, mode, path, partner) + dates
+  (nominated/approval/actual-start/actual-end/planned, derived `TotalDays`) via `POST /api/admin/import-offerings`
+  (Summary, by TPID+Task Id); completed migrations via `POST /api/admin/import-completed` (DE-Completed). FDO
+  withdraw guard now protects Completed/CustomerDeferred. **Next:** consolidate to a single Summary-sourced
+  import that also creates the completed set (356 Summary rows carry a completion date vs 80 in DE-Completed).
 
 ## 7. Pending / to verify (known caveats)
 

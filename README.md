@@ -100,6 +100,7 @@ Open <http://localhost:5080> — the API serves the SPA and the JSON endpoints t
 | Method | Route | Description |
 | ------ | ----- | ----------- |
 | GET | `/api/dashboard/executive?region=` | Executive KPI cards + chart series |
+| GET | `/api/analytics?region=` | Migration analytics — ACR/cores/adoption KPIs + distributions + value cuts over Approved nominations |
 | GET | `/api/resources?search=&region=&role=&skill=&status=` | Resource hub |
 | GET | `/api/resources/{id}` | Resource detail (accounts + upcoming leave) |
 | GET | `/api/accounts?search=&region=` | Account hub (name search is case-insensitive) |
@@ -119,6 +120,8 @@ Open <http://localhost:5080> — the API serves the SPA and the JSON endpoints t
 | POST | `/api/admin/merge-accounts?apply=` | Preview/merge casing-punctuation duplicate accounts into the TPID master (re-points FKs, keeps the variant as an alias). `apply=false` previews. |
 | POST | `/api/admin/park-accounts?apply=` | Preview/move no-TPID (non-canonical) accounts out of the master into `ParkedAccount`; skips any a nomination references (no orphans). Reversible. |
 | POST | `/api/admin/unpark-accounts` | Restore every parked account (re-creates the account, its resource links, and nomination references). |
+| POST | `/api/admin/import-offerings?apply=` | One-time: enrich nominations by TPID+Task Id from "Summary of All Offerings" (offering fields + dates) and refresh `Account.Segment`. `apply=false` previews. |
+| POST | `/api/admin/import-completed?apply=` | One-time: load DE-Completed as `Completed` nominations (create/mark by TPID+Task Id; creates missing accounts). `apply=false` previews. |
 
 ---
 

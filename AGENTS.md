@@ -143,7 +143,9 @@ import the **web app is the system of record**.
   FDO **Task Id** (`Nomination.ExternalTaskId`, indexed); FDO-owned fields are refreshed each drop and
   portal-owned fields (`Status`, `BlockedReason`, `BlockedSince`, `FollowUpDate`, `WaveLinks`, edited
   `Remarks`) are **preserved**. Rows missing from a drop are soft-set `NominationStatusType.Withdrawn`
-  (`= 8`) — never hard-deleted (keeps history + waves). `DataRefreshService` must **not**
+  (`= 8`) — never hard-deleted (keeps history + waves). **Settled states are never auto-withdrawn**: the
+  withdraw guard skips `Withdrawn/Closed/Completed/CustomerDeferred`, so completed migrations survive
+  in-flight drops. `DataRefreshService` must **not**
   `ExecuteDeleteAsync` nominations. See `NominationImportService` loop + `DEVELOPMENT-PLAN.md` §8.
   (⚠ `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` still wipe-and-rebuild — safe today; fix before
   portal-entered leave.)
@@ -153,6 +155,16 @@ import the **web app is the system of record**.
   Added / Updated with field-level from→to / Withdrawn) via `NominationImportService`. Surfaced on the
   **Import History** page (`/history`, `GET /api/imports`, `GET /api/imports/{id}/changes`). History rows
   (not nominations) are pruned after `HistoryRetentionDays` (90). Upload filename is stamped onto the run.
+- **Nomination enrichment (one-time, keyed by TPID + Task Id)**: `POST /api/admin/import-offerings?apply=`
+  reads `Summary of All Offerings.xlsx` and sets **offering fields** (`PrimaryMigrationPath`, `PartnerName`,
+  `TotalCores`, `IsToolAttached`, `IsAutomationUsed`, `ModeOfAccess`, `TotalAcr`, `NnrAcr`) and **dates**
+  (`NominatedDate`, `ApprovalDate`, `ActualStartDate`, `ActualEndDate`, `PlannedStartDate`, `PlannedEndDate`,
+  derived `TotalDays`) on matched nominations, and refreshes `Account.Segment` by TPID. `POST
+  /api/admin/import-completed?apply=` loads `DE-Completed.xlsx` as `Completed` nominations (create/mark by
+  TPID + Task Id; creates missing accounts). Both are on-demand admin ops (NOT wired into refresh/seed),
+  serial-date-aware, `apply=false` previews.
+  > ⚠ **Planned:** the Summary file is the superset (356 rows carry a completion `Actual End Date` vs 80 in
+  > DE-Completed) — consolidating to one Summary-sourced import that also *creates* the completed set is next.
 - `GET /api/admin/status` → counts + `lastRefreshUtc` (stamped by `DataRefreshService` on every
   successful import). Surfaced as "Updated Xm ago" in the header.
 - `GET /api/export/{resources|capacity|nominations|performance|summary}` → `.xlsx` (ClosedXML
@@ -198,5 +210,12 @@ backup/restore (`/backup`).
   capacity doughnut uses heat-band colours.
 - **Account data quality**: de-dup merge (`/api/admin/merge-accounts`) + reversible no-TPID parking
   (`/api/admin/park-accounts` / `unpark-accounts`, `ParkedAccount` table); Accounts hub Segment/Status/TPID filters.
+- **Migration Analytics** (`/analytics`, `GET /api/analytics?region=`): headline KPIs (in-flight, Total/NNR ACR,
+  cores, tool/automation adoption) + distributions (stage, current-state health, SLA, region, segment, path,
+  mode, waves) + value cuts (ACR by region/segment/path, cores by stage, top partners). Built by
+  `AnalyticsService`, which reuses `INominationService` (so it inherits stage/stale/wave + offering/date fields)
+  and joins `Segment` by AccountId; scoped to Approved nominations.
+- **Nomination enrichment**: offering fields + dates via `import-offerings` (Summary) and completed migrations
+  via `import-completed` (DE-Completed); FDO withdraw guard protects settled states.
 Backlog: Leave intake data source, trends/snapshots, my-view, global search, Entra auth, in-app
 upload, API smoke tests.
