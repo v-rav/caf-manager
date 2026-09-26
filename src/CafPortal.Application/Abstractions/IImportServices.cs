@@ -38,6 +38,12 @@ public interface IDataRefreshService
     /// <summary>Saves an uploaded source workbook (kind: nominations|resources|leave|engagement) then runs a refresh.</summary>
     Task<DataRefreshResultDto> UploadAndRefreshAsync(string kind, Stream content, string fileName, CancellationToken ct = default);
 
+    /// <summary>Moves no-TPID accounts (non-canonical: departments/apps/abbreviations) out of the master into ParkedAccount. apply=false previews.</summary>
+    Task<DataRefreshResultDto> ParkNoTpidAccountsAsync(bool apply, CancellationToken ct = default);
+
+    /// <summary>Restores every parked account back into the master (re-creates the account, resource links, and nomination references).</summary>
+    Task<DataRefreshResultDto> UnparkAllAccountsAsync(CancellationToken ct = default);
+
     /// <summary>Re-runs the one-time seed on demand (configuration + resource enrichments). Normally seeding runs only once.</summary>
     Task<DataRefreshResultDto> ReseedAsync(CancellationToken ct = default);
 

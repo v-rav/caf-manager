@@ -1,5 +1,6 @@
 using CafPortal.Application.Abstractions;
 using CafPortal.Application.Dtos;
+using CafPortal.Domain.Entities;
 using CafPortal.Domain.Entities.Configuration;
 using CafPortal.Infrastructure.Options;
 using CafPortal.Infrastructure.Persistence;
@@ -313,6 +314,181 @@ public class DataRefreshService(
             _logger.LogError(ex, "Account merge failed");
             result.Success = false;
             result.Messages.Add($"Account merge failed: {ex.Message}");
+        }
+        result.CompletedUtc = DateTimeOffset.UtcNow;
+        return result;
+    }
+
+    // Moves no-TPID accounts (non-canonical: departments / apps / abbreviations) out of the master into
+    // ParkedAccount, detaching references (nullable FKs nulled; non-null ResourceAccount/OwnershipHistory
+    // deleted after being recorded for restore). Fully reversible via UnparkAllAccountsAsync. apply=false previews.
+    public async Task<DataRefreshResultDto> ParkNoTpidAccountsAsync(bool apply, CancellationToken ct = default)
+    {
+        var result = new DataRefreshResultDto { StartedUtc = DateTimeOffset.UtcNow };
+        try
+        {
+            // Keep any no-TPID account a nomination still points at (parking it would orphan the nomination);
+            // the next FDO upload is expected to resolve those to a real TPID.
+            var referenced = (await _db.Nominations.Where(n => n.AccountId != null)
+                .Select(n => n.AccountId!.Value).Distinct().ToListAsync(ct)).ToHashSet();
+            var allNoTpid = await _db.Accounts
+                .Where(a => a.Tpid == null || a.Tpid == "")
+                .OrderBy(a => a.AccountName)
+                .ToListAsync(ct);
+            var skippedReferenced = allNoTpid.Count(a => referenced.Contains(a.AccountId));
+            var targets = allNoTpid.Where(a => !referenced.Contains(a.AccountId)).ToList();
+
+            int parked = 0, noms = 0, links = 0, owns = 0, engs = 0, waves = 0, strat = 0, strategicFlagged = 0;
+            foreach (var a in targets)
+            {
+                var resourceLinks = await _db.ResourceAccounts.Where(x => x.AccountId == a.AccountId)
+                    .Select(x => new { x.ResourceId, x.RelationshipType }).ToListAsync(ct);
+                var nomIds = await _db.Nominations.Where(x => x.AccountId == a.AccountId).Select(x => x.Id).ToListAsync(ct);
+                var waveCount = await _db.WaveLinks.CountAsync(x => x.AccountId == a.AccountId, ct);
+                var engCount = await _db.EngagementFacts.CountAsync(x => x.AccountId == a.AccountId, ct);
+                var ownRows = await _db.OwnershipHistory.Where(x => x.AccountId == a.AccountId).ToListAsync(ct);
+                var stratRows = await _db.StrategicAccountConfigurations.Where(x => x.AccountId == a.AccountId).ToListAsync(ct);
+
+                noms += nomIds.Count; links += resourceLinks.Count; waves += waveCount;
+                engs += engCount; owns += ownRows.Count; strat += stratRows.Count;
+                if (a.StrategicFlag) strategicFlagged++;
+
+                if (apply)
+                {
+                    _db.ParkedAccounts.Add(new ParkedAccount
+                    {
+                        OriginalAccountId = a.AccountId,
+                        AccountName = a.AccountName,
+                        Tpid = a.Tpid,
+                        ExternalAccountId = a.ExternalAccountId,
+                        Segment = a.Segment,
+                        Region = a.Region,
+                        Status = a.Status,
+                        StrategicFlag = a.StrategicFlag,
+                        PriorityWeight = a.PriorityWeight,
+                        Aliases = a.Aliases,
+                        ProjectManager = a.ProjectManager,
+                        SolutionArchitect = a.SolutionArchitect,
+                        Cftl = a.Cftl,
+                        AccountOwner = a.AccountOwner,
+                        CustomerPoc = a.CustomerPoc,
+                        BackupOwner = a.BackupOwner,
+                        ResourceLinks = resourceLinks.Count > 0
+                            ? string.Join(";", resourceLinks.Select(r => $"{r.ResourceId}:{r.RelationshipType}"))
+                            : null,
+                        NominationIds = nomIds.Count > 0 ? string.Join(";", nomIds) : null,
+                        Reason = "No TPID (not in FDO / master customer list)",
+                        ParkedUtc = DateTimeOffset.UtcNow,
+                    });
+
+                    foreach (var n in await _db.Nominations.Where(x => x.AccountId == a.AccountId).ToListAsync(ct)) n.AccountId = null;
+                    foreach (var w in await _db.WaveLinks.Where(x => x.AccountId == a.AccountId).ToListAsync(ct)) w.AccountId = null;
+                    foreach (var e in await _db.EngagementFacts.Where(x => x.AccountId == a.AccountId).ToListAsync(ct)) e.AccountId = null;
+                    _db.StrategicAccountConfigurations.RemoveRange(stratRows);
+                    _db.OwnershipHistory.RemoveRange(ownRows);
+                    _db.ResourceAccounts.RemoveRange(await _db.ResourceAccounts.Where(x => x.AccountId == a.AccountId).ToListAsync(ct));
+                    _db.Accounts.Remove(a);
+                }
+                parked++;
+            }
+
+            if (apply && parked > 0)
+            {
+                await _db.SaveChangesAsync(ct);
+                await SyncStrategicFlagsAsync(ct);
+                await _capacityRebuild.RebuildAllAsync(ct);
+            }
+            result.Success = true;
+            result.Messages.Add($"{(apply ? "Parked" : "Preview")}: {parked} no-TPID account(s) ({strategicFlagged} strategic-flagged); " +
+                $"kept {skippedReferenced} referenced by a nomination (no orphans). " +
+                $"Detached resourceLinks={links}, ownership={owns}, engagements={engs}, waves={waves}, strategicCfg={strat}.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Park no-TPID accounts failed");
+            result.Success = false;
+            result.Messages.Add($"Park failed: {ex.Message}");
+        }
+        result.CompletedUtc = DateTimeOffset.UtcNow;
+        return result;
+    }
+
+    // Restores every parked account into the master: re-creates the account, its resource links, and
+    // re-points the nominations whose AccountId was nulled at park time. (Ownership/engagement/wave/strategic
+    // rows detached at park time are not reconstructed.)
+    public async Task<DataRefreshResultDto> UnparkAllAccountsAsync(CancellationToken ct = default)
+    {
+        var result = new DataRefreshResultDto { StartedUtc = DateTimeOffset.UtcNow };
+        try
+        {
+            var parkedList = await _db.ParkedAccounts.ToListAsync(ct);
+            int restored = 0, relinked = 0, renoms = 0;
+            foreach (var p in parkedList)
+            {
+                var acct = new Account
+                {
+                    AccountName = p.AccountName,
+                    Region = p.Region,
+                    Status = p.Status,
+                    StrategicFlag = p.StrategicFlag,
+                    PriorityWeight = p.PriorityWeight,
+                    Segment = p.Segment,
+                    Tpid = p.Tpid,
+                    ExternalAccountId = p.ExternalAccountId,
+                    Aliases = p.Aliases,
+                    ProjectManager = p.ProjectManager,
+                    SolutionArchitect = p.SolutionArchitect,
+                    Cftl = p.Cftl,
+                    AccountOwner = p.AccountOwner,
+                    CustomerPoc = p.CustomerPoc,
+                    BackupOwner = p.BackupOwner,
+                };
+                _db.Accounts.Add(acct);
+                await _db.SaveChangesAsync(ct); // materialize AccountId for the links/references below
+
+                foreach (var token in (p.ResourceLinks ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var parts = token.Split(':', 2);
+                    if (int.TryParse(parts[0], out var rid))
+                    {
+                        _db.ResourceAccounts.Add(new ResourceAccount
+                        {
+                            ResourceId = rid,
+                            AccountId = acct.AccountId,
+                            RelationshipType = parts.Length > 1 && parts[1].Length > 0 ? parts[1] : "Primary",
+                            Source = "Unpark",
+                        });
+                        relinked++;
+                    }
+                }
+
+                foreach (var token in (p.NominationIds ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (int.TryParse(token, out var nid))
+                    {
+                        var nom = await _db.Nominations.FirstOrDefaultAsync(x => x.Id == nid, ct);
+                        if (nom is not null && nom.AccountId is null) { nom.AccountId = acct.AccountId; renoms++; }
+                    }
+                }
+
+                _db.ParkedAccounts.Remove(p);
+                restored++;
+            }
+
+            if (restored > 0)
+            {
+                await _db.SaveChangesAsync(ct);
+                await SyncStrategicFlagsAsync(ct);
+                await _capacityRebuild.RebuildAllAsync(ct);
+            }
+            result.Success = true;
+            result.Messages.Add($"Unparked {restored} account(s); restored resourceLinks={relinked}, re-pointed noms={renoms}.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unpark accounts failed");
+            result.Success = false;
+            result.Messages.Add($"Unpark failed: {ex.Message}");
         }
         result.CompletedUtc = DateTimeOffset.UtcNow;
         return result;

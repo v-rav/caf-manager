@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Resource> Resources => Set<Resource>();
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<AccountAlias> AccountAliases => Set<AccountAlias>();
+    public DbSet<ParkedAccount> ParkedAccounts => Set<ParkedAccount>();
     public DbSet<ResourceAccount> ResourceAccounts => Set<ResourceAccount>();
     public DbSet<LeaveFact> LeaveFacts => Set<LeaveFact>();
     public DbSet<EngagementFact> EngagementFacts => Set<EngagementFact>();
