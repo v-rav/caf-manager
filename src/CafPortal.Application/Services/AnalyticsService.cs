@@ -191,7 +191,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         return rows.OrderBy(x => x.D).Select(x => x.N).ToList();
     }
 
-    // Factory attainment: cumulative Target curve vs Completed (landed) + In-flight NNR ACR, by fiscal month.
+    // Factory attainment: cumulative Target curve vs Completed (landed) + In-flight Total ACR, by fiscal month.
     public async Task<AttainmentDto> GetAttainmentAsync(string? region, int? fy, CancellationToken ct = default)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -206,7 +206,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out annual);
 
         var (noms, _) = await LoadApprovedAsync(region, ct);
-        decimal Acr(NominationDto n) => n.NnrAcr ?? 0m;
+        decimal Acr(NominationDto n) => n.TotalAcr ?? 0m;
         static int MonthIndex(DateOnly d) => (d.Month + 5) % 12 + 1; // Jul=1 … Jun=12
 
         // Per-fiscal-month increments: completed by ActualEndDate, in-flight by ApprovalDate (carryover → month 1).
@@ -262,7 +262,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         {
             FiscalYear = fiscalYear,
             Label = FiscalCalendar.FyLabel(fiscalYear),
-            Measure = "NNR ACR",
+            Measure = "Total ACR",
             AnnualTarget = annual,
             TargetSet = targetSet,
             Buckets = buckets,
