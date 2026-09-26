@@ -215,7 +215,20 @@ backup/restore (`/backup`).
   mode, waves) + value cuts (ACR by region/segment/path, cores by stage, top partners). Built by
   `AnalyticsService`, which reuses `INominationService` (so it inherits stage/stale/wave + offering/date fields)
   and joins `Segment` by AccountId; scoped to Approved nominations.
-- **Nomination enrichment**: offering fields + dates via `import-offerings` (Summary) and completed migrations
-  via `import-completed` (DE-Completed); FDO withdraw guard protects settled states.
-Backlog: Leave intake data source, trends/snapshots, my-view, global search, Entra auth, in-app
-upload, API smoke tests.
+- **Trends (time-series)** on the Analytics page (`GET /api/analytics/timeseries` +
+  `/api/analytics/timeseries/detail`): a **fiscal-year-aware** pivot of Approved nominations over time.
+  Configurable **basis** (which date buckets a record — `nominated`/`approved`/`started`/`completed`, default
+  `completed`), **granularity** (`week` = ISO calendar week · `month` default · `quarter`/`year` = **fiscal**),
+  **measure** (`count` default · `acr`/`nnr`/`cores` sums), and **splitBy** (`none`/`region`/`segment`/`path`/
+  `stage`/`status` → stacked series). Optional `from`/`to` (DateOnly). Returns `TimeSeriesDto` (chronological
+  `Buckets` of `NameValueDto[]` + per-bucket/overall totals + `RecordsWithoutDate`). The UI renders a stacked
+  `TimeSeriesChart` (charts.tsx) + an aggregated `DataTable<TimeBucket>` whose **Period** cell is a `Link` that
+  drills into an **in-page** `DataTable<Nomination>` for that bucket (via `/timeseries/detail?bucket=<key>`).
+  **Fiscal convention** (`CafPortal.Application/Common/FiscalCalendar.cs`): FY starts **Jul 1**, labelled by its
+  **end year** — Jul 2026–Jun 2027 = **FY27** (we are in FY27 now). `Bucket(date, granularity)` yields a
+  chronological sort key + stable key + display label (e.g. `FY27 Q1`, `Sep 2026`, `2026-W38`).
+- **Nomination enrichment**: offering fields + dates via `import-offerings` (Summary, single source; also
+  creates Completed nominations from Actual End Date); FDO withdraw guard protects settled states.
+Backlog: cycle-time measure (avg days / nominated→completed), bucket→Nominations date-range drill, trend CSV
+  export, weekly view is sparse; Leave intake data source, my-view, global search, Entra auth, in-app upload,
+  API smoke tests.

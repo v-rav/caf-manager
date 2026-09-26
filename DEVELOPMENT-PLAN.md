@@ -151,6 +151,13 @@ and are best done as follow-ups once the cockpit changes prove out.
 - **Migration Analytics** (`/analytics`, `GET /api/analytics?region=`) — headline KPIs (in-flight, Total/NNR
   ACR, cores, tool/automation adoption) + stage/health/SLA/region/segment/path/mode/wave distributions and
   ACR/cores value cuts, over Approved nominations (`AnalyticsService` reuses `INominationService`).
+- **Trends (time-series)** on the Analytics page (`GET /api/analytics/timeseries` + `.../timeseries/detail`) —
+  a **fiscal-year-aware** pivot of Approved nominations: configurable **basis** (nominated/approved/started/
+  **completed**), **granularity** (week=ISO calendar week · **month** · quarter/year=**fiscal**), **measure**
+  (**count**/acr/nnr/cores) and **splitBy** (none/region/segment/path/stage/status → stacked series), optional
+  `from`/`to`. Stacked `TimeSeriesChart` + aggregated `DataTable<TimeBucket>` whose **Period** drills **in-page**
+  into that bucket's nominations. Fiscal convention in `Common/FiscalCalendar.cs`: FY starts **Jul 1**, labelled
+  by end year (Jul 2026–Jun 2027 = **FY27**).
 - **Nomination enrichment** — offering fields (ACR, cores, tool/automation, mode, path, partner) + dates
   (nominated/approval/actual-start/actual-end/planned, derived `TotalDays`) via `POST /api/admin/import-offerings`
   (Summary, by TPID+Task Id); completed migrations via `POST /api/admin/import-completed` (DE-Completed). FDO
