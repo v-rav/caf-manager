@@ -27,6 +27,7 @@ public static class SeedData
         await SeedAliasesAsync(db, ct);
         await SeedResourceAliasesAsync(db, ct);
         await SeedResourceEmailsAsync(db, ct);
+        await SeedResourceMobilesAsync(db, ct);
         await SeedStrategicAccountsAsync(db, ct);
         await db.SaveChangesAsync(ct);
 
@@ -292,6 +293,73 @@ public static class SeedData
             if (email is not null && taken.Add(email)) // unique email index: never assign the same address twice
             {
                 r.Email = email;
+                changed = true;
+            }
+        }
+        if (changed)
+            await db.SaveChangesAsync(ct);
+    }
+
+    // Name -> mobile number (from mobile.md). Matches by name/alias; fills only blank Mobile fields.
+    private static readonly Dictionary<string, string> ResourceMobileSeed = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Ravinder Rana"] = "9911330448",
+        ["Shyam Koleti"] = "7958160072",
+        ["Rakesh Kumar"] = "9890139899",
+        ["Viswanatha Selvam P"] = "9841722804",
+        ["Kiran Raj M C"] = "9606031552",
+        ["Seethai Paulsamy"] = "9176739884",
+        ["Deepak D"] = "9986928100",
+        ["Basavaraj Araballi"] = "9880266722",
+        ["Abhishek Anand"] = "9820540482",
+        ["Dinesh Mahenderkar"] = "9550835366",
+        ["Ramchandra Gosavi"] = "8655540318",
+        ["Noorbasha Sufiyan"] = "9494300284",
+        ["Nandhini"] = "7406628790",
+        ["Gaurav Sharma"] = "9958238291",
+        ["Rajnish Kumar Singh"] = "9873495625",
+        ["Rajnish Mishra"] = "8871839236",
+        ["Abhinav Jain"] = "9911574736",
+        ["Kandasamy Kandavel"] = "7044570745",
+        ["Swadhin Kumar Nayak"] = "8984098014",
+        ["Priyadarshi Sharma"] = "9962561911",
+        ["Arunkumar Azariah Koilraj"] = "978910035",
+        ["Amit Bengali"] = "9763366769",
+        ["Dhinakaran M"] = "9940312106",
+        ["Sushil Gupta"] = "8539923969",
+        ["Sanket Singh"] = "7406628790",
+        ["Hozefa Tinwala"] = "7506269112",
+        ["Dharmendra Singh"] = "7503696202",
+        ["Rama Subbu Lakshmi A"] = "9962778613",
+        ["Abhirup Roy"] = "9123856475",
+        ["Prasanna M"] = "8056134977",
+        ["Yogaraj M"] = "8508221000",
+        ["Abhishek Sarkar"] = "9051906999",
+        ["Mrinmoy Kundu"] = "8617097326",
+        ["Renu Kumari"] = "8377036025",
+        ["Kamasastry Kodukulla"] = "9494062890",
+        ["Pradeep Singh"] = "9453711032",
+        ["Vadde Umadevi"] = "9886803951",
+    };
+
+    private static async Task SeedResourceMobilesAsync(AppDbContext db, CancellationToken ct)
+    {
+        static string Norm(string? s) => new string((s ?? string.Empty).ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+        var byNorm = ResourceMobileSeed.ToDictionary(kv => Norm(kv.Key), kv => kv.Value);
+
+        var all = await db.Resources.ToListAsync(ct);
+        var changed = false;
+        foreach (var r in all)
+        {
+            if (!string.IsNullOrWhiteSpace(r.Mobile))
+                continue;
+            var keys = new List<string> { Norm(r.Name) };
+            if (!string.IsNullOrWhiteSpace(r.Aliases))
+                keys.AddRange(r.Aliases.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(Norm));
+            var mobile = keys.Select(k => byNorm.TryGetValue(k, out var m) ? m : null).FirstOrDefault(m => m is not null);
+            if (mobile is not null)
+            {
+                r.Mobile = mobile;
                 changed = true;
             }
         }
