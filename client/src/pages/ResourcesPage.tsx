@@ -6,15 +6,9 @@ import {
   Option,
   SearchBox,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
   Text,
 } from '@fluentui/react-components'
-import { AddRegular, ArrowDownloadRegular, DeleteRegular, EditRegular, LinkRegular } from '@fluentui/react-icons'
+import { AddRegular, ArrowDownloadRegular, DeleteRegular, EditRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { ConfirmDialog, Modal } from '../components/Modal'
@@ -74,7 +68,6 @@ export function ResourcesPage() {
   const [form, setForm] = useState<ResourceUpsert | null>(null)
   const [editId, setEditId] = useState<number | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Resource | null>(null)
-  const [mapTarget, setMapTarget] = useState<Resource | null>(null)
   const [busy, setBusy] = useState(false)
 
   const openCreate = () => {
@@ -188,7 +181,6 @@ export function ResourcesPage() {
                 header: 'Actions',
                 render: (r) => (
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <Button size="small" appearance="subtle" icon={<LinkRegular />} title="Manage accounts" onClick={() => setMapTarget(r)} />
                     <Button size="small" appearance="subtle" icon={<EditRegular />} title="Edit" onClick={() => openEdit(r)} />
                     <Button size="small" appearance="subtle" icon={<DeleteRegular />} title="Delete" onClick={() => setDeleteTarget(r)} />
                   </div>
@@ -261,16 +253,6 @@ export function ResourcesPage() {
         )}
       </Modal>
 
-      {mapTarget && (
-        <MappingEditor
-          resource={mapTarget}
-          onClose={() => {
-            setMapTarget(null)
-            reload()
-          }}
-        />
-      )}
-
       <ConfirmDialog
         open={!!deleteTarget}
         title="Delete resource"
@@ -280,92 +262,5 @@ export function ResourcesPage() {
         busy={busy}
       />
     </div>
-  )
-}
-
-function MappingEditor({ resource, onClose }: { resource: Resource; onClose: () => void }) {
-  const { data: detail, loading, reload } = useAsync(() => api.resource(resource.resourceId), [resource.resourceId])
-  const { data: accounts } = useAsync(() => api.accounts(), [])
-  const [accountId, setAccountId] = useState<number | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  const assigned = new Set(detail?.accounts.map((a) => a.accountId) ?? [])
-  const available = accounts?.filter((a) => !assigned.has(a.accountId)) ?? []
-
-  const add = async () => {
-    if (!accountId) return
-    setBusy(true)
-    try {
-      await api.assignAccount(resource.resourceId, accountId)
-      setAccountId(null)
-      reload()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const remove = async (id: number) => {
-    setBusy(true)
-    try {
-      await api.unassignAccount(resource.resourceId, id)
-      reload()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <Modal open title={`Manage Accounts — ${resource.name}`} onClose={onClose} submitLabel="Done" onSubmit={onClose}>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'end' }}>
-        <Dropdown
-          style={{ flex: 1 }}
-          placeholder="Select account to assign"
-          value={available.find((a) => a.accountId === accountId)?.accountName ?? ''}
-          selectedOptions={accountId ? [String(accountId)] : []}
-          onOptionSelect={(_, d) => setAccountId(Number(d.optionValue))}
-        >
-          {available.map((a) => (
-            <Option key={a.accountId} value={String(a.accountId)} text={`${a.accountName} (${a.region})`}>
-              {a.accountName} ({a.region})
-            </Option>
-          ))}
-        </Dropdown>
-        <Button appearance="primary" icon={<AddRegular />} onClick={add} disabled={!accountId || busy}>
-          Assign
-        </Button>
-      </div>
-
-      {loading ? (
-        <Loading />
-      ) : (
-        <Table size="small" aria-label="Assigned accounts">
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>Account</TableHeaderCell>
-              <TableHeaderCell>Region</TableHeaderCell>
-              <TableHeaderCell>Relationship</TableHeaderCell>
-              <TableHeaderCell />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {detail?.accounts.map((a) => (
-              <TableRow key={a.accountId}>
-                <TableCell>{a.accountName}</TableCell>
-                <TableCell>{a.region}</TableCell>
-                <TableCell>{a.relationshipType ?? '—'}</TableCell>
-                <TableCell>
-                  <Button size="small" appearance="subtle" icon={<DeleteRegular />} onClick={() => remove(a.accountId)} disabled={busy} />
-                </TableCell>
-              </TableRow>
-            ))}
-            {detail && detail.accounts.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4}>No accounts assigned yet.</TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      )}
-    </Modal>
   )
 }
