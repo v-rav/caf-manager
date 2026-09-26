@@ -59,9 +59,10 @@ function TrendsSection({ region }: { region?: string }) {
   const [granularity, setGranularity] = useState('month')
   const [measure, setMeasure] = useState('count')
   const [splitBy, setSplitBy] = useState('none')
+  const [fy, setFy] = useState('all')
   const { data, loading } = useAsync(
-    () => api.timeseries({ region, basis, granularity, measure, splitBy: splitBy === 'none' ? undefined : splitBy }),
-    [region, basis, granularity, measure, splitBy],
+    () => api.timeseries({ region, basis, granularity, measure, splitBy: splitBy === 'none' ? undefined : splitBy, fy: fy === 'all' ? undefined : fy }),
+    [region, basis, granularity, measure, splitBy, fy],
   )
   const [detail, setDetail] = useState<{ label: string; rows: Nomination[] } | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -86,6 +87,7 @@ function TrendsSection({ region }: { region?: string }) {
   }
 
   const single = !data || data.series.length <= 1
+  const fyOpts = [{ v: 'all', t: 'All FY' }, ...(data?.fiscalYears ?? []).map((y) => ({ v: String(y), t: `FY${String(y % 100).padStart(2, '0')}` }))]
   const bucketCols = single
     ? [
         { key: 'period', header: 'Period', sortValue: (b: TimeBucket) => b.key, render: (b: TimeBucket) => <Link onClick={() => openDetail(b)}>{b.label}</Link> },
@@ -103,6 +105,7 @@ function TrendsSection({ region }: { region?: string }) {
         <Text size={400} weight="semibold">Trends over time</Text>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Pick label="Date basis" value={basis} options={BASIS_OPTS} onChange={setBasis} />
+          <Pick label="Fiscal year" value={fy} options={fyOpts} onChange={setFy} />
           <Pick label="Granularity" value={granularity} options={GRAN_OPTS} onChange={setGranularity} />
           <Pick label="Measure" value={measure} options={MEASURE_OPTS} onChange={setMeasure} />
           <Pick label="Split by" value={splitBy} options={SPLIT_OPTS} onChange={setSplitBy} />

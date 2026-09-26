@@ -114,7 +114,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
     }
 
     public async Task<TimeSeriesDto> GetTimeSeriesAsync(string? region, string basis, string granularity, string measure,
-        string? splitBy, DateOnly? from, DateOnly? to, CancellationToken ct = default)
+        string? splitBy, DateOnly? from, DateOnly? to, int? fy, CancellationToken ct = default)
     {
         basis = (basis ?? "completed").ToLowerInvariant();
         granularity = (granularity ?? "month").ToLowerInvariant();
@@ -134,11 +134,14 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         var acc = new Dictionary<string, Dictionary<string, double>>();
         var meta = new Dictionary<string, (long Sort, string Label)>();
         var seriesSet = new HashSet<string>();
+        var fySet = new HashSet<int>();
         int noDate = 0;
         foreach (var n in noms)
         {
             var d = BasisDate(n, basis);
             if (d is null) { noDate++; continue; }
+            fySet.Add(FiscalCalendar.FiscalYear(d.Value));
+            if (fy is not null && FiscalCalendar.FiscalYear(d.Value) != fy) continue;
             if (from is not null && d < from) continue;
             if (to is not null && d > to) continue;
             var (sort, key, label) = FiscalCalendar.Bucket(d.Value, granularity);
@@ -163,6 +166,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         {
             Basis = basis, Granularity = granularity, Measure = measure, SplitBy = split,
             Series = series, Buckets = buckets, Total = buckets.Sum(b => b.Total), RecordsWithoutDate = noDate,
+            FiscalYears = fySet.OrderByDescending(x => x).ToList(),
         };
     }
 

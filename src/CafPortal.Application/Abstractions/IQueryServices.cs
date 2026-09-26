@@ -12,7 +12,7 @@ public interface IAnalyticsService
     Task<AnalyticsDto> GetAsync(string? region, CancellationToken ct = default);
 
     Task<TimeSeriesDto> GetTimeSeriesAsync(string? region, string basis, string granularity, string measure,
-        string? splitBy, DateOnly? from, DateOnly? to, CancellationToken ct = default);
+        string? splitBy, DateOnly? from, DateOnly? to, int? fy, CancellationToken ct = default);
 
     Task<IReadOnlyList<NominationDto>> GetTimeSeriesDetailAsync(string? region, string basis, string granularity,
         string bucketKey, string? splitBy, string? series, CancellationToken ct = default);

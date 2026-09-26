@@ -21,6 +21,7 @@ export interface TimeSeries {
   buckets: TimeBucket[]
   total: number
   recordsWithoutDate: number
+  fiscalYears: number[]
 }
 
 export interface Analytics {

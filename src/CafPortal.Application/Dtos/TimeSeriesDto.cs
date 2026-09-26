@@ -14,6 +14,8 @@ public class TimeSeriesDto
     public double Total { get; set; }
     /// <summary>Approved nominations skipped because the chosen basis date is missing (coverage signal).</summary>
     public int RecordsWithoutDate { get; set; }
+    /// <summary>Fiscal years present in the (region-scoped, basis-dated) data, descending — for the FY filter.</summary>
+    public IReadOnlyList<int> FiscalYears { get; set; } = [];
 }
 
 public class TimeBucketDto

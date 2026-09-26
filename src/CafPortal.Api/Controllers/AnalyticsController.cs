@@ -15,8 +15,8 @@ public class AnalyticsController(IAnalyticsService analytics) : ControllerBase
     [HttpGet("timeseries")]
     public async Task<IActionResult> TimeSeries([FromQuery] string? region, [FromQuery] string basis = "completed",
         [FromQuery] string granularity = "month", [FromQuery] string measure = "count", [FromQuery] string? splitBy = null,
-        [FromQuery] DateOnly? from = null, [FromQuery] DateOnly? to = null, CancellationToken ct = default)
-        => Ok(await analytics.GetTimeSeriesAsync(region, basis, granularity, measure, splitBy, from, to, ct));
+        [FromQuery] DateOnly? from = null, [FromQuery] DateOnly? to = null, [FromQuery] int? fy = null, CancellationToken ct = default)
+        => Ok(await analytics.GetTimeSeriesAsync(region, basis, granularity, measure, splitBy, from, to, fy, ct));
 
     [HttpGet("timeseries/detail")]
     public async Task<IActionResult> TimeSeriesDetail([FromQuery] string? region, [FromQuery] string basis,
