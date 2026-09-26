@@ -311,9 +311,21 @@ public static class SeedData
         ["Hema Chandra Dyapa"] = "Hema Dyapa",
         // email.md name variants -> canonical roster name (so email backfill matches).
         ["Sanket Kumar Singh"] = "Sanket Singh",
-        ["Rama Subbu Lakshmi"] = "Rama Subbu Lakshmi A",
         ["Sayed Yahya Refai"] = "Yahya Refai",
+    };
+
+    // Shorter roster spelling -> correct full name to rename the record to (fresh DBs).
+    private static readonly Dictionary<string, string> ResourceRenameSeed = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Rama Subbu Lakshmi"] = "Rama Subbu Lakshmi A",
         ["Divya Sree"] = "Divya Sree Illa",
+    };
+
+    // Correct full name -> short spelling to keep as the alias (so FDO imports still match).
+    private static readonly Dictionary<string, string> ResourceCanonicalAliasSeed = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Rama Subbu Lakshmi A"] = "Rama Subbu Lakshmi",
+        ["Divya Sree Illa"] = "Divya Sree",
     };
 
     private static async Task SeedResourceAliasesAsync(AppDbContext db, CancellationToken ct)
@@ -322,6 +334,20 @@ public static class SeedData
         var changed = false;
         foreach (var r in all)
         {
+            // Rename shorter roster spellings to the correct full name.
+            if (ResourceRenameSeed.TryGetValue(r.Name, out var fullName)
+                && !all.Any(x => x != r && x.Name.Equals(fullName, StringComparison.OrdinalIgnoreCase)))
+            {
+                r.Name = fullName;
+                changed = true;
+            }
+            // Set the short spelling as alias (also corrects a redundant self-alias from an earlier run).
+            if (ResourceCanonicalAliasSeed.TryGetValue(r.Name, out var shortAlias)
+                && (string.IsNullOrWhiteSpace(r.Aliases) || r.Aliases.Equals(r.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                r.Aliases = shortAlias;
+                changed = true;
+            }
             // Backfill known aliases without clobbering manual edits.
             if (string.IsNullOrWhiteSpace(r.Aliases) && ResourceAliasSeed.TryGetValue(r.Name, out var alias))
             {
