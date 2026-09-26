@@ -9,6 +9,7 @@ public class Resource : AuditableEntity
     public string? Psid { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Email { get; set; }
+    public string? Mobile { get; set; }
     /// <summary>Semicolon-separated alternate name spellings (FDO variants) used to match this person by name.</summary>
     public string? Aliases { get; set; }
     public string Region { get; set; } = string.Empty;

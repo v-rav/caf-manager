@@ -71,6 +71,7 @@ export interface Resource {
   psid?: string
   name: string
   email?: string
+  mobile?: string
   aliases?: string
   region: string
   role: string
@@ -399,6 +400,7 @@ export interface ResourceUpsert {
   psid?: string
   name: string
   email?: string
+  mobile?: string
   aliases?: string
   region: string
   role: string

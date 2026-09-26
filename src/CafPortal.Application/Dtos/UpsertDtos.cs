@@ -8,6 +8,7 @@ public class ResourceUpsertDto
     public string? Psid { get; set; }
     [Required] public string Name { get; set; } = string.Empty;
     public string? Email { get; set; }
+    public string? Mobile { get; set; }
     public string? Aliases { get; set; }
     [Required] public string Region { get; set; } = string.Empty;
     [Required] public string Role { get; set; } = string.Empty;

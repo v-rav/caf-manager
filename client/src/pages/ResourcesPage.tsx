@@ -31,6 +31,7 @@ const emptyForm: ResourceUpsert = {
   name: '',
   psid: '',
   email: '',
+  mobile: '',
   aliases: '',
   region: '',
   role: '',
@@ -86,6 +87,7 @@ export function ResourcesPage() {
       name: r.name,
       psid: r.psid ?? '',
       email: r.email ?? '',
+      mobile: r.mobile ?? '',
       aliases: r.aliases ?? '',
       region: r.region,
       role: r.role,
@@ -166,6 +168,7 @@ export function ResourcesPage() {
             columns={[
               { key: 'name', header: 'Name', sortValue: (r) => r.name },
               { key: 'email', header: 'Email', sortValue: (r) => r.email ?? '', render: (r) => r.email ?? '—' },
+              { key: 'mobile', header: 'Mobile', sortValue: (r) => r.mobile ?? '', render: (r) => r.mobile ?? '—' },
               { key: 'region', header: 'Region', sortValue: (r) => r.region },
               { key: 'role', header: 'Role', sortValue: (r) => r.role },
               { key: 'skill', header: 'Primary Skill', sortValue: (r) => r.primarySkill ?? '', render: (r) => r.primarySkill ?? '—' },
@@ -210,6 +213,7 @@ export function ResourcesPage() {
             <div style={{ display: 'flex', gap: 8 }}>
               <Input style={{ flex: 1 }} placeholder="PSID" value={form.psid} onChange={(_, d) => patch({ psid: d.value })} />
               <Input style={{ flex: 1 }} placeholder="Email" value={form.email} onChange={(_, d) => patch({ email: d.value })} />
+              <Input style={{ flex: 1 }} placeholder="Mobile" value={form.mobile} onChange={(_, d) => patch({ mobile: d.value })} />
             </div>
             <Input placeholder="Aliases (; separated name variants)" value={form.aliases} onChange={(_, d) => patch({ aliases: d.value })} />
             <div style={{ display: 'flex', gap: 8 }}>

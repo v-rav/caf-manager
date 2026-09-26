@@ -84,6 +84,7 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
             Psid = baseDto.Psid,
             Name = baseDto.Name,
             Email = baseDto.Email,
+            Mobile = baseDto.Mobile,
             Aliases = baseDto.Aliases,
             Region = baseDto.Region,
             Role = baseDto.Role,
@@ -180,6 +181,7 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
         resource.Psid = input.Psid;
         resource.Name = input.Name;
         resource.Email = string.IsNullOrWhiteSpace(input.Email) ? null : input.Email.Trim();
+        resource.Mobile = string.IsNullOrWhiteSpace(input.Mobile) ? null : input.Mobile.Trim();
         resource.Aliases = string.IsNullOrWhiteSpace(input.Aliases) ? null : input.Aliases.Trim();
         resource.Region = input.Region;
         resource.Role = input.Role;
@@ -211,6 +213,7 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
             Psid = r.Psid,
             Name = r.Name,
             Email = r.Email,
+            Mobile = r.Mobile,
             Aliases = r.Aliases,
             Region = r.Region,
             Role = r.Role,

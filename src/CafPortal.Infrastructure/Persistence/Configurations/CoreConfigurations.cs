@@ -12,6 +12,7 @@ public class ResourceConfiguration : IEntityTypeConfiguration<Resource>
         builder.Property(r => r.Name).HasMaxLength(200).IsRequired();
         builder.Property(r => r.Psid).HasMaxLength(50);
         builder.Property(r => r.Email).HasMaxLength(256);
+        builder.Property(r => r.Mobile).HasMaxLength(40);
         builder.Property(r => r.Aliases).HasMaxLength(400);
         builder.Property(r => r.Region).HasMaxLength(50).IsRequired();
         builder.Property(r => r.Role).HasMaxLength(100).IsRequired();

@@ -6,6 +6,7 @@ public class ResourceDto
     public string? Psid { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Email { get; set; }
+    public string? Mobile { get; set; }
     public string? Aliases { get; set; }
     public string Region { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
