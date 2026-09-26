@@ -19,7 +19,7 @@ import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { ConfirmDialog, Modal } from '../components/Modal'
 import { DataTable } from '../components/DataTable'
-import { ErrorText, FilterSelect, Loading, Panel, StatusBadge, UtilizationBar } from '../components/common'
+import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import { useSearchParams } from 'react-router-dom'
@@ -169,7 +169,6 @@ export function ResourcesPage() {
               { key: 'region', header: 'Region', sortValue: (r) => r.region },
               { key: 'role', header: 'Role', sortValue: (r) => r.role },
               { key: 'skill', header: 'Primary Skill', sortValue: (r) => r.primarySkill ?? '', render: (r) => r.primarySkill ?? '—' },
-              { key: 'onboarding', header: 'Onboarding', sortValue: (r) => r.onboardingStatus, render: (r) => r.onboardingStatus },
               {
                 key: 'active',
                 header: 'Active',
@@ -181,9 +180,6 @@ export function ResourcesPage() {
                   </Badge>
                 ),
               },
-              { key: 'accounts', header: 'Accounts', align: 'center', sortValue: (r) => r.accountCount, render: (r) => `${r.accountCount} / ${r.capacityLimit}` },
-              { key: 'utilization', header: 'Utilization', minWidth: 140, sortValue: (r) => r.utilizationPercent, render: (r) => <UtilizationBar percent={r.utilizationPercent} /> },
-              { key: 'status', header: 'Status', sortValue: (r) => r.capacityStatus, render: (r) => <StatusBadge status={r.capacityStatus} /> },
               {
                 key: 'actions',
                 header: 'Actions',
