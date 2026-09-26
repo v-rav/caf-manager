@@ -31,6 +31,9 @@ public class NominationDto
     public int? TotalCores { get; set; }
     public bool? IsToolAttached { get; set; }
     public bool? IsAutomationUsed { get; set; }
+    public string? ModeOfAccess { get; set; }
+    public decimal? TotalAcr { get; set; }
+    public decimal? NnrAcr { get; set; }
 
     /// <summary>Whole days since last update. Drives stale detection.</summary>
     public int DaysSinceUpdate { get; set; }

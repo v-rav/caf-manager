@@ -209,6 +209,9 @@ export interface Nomination {
   totalCores?: number
   isToolAttached?: boolean
   isAutomationUsed?: boolean
+  modeOfAccess?: string
+  totalAcr?: number
+  nnrAcr?: number
   daysSinceUpdate: number
   staleTier: string
   dbLinked: boolean

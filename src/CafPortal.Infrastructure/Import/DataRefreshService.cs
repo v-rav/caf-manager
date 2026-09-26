@@ -525,6 +525,9 @@ public class DataRefreshService(
             var colCores = ExcelHelpers.FindColumn(h, "Total Cores");
             var colTool = ExcelHelpers.FindColumn(h, "Is Tool Attached");
             var colAuto = ExcelHelpers.FindColumn(h, "Is Automation Used");
+            var colMode = ExcelHelpers.FindColumn(h, "Mode Of Access");
+            var colTotalAcr = ExcelHelpers.FindColumn(h, "Total ACR");
+            var colNnrAcr = ExcelHelpers.FindColumn(h, "NNR ACR");
             if (colTpid is null || colTask is null)
             {
                 result.Success = false;
@@ -581,6 +584,13 @@ public class DataRefreshService(
                         ? (int)Math.Round(cores) : null;
                     nom.IsToolAttached = ParseYesNo(ExcelHelpers.GetString(row, colTool));
                     nom.IsAutomationUsed = ParseYesNo(ExcelHelpers.GetString(row, colAuto));
+                    nom.ModeOfAccess = ExcelHelpers.GetString(row, colMode);
+                    var totalAcrStr = ExcelHelpers.GetString(row, colTotalAcr);
+                    nom.TotalAcr = totalAcrStr is not null && decimal.TryParse(totalAcrStr,
+                        System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var tacr) ? tacr : null;
+                    var nnrAcrStr = ExcelHelpers.GetString(row, colNnrAcr);
+                    nom.NnrAcr = nnrAcrStr is not null && decimal.TryParse(nnrAcrStr,
+                        System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var nacr) ? nacr : null;
                 }
             }
 

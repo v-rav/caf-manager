@@ -40,6 +40,9 @@ public class Nomination : AuditableEntity
     public int? TotalCores { get; set; }
     public bool? IsToolAttached { get; set; }
     public bool? IsAutomationUsed { get; set; }
+    public string? ModeOfAccess { get; set; }
+    public decimal? TotalAcr { get; set; }
+    public decimal? NnrAcr { get; set; }
 
     public Account? Account { get; set; }
     public ICollection<WaveLink> WaveLinks { get; set; } = new List<WaveLink>();
