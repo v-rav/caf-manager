@@ -109,6 +109,11 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
                 .GroupBy(n => n.PartnerName!)
                 .Select(g => new NameValueDto(g.Key, (double)g.Sum(n => n.TotalAcr ?? 0m)))
                 .Where(x => x.Value > 0).OrderByDescending(x => x.Value).Take(8).ToList(),
+            // Spans ALL approval steps (not just Approved) — mirrors the FDO "Concierge Nomination Status ACR".
+            AcrByApproval = all.Where(n => !string.IsNullOrWhiteSpace(n.ApprovalStatus))
+                .GroupBy(n => n.ApprovalStatus!)
+                .Select(g => new NameValueDto(g.Key, (double)g.Sum(n => n.TotalAcr ?? 0m)))
+                .Where(x => x.Value > 0).OrderByDescending(x => x.Value).ToList(),
         };
         return dto;
     }

@@ -34,4 +34,6 @@ public class AnalyticsDto
     public IReadOnlyList<NameValueDto> AcrByMigrationPath { get; set; } = [];
     public IReadOnlyList<NameValueDto> CoresByStage { get; set; } = [];
     public IReadOnlyList<NameValueDto> TopPartnersByAcr { get; set; } = [];
+    /// <summary>ACR summed by approval step across ALL statuses (Concierge / Provisional / Approved / Declined …).</summary>
+    public IReadOnlyList<NameValueDto> AcrByApproval { get; set; } = [];
 }

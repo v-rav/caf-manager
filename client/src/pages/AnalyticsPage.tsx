@@ -273,6 +273,7 @@ export function AnalyticsPage() {
         <Panel title="ACR by segment"><BarChart data={data.acrBySegment} label="ACR ($)" /></Panel>
         <Panel title="Top migration paths by ACR"><BarChart data={data.acrByMigrationPath} label="ACR ($)" /></Panel>
         <Panel title="Cores by stage"><BarChart data={data.coresByStage} label="Cores" /></Panel>
+        <Panel title="ACR by approval status"><BarChart data={data.acrByApproval} label="ACR ($)" /></Panel>
       </Section>
 
       <Section title="Adoption & coverage">

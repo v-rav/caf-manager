@@ -48,6 +48,7 @@ export interface Analytics {
   acrByMigrationPath: NameValue[]
   coresByStage: NameValue[]
   topPartnersByAcr: NameValue[]
+  acrByApproval: NameValue[]
 }
 
 export interface ExecutiveDashboard {

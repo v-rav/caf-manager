@@ -297,13 +297,63 @@ public class ExportService(
 
         WriteStackedSections(wb, "Value cuts",
             ("ACR by region", a.AcrByRegion), ("ACR by segment", a.AcrBySegment), ("ACR by migration path", a.AcrByMigrationPath),
-            ("Cores by stage", a.CoresByStage), ("Top partners by ACR", a.TopPartnersByAcr));
+            ("Cores by stage", a.CoresByStage), ("Top partners by ACR", a.TopPartnersByAcr), ("ACR by approval status", a.AcrByApproval));
+
+        var att = await analytics.GetAttainmentAsync(region, fy, ct);
+        BuildAttainmentSheet(wb, att);
 
         BuildTrendSheet(wb, ts);
 
         using var ms = new MemoryStream();
         wb.SaveAs(ms);
         return ms.ToArray();
+    }
+
+    // Attainment: headline KPIs + the cumulative Target/Completed/In-flight/VTT by fiscal month.
+    private static void BuildAttainmentSheet(XLWorkbook wb, AttainmentDto a)
+    {
+        var ws = wb.AddWorksheet("Attainment");
+        ws.Cell(1, 1).Value = $"Attainment vs {a.Label} target · {a.Measure}";
+        ws.Cell(1, 1).Style.Font.Bold = true;
+        ws.Cell(1, 1).Style.Font.FontSize = 13;
+        if (!a.TargetSet)
+            ws.Cell(2, 1).Value = $"No ACR target set for {a.Label} — set it in Configuration → Fiscal-year ACR targets.";
+
+        WriteHeader(ws, new[] { "Metric", "Value" }, startRow: 3);
+        var kpis = new (string Label, double Value)[]
+        {
+            ($"{a.Label} target", (double)a.AnnualTarget),
+            ("Completed (landed) YTD", (double)a.CompletedYtd),
+            ("In-flight pipeline", (double)a.InflightYtd),
+            ("Target to date", (double)a.TargetToDate),
+            ("VTT (gap to plan)", (double)a.Vtt),
+            ("Attainment %", Math.Round(a.AttainmentPct, 1)),
+            ("Pace % (vs to-date)", Math.Round(a.PacePct, 1)),
+            ("Completed count", a.CompletedCount),
+            ("Avg nomination size", (double)a.AvgNominationSize),
+            ("Nominations needed", Math.Round(a.NominationsNeeded, 1)),
+        };
+        var kr = 4;
+        foreach (var (label, value) in kpis)
+        {
+            ws.Cell(kr, 1).Value = label;
+            ws.Cell(kr, 2).Value = value;
+            kr++;
+        }
+
+        var hr = kr + 1;
+        WriteHeader(ws, new[] { "Fiscal Month", "Target", "Completed", "In-flight", "VTT" }, startRow: hr);
+        var r = hr + 1;
+        foreach (var b in a.Buckets)
+        {
+            ws.Cell(r, 1).Value = b.Label;
+            ws.Cell(r, 2).Value = b.Target;
+            ws.Cell(r, 3).Value = b.Completed;
+            ws.Cell(r, 4).Value = b.Inflight;
+            ws.Cell(r, 5).Value = b.Vtt;
+            r++;
+        }
+        ws.Columns(1, 5).AdjustToContents();
     }
 
     // Several label/value distributions stacked on one sheet (fewer tabs than one sheet each).
