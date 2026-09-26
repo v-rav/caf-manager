@@ -1,5 +1,6 @@
 using CafPortal.Application.Abstractions;
 using CafPortal.Domain.Entities;
+using CafPortal.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace CafPortal.Application.Services;
@@ -13,32 +14,44 @@ public class CapacityRebuildService(IApplicationDbContext db, ICapacityCalculati
     private readonly IApplicationDbContext _db = db;
     private readonly ICapacityCalculationService _capacity = capacity;
 
+    // A nomination stops consuming capacity once it reaches a settled state (matches CapacityService).
+    private static readonly NominationStatusType[] Settled =
+    {
+        NominationStatusType.Closed, NominationStatusType.Completed,
+        NominationStatusType.Withdrawn, NominationStatusType.CustomerDeferred
+    };
+
     public async Task<int> RebuildAllAsync(CancellationToken ct = default)
     {
         await _db.CapacityFacts.ExecuteDeleteAsync(ct);
 
         var thresholds = await _capacity.GetThresholdsAsync(ct);
-        var roleLimits = await _db.CapacityConfigurations.AsNoTracking()
-            .ToDictionaryAsync(c => c.RoleName, c => c.CapacityLimit, StringComparer.OrdinalIgnoreCase, ct);
-        var defaultLimit = await _capacity.ResolveCapacityLimitAsync(string.Empty, null, ct);
 
         var resources = await _db.Resources.AsNoTracking()
             .Where(r => r.ActiveFlag)
             .Select(r => new { r.ResourceId, r.Role, r.CapacityLimit })
             .ToListAsync(ct);
 
-        var counts = await _db.ResourceAccounts.AsNoTracking()
-            .GroupBy(ra => ra.ResourceId)
-            .Select(g => new { ResourceId = g.Key, Count = g.Select(x => x.AccountId).Distinct().Count() })
-            .ToDictionaryAsync(x => x.ResourceId, x => x.Count, ct);
+        // Real workload = distinct in-flight accounts via nominations (Approved + not settled),
+        // matching CapacityService — NOT the noisy ResourceAccounts links.
+        var pairs = await _db.NominationResources.AsNoTracking()
+            .Where(nr => nr.Nomination!.AccountId != null
+                      && nr.Nomination.ApprovalStatus == "Approved"
+                      && !Settled.Contains(nr.Nomination.Status))
+            .Select(nr => new { nr.ResourceId, AccountId = nr.Nomination!.AccountId!.Value })
+            .Distinct()
+            .ToListAsync(ct);
+        var counts = pairs.GroupBy(p => p.ResourceId).ToDictionary(g => g.Key, g => g.Count());
 
         var now = DateTimeOffset.UtcNow;
-        var facts = resources.Select(r =>
+        // Resolve limits via the same engine CapacityService uses, so the snapshot matches the live page.
+        var facts = new List<CapacityFact>(resources.Count);
+        foreach (var r in resources)
         {
-            var limit = ResolveLimit(roleLimits, r.Role, r.CapacityLimit, defaultLimit);
+            var limit = await _capacity.ResolveCapacityLimitAsync(r.Role ?? string.Empty, r.CapacityLimit, ct);
             var accountCount = counts.TryGetValue(r.ResourceId, out var c) ? c : 0;
             var utilization = _capacity.CalculateUtilization(accountCount, limit);
-            return new CapacityFact
+            facts.Add(new CapacityFact
             {
                 ResourceId = r.ResourceId,
                 AccountCount = accountCount,
@@ -46,8 +59,8 @@ public class CapacityRebuildService(IApplicationDbContext db, ICapacityCalculati
                 UtilizationPercent = utilization,
                 CapacityStatus = _capacity.ResolveStatus(utilization, thresholds),
                 LastUpdated = now
-            };
-        }).ToList();
+            });
+        }
 
         _db.CapacityFacts.AddRange(facts);
         await _db.SaveChangesAsync(ct);
@@ -69,16 +82,15 @@ public class CapacityRebuildService(IApplicationDbContext db, ICapacityCalculati
         }
 
         var thresholds = await _capacity.GetThresholdsAsync(ct);
-        var roleLimit = await _db.CapacityConfigurations.AsNoTracking()
-            .Where(c => c.RoleName == resource.Role)
-            .Select(c => (int?)c.CapacityLimit)
-            .FirstOrDefaultAsync(ct);
-        var defaultLimit = await _capacity.ResolveCapacityLimitAsync(string.Empty, null, ct);
-        var limit = roleLimit is > 0 ? roleLimit.Value : (resource.CapacityLimit > 0 ? resource.CapacityLimit : defaultLimit);
+        var limit = await _capacity.ResolveCapacityLimitAsync(resource.Role ?? string.Empty, resource.CapacityLimit, ct);
 
-        var accountCount = await _db.ResourceAccounts.AsNoTracking()
-            .Where(ra => ra.ResourceId == resourceId)
-            .Select(ra => ra.AccountId).Distinct().CountAsync(ct);
+        var accountCount = await _db.NominationResources.AsNoTracking()
+            .Where(nr => nr.ResourceId == resourceId
+                      && nr.Nomination!.AccountId != null
+                      && nr.Nomination.ApprovalStatus == "Approved"
+                      && !Settled.Contains(nr.Nomination.Status))
+            .Select(nr => nr.Nomination!.AccountId!.Value)
+            .Distinct().CountAsync(ct);
 
         var utilization = _capacity.CalculateUtilization(accountCount, limit);
         _db.CapacityFacts.Add(new CapacityFact
@@ -92,9 +104,4 @@ public class CapacityRebuildService(IApplicationDbContext db, ICapacityCalculati
         });
         await _db.SaveChangesAsync(ct);
     }
-
-    private static int ResolveLimit(IReadOnlyDictionary<string, int> roleLimits, string? role, int resourceLimit, int defaultLimit)
-        => roleLimits.TryGetValue(role ?? string.Empty, out var roleLimit) && roleLimit > 0
-            ? roleLimit
-            : (resourceLimit > 0 ? resourceLimit : defaultLimit);
 }

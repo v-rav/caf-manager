@@ -9,6 +9,9 @@ import { KpiCard } from '../components/KpiCard'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 
+// Heat-band colours matching the Capacity page (Available → Overloaded).
+const CAPACITY_COLORS = ['#107c10', '#eaa300', '#ca5010', '#c50f1f']
+
 export function DashboardPage() {
   const { region } = useRegion()
   const navigate = useNavigate()
@@ -31,14 +34,14 @@ export function DashboardPage() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <KpiCard label="Total Resources" value={data.totalResources} tone="brand" onClick={() => navigate('/resources')} />
-        <KpiCard label="Active Accounts" value={data.activeAccounts} onClick={() => navigate('/accounts')} />
+        <KpiCard label="Total Accounts" value={data.activeAccounts} onClick={() => navigate('/accounts')} />
         <KpiCard label="Available" value={data.availableResources} tone="success" onClick={() => navigate('/resources?capacity=Available')} />
         <KpiCard label="Partially Utilized" value={data.partiallyUtilizedResources} tone="warning" onClick={() => navigate('/resources?capacity=Partially%20Utilized')} />
         <KpiCard label="Fully Utilized" value={data.fullyUtilizedResources} tone="warning" onClick={() => navigate('/resources?capacity=Fully%20Utilized')} />
         <KpiCard label="Overloaded" value={data.overloadedResources} tone="danger" onClick={() => navigate('/capacity?status=Overloaded')} />
         <KpiCard label="On Leave" value={data.resourcesOnLeave} onClick={() => navigate('/leave')} />
         <KpiCard label="Strategic Accounts" value={data.strategicAccounts} tone="brand" />
-        <KpiCard label="Open Nominations" value={data.openNominations} onClick={() => navigate('/nominations')} />
+        <KpiCard label="Active Nominations" value={data.openNominations} onClick={() => navigate('/nominations')} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
@@ -46,7 +49,7 @@ export function DashboardPage() {
           <DoughnutChart data={data.regionDistribution} />
         </Panel>
         <Panel title="Capacity Distribution">
-          <DoughnutChart data={data.capacityDistribution} />
+          <DoughnutChart data={data.capacityDistribution} colors={CAPACITY_COLORS} />
         </Panel>
         <Panel title="Strategic Account Coverage">
           <BarChart data={data.strategicAccountCoverage} label="Assigned resources" />
