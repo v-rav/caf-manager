@@ -101,8 +101,9 @@ Open <http://localhost:5080> — the API serves the SPA and the JSON endpoints t
 | ------ | ----- | ----------- |
 | GET | `/api/dashboard/executive?region=` | Executive KPI cards + chart series |
 | GET | `/api/analytics?region=` | Migration analytics — ACR/cores/adoption KPIs + distributions + value cuts over Approved nominations |
-| GET | `/api/analytics/timeseries?region=&basis=&granularity=&measure=&splitBy=&from=&to=` | Fiscal-year Trends pivot — basis×granularity×measure×split, chronological buckets |
+| GET | `/api/analytics/timeseries?region=&basis=&granularity=&measure=&splitBy=&fy=&from=&to=` | Fiscal-year Trends pivot — basis×granularity×measure×split, chronological buckets |
 | GET | `/api/analytics/timeseries/detail?region=&basis=&granularity=&bucket=&splitBy=&series=` | Nominations behind one Trends bucket (drill-through) |
+| GET | `/api/export/analytics?region=&basis=&granularity=&measure=&splitBy=&fy=` | Page-level analytics `.xlsx` — Overview + Distributions + Value cuts + live Trend view |
 | GET | `/api/resources?search=&region=&role=&skill=&status=` | Resource hub |
 | GET | `/api/resources/{id}` | Resource detail (accounts + upcoming leave) |
 | GET | `/api/accounts?search=&region=` | Account hub (name search is case-insensitive) |

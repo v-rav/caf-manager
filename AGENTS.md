@@ -167,7 +167,7 @@ import the **web app is the system of record**.
   the superset — 356 rows carry a completion `Actual End Date`).
 - `GET /api/admin/status` → counts + `lastRefreshUtc` (stamped by `DataRefreshService` on every
   successful import). Surfaced as "Updated Xm ago" in the header.
-- `GET /api/export/{resources|capacity|nominations|performance|summary}` → `.xlsx` (ClosedXML
+- `GET /api/export/{resources|capacity|nominations|performance|summary|analytics}` → `.xlsx` (ClosedXML
   `ExportService` in Infrastructure). Keep export columns in sync when grid columns change. The **capacity**
   export includes an **Assigned Accounts** column (semicolon-joined) matching the on-screen hover. The
   **nominations** export is filter-aware: it accepts the same query params as the grid
@@ -176,6 +176,12 @@ import the **web app is the system of record**.
   `api.exportUrl('nominations', region, {...})`. It writes a numeric **Stage** column (1–4), a frozen
   header + autofilter, and a second **Analysis** sheet with pivot-style counts (by approval, stage,
   region, SLA stale tier, wave linkage) of the filtered set.
+- The **analytics** export (`GET /api/export/analytics`) is the **single page-level** download for the
+  Migration Analytics page (one button, top-right; no per-chart buttons). It builds a 4-sheet workbook —
+  **Overview** (KPIs), **Distributions** (all count cuts stacked), **Value cuts** (ACR/cores stacked), and
+  **Trend** (the live time-series view) — and is Trends-filter-aware: it takes the same params as the Trends
+  section (`basis`, `granularity`, `measure`, `splitBy`, `fy`, `region`) so the file matches what's on screen
+  (the page owns that filter state and passes it via `api.exportUrl('analytics', region, {...})`).
 - **Backup & Restore** (`/backup` page, database icon in nav; `BackupService` in Infrastructure,
   `BackupController`). `GET /api/backup/download` → a consistent, zipped SQLite snapshot via
   `VACUUM INTO` (`cafdb_backup_<utc>.zip`, entry `cafdb.sqlite`); safe to run anytime. `POST
@@ -220,8 +226,10 @@ backup/restore (`/backup`).
   Configurable **basis** (which date buckets a record — `nominated`/`approved`/`started`/`completed`, default
   `completed`), **granularity** (`week` = ISO calendar week · `month` default · `quarter`/`year` = **fiscal**),
   **measure** (`count` default · `acr`/`nnr`/`cores` sums), and **splitBy** (`none`/`region`/`segment`/`path`/
-  `stage`/`status` → stacked series). Optional `from`/`to` (DateOnly). Returns `TimeSeriesDto` (chronological
-  `Buckets` of `NameValueDto[]` + per-bucket/overall totals + `RecordsWithoutDate`). The UI renders a stacked
+  `stage`/`status` → stacked series). Optional `fy` (4-digit fiscal year, e.g. `2027`; default **All**) and
+  `from`/`to` (DateOnly). Returns `TimeSeriesDto` (chronological `Buckets` of `NameValueDto[]` + per-bucket/overall
+  totals + `RecordsWithoutDate` + `FiscalYears` present, which drives the data-driven **Fiscal year** filter).
+  The UI renders a stacked
   `TimeSeriesChart` (charts.tsx) + an aggregated `DataTable<TimeBucket>` whose **Period** cell is a `Link` that
   drills into an **in-page** `DataTable<Nomination>` for that bucket (via `/timeseries/detail?bucket=<key>`).
   **Fiscal convention** (`CafPortal.Application/Common/FiscalCalendar.cs`): FY starts **Jul 1**, labelled by its
