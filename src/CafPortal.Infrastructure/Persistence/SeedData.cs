@@ -12,11 +12,23 @@ namespace CafPortal.Infrastructure.Persistence;
 /// </summary>
 public static class SeedData
 {
+    // While this ApplicationSetting exists, startup seeding is skipped so nothing re-applies to
+    // user-managed data. Delete it (or POST /api/admin/seed) to allow a deliberate re-seed.
+    private const string SeedCompletedKey = "SeedCompletedUtc";
+
     public static async Task SeedAsync(AppDbContext db, CancellationToken ct = default)
-        => await SeedAsync(db, seedDemo: true, ct);
+        => await SeedAsync(db, seedDemo: true, force: false, ct);
 
     public static async Task SeedAsync(AppDbContext db, bool seedDemo, CancellationToken ct = default)
+        => await SeedAsync(db, seedDemo, force: false, ct);
+
+    public static async Task SeedAsync(AppDbContext db, bool seedDemo, bool force, CancellationToken ct = default)
     {
+        // One-time by default: once the initial seed has run, later startups skip it entirely.
+        var alreadySeeded = await db.ApplicationSettings.AsNoTracking().AnyAsync(s => s.Key == SeedCompletedKey, ct);
+        if (alreadySeeded && !force)
+            return;
+
         await SeedRegionsAsync(db, ct);
         await SeedRolesAsync(db, ct);
         await SeedSegmentsAsync(db, ct);
@@ -35,6 +47,23 @@ public static class SeedData
         // Demo data is only seeded when requested (no real source workbook) and the DB has no resources yet.
         if (seedDemo && !await db.Resources.AnyAsync(ct))
             await SeedDemoDataAsync(db, ct);
+
+        await MarkSeededAsync(db, ct);
+    }
+
+    private static async Task MarkSeededAsync(AppDbContext db, CancellationToken ct)
+    {
+        var marker = await db.ApplicationSettings.FirstOrDefaultAsync(s => s.Key == SeedCompletedKey, ct);
+        if (marker is null)
+            db.ApplicationSettings.Add(new ApplicationSetting
+            {
+                Key = SeedCompletedKey,
+                Value = DateTimeOffset.UtcNow.ToString("O"),
+                Description = "Timestamp of the one-time initial seed. Startup seeding is skipped while this exists."
+            });
+        else
+            marker.Value = DateTimeOffset.UtcNow.ToString("O");
+        await db.SaveChangesAsync(ct);
     }
 
     private static async Task SeedRegionsAsync(AppDbContext db, CancellationToken ct)

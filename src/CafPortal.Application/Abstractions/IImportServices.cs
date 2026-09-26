@@ -38,6 +38,9 @@ public interface IDataRefreshService
     /// <summary>Saves an uploaded source workbook (kind: nominations|resources|leave|engagement) then runs a refresh.</summary>
     Task<DataRefreshResultDto> UploadAndRefreshAsync(string kind, Stream content, string fileName, CancellationToken ct = default);
 
+    /// <summary>Re-runs the one-time seed on demand (configuration + resource enrichments). Normally seeding runs only once.</summary>
+    Task<DataRefreshResultDto> ReseedAsync(CancellationToken ct = default);
+
     /// <summary>Freshness + row counts for the header banner.</summary>
     Task<DataStatusDto> GetStatusAsync(CancellationToken ct = default);
 }

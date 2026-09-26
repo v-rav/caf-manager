@@ -67,7 +67,9 @@ dotnet run --project src/CafPortal.Api --urls http://localhost:5080
 ```
 
 On first start it applies EF migrations, seeds configuration + a demo dataset, and builds
-the initial capacity snapshot. SQLite file: `src/CafPortal.Api/App_Data/cafdb.sqlite`.
+the initial capacity snapshot. **Seeding is one-time** — once it has run, subsequent starts skip it
+(a `SeedCompletedUtc` marker is recorded), so nothing re-applies to data you manage in the app.
+SQLite file: `src/CafPortal.Api/App_Data/cafdb.sqlite`.
 
 - Swagger (Development): <http://localhost:5080/swagger>
 - Health: <http://localhost:5080/health>
@@ -113,6 +115,7 @@ Open <http://localhost:5080> — the API serves the SPA and the JSON endpoints t
 | GET · POST · PUT | `/api/configuration/segments` | List / add / rename account segments |
 | POST | `/api/admin/refresh` | On-demand import of operational data (nominations, accounts, leave, engagement) + capacity rebuild. **Does not touch the resources table.** |
 | POST | `/api/admin/upload?kind=` | Upload an `.xlsx` for a source. `kind=resources` imports the resources table directly (one-shot, not staged); other kinds stage into `SourceData/` and refresh. |
+| POST | `/api/admin/seed` | Re-run the one-time seed on demand (configuration + resource enrichments). Seeding otherwise runs only once, at first start. |
 
 ---
 

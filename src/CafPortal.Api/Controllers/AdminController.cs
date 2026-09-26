@@ -13,6 +13,10 @@ public class AdminController(IDataRefreshService refresh) : ControllerBase
     public async Task<IActionResult> Refresh(CancellationToken ct)
         => Ok(await refresh.RefreshAsync(ct));
 
+    [HttpPost("seed")]
+    public async Task<IActionResult> Seed(CancellationToken ct)
+        => Ok(await refresh.ReseedAsync(ct));
+
     [HttpPost("upload")]
     [RequestSizeLimit(52_428_800)] // 50 MB
     public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromQuery] string kind = "nominations", CancellationToken ct = default)

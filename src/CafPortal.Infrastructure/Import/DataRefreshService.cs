@@ -196,6 +196,28 @@ public class DataRefreshService(
         return result;
     }
 
+    // Re-runs the one-time seed on demand (config + resource enrichments), then rebuilds capacity.
+    public async Task<DataRefreshResultDto> ReseedAsync(CancellationToken ct = default)
+    {
+        var result = new DataRefreshResultDto { StartedUtc = DateTimeOffset.UtcNow };
+        try
+        {
+            await Persistence.SeedData.SeedAsync(_db, seedDemo: false, force: true, ct);
+            await SyncStrategicFlagsAsync(ct);
+            result.CapacityRowsRebuilt = await _capacityRebuild.RebuildAllAsync(ct);
+            result.Messages.Add("Re-seed complete (configuration + resource enrichments); capacity rebuilt.");
+            result.Success = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Re-seed failed");
+            result.Success = false;
+            result.Messages.Add($"Re-seed failed: {ex.Message}");
+        }
+        result.CompletedUtc = DateTimeOffset.UtcNow;
+        return result;
+    }
+
     public async Task<DataStatusDto> GetStatusAsync(CancellationToken ct = default)
     {
         var setting = await _db.ApplicationSettings.AsNoTracking()
