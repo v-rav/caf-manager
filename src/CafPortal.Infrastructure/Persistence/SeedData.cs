@@ -309,6 +309,11 @@ public static class SeedData
         ["Rodrigo Pedroso"] = "Rodrigo Pedroso Bregalanti",
         ["Seethai P"] = "Seethai Paulsamy",
         ["Hema Chandra Dyapa"] = "Hema Dyapa",
+        // email.md name variants -> canonical roster name (so email backfill matches).
+        ["Sanket Kumar Singh"] = "Sanket Singh",
+        ["Rama Subbu Lakshmi"] = "Rama Subbu Lakshmi A",
+        ["Sayed Yahya Refai"] = "Yahya Refai",
+        ["Divya Sree"] = "Divya Sree Illa",
     };
 
     private static async Task SeedResourceAliasesAsync(AppDbContext db, CancellationToken ct)
