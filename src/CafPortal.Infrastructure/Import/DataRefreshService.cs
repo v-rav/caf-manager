@@ -535,6 +535,12 @@ public class DataRefreshService(
             var colActualEnd = ExcelHelpers.FindColumn(h, "Actual End Date");
             var colPlannedStart = ExcelHelpers.FindColumn(h, "Planned Start Date");
             var colPlannedEnd = ExcelHelpers.FindColumn(h, "Planned End Date");
+            // Extra columns used when creating Completed nominations for rows not already in our DB.
+            var colCustomer = ExcelHelpers.FindColumn(h, "Customer Name", "Customer");
+            var colOffering = ExcelHelpers.FindColumn(h, "Factory Offering", "Offering Name and Phase", "Offering");
+            var colMigration = ExcelHelpers.FindColumn(h, "Migration Status");
+            var colCurrent = ExcelHelpers.FindColumn(h, "Current State");
+            var colRegion = ExcelHelpers.FindColumn(h, "WW Region", "Area", "Region");
             if (colTpid is null || colTask is null)
             {
                 result.Success = false;
@@ -560,8 +566,37 @@ public class DataRefreshService(
                 : v.Trim().Equals("Yes", StringComparison.OrdinalIgnoreCase) ? true
                 : v.Trim().Equals("No", StringComparison.OrdinalIgnoreCase) ? false
                 : null;
+            static int? ParseIntCell(IXLRow r, int? col)
+            {
+                var s = ExcelHelpers.GetString(r, col);
+                return s is not null && double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var d) ? (int)Math.Round(d) : null;
+            }
+            static decimal? ParseDecCell(IXLRow r, int? col)
+            {
+                var s = ExcelHelpers.GetString(r, col);
+                return s is not null && decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : null;
+            }
+            // Sets the 8 offering fields + 6 dates + derived TotalDays on a nomination from a row.
+            void SetFields(Nomination n, IXLRow row)
+            {
+                n.PrimaryMigrationPath = ExcelHelpers.GetString(row, colPath);
+                n.PartnerName = ExcelHelpers.GetString(row, colPartner);
+                n.TotalCores = ParseIntCell(row, colCores);
+                n.IsToolAttached = ParseYesNo(ExcelHelpers.GetString(row, colTool));
+                n.IsAutomationUsed = ParseYesNo(ExcelHelpers.GetString(row, colAuto));
+                n.ModeOfAccess = ExcelHelpers.GetString(row, colMode);
+                n.TotalAcr = ParseDecCell(row, colTotalAcr);
+                n.NnrAcr = ParseDecCell(row, colNnrAcr);
+                n.NominatedDate = ParseExcelDate(row, colNominated);
+                n.ApprovalDate = ParseExcelDate(row, colApprovalDate);
+                n.ActualStartDate = ParseExcelDate(row, colActualStart);
+                n.ActualEndDate = ParseExcelDate(row, colActualEnd);
+                n.PlannedStartDate = ParseExcelDate(row, colPlannedStart);
+                n.PlannedEndDate = ParseExcelDate(row, colPlannedEnd);
+                n.TotalDays = n.ActualStartDate is { } ds && n.ActualEndDate is { } de && de >= ds ? de.DayNumber - ds.DayNumber : null;
+            }
 
-            int nomMatched = 0, taskNotFound = 0, tpidMismatch = 0, segUpdated = 0, tpidNotInMaster = 0;
+            int nomMatched = 0, matchedCompleted = 0, completedCreated = 0, accountsCreated = 0, taskNotFound = 0, tpidMismatch = 0, segUpdated = 0, tpidNotInMaster = 0;
             var segByTpid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // first non-blank segment per TPID
 
             foreach (var row in rowsUsed.Skip(1))
@@ -575,37 +610,62 @@ public class DataRefreshService(
                     segByTpid[tpid] = segment!;
 
                 if (task.Length == 0) continue;
-                if (!byKey.TryGetValue((tpid, task), out var nom))
+
+                if (byKey.TryGetValue((tpid, task), out var nom))
                 {
-                    if (taskOnly.ContainsKey(task)) tpidMismatch++; else taskNotFound++;
+                    nomMatched++;
+                    if (apply)
+                    {
+                        SetFields(nom, row);
+                        // An in-flight row that now carries an end date has completed since our snapshot.
+                        if (nom.ActualEndDate is not null
+                            && nom.Status is not (NominationStatusType.Completed or NominationStatusType.Closed
+                                or NominationStatusType.Withdrawn or NominationStatusType.CustomerDeferred))
+                        {
+                            nom.Status = NominationStatusType.Completed;
+                            matchedCompleted++;
+                        }
+                    }
                     continue;
                 }
-                nomMatched++;
+
+                // Not in our DB. TPID-mismatch (task exists under a different TPID) is skipped; otherwise we
+                // create it ONLY when it is a completed migration (has an Actual End Date).
+                if (taskOnly.ContainsKey(task)) { tpidMismatch++; continue; }
+                var actualEnd = ParseExcelDate(row, colActualEnd);
+                if (actualEnd is null) { taskNotFound++; continue; }
+                completedCreated++;
                 if (apply)
                 {
-                    nom.PrimaryMigrationPath = ExcelHelpers.GetString(row, colPath);
-                    nom.PartnerName = ExcelHelpers.GetString(row, colPartner);
-                    var coresStr = ExcelHelpers.GetString(row, colCores);
-                    nom.TotalCores = coresStr is not null && double.TryParse(coresStr,
-                        System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var cores)
-                        ? (int)Math.Round(cores) : null;
-                    nom.IsToolAttached = ParseYesNo(ExcelHelpers.GetString(row, colTool));
-                    nom.IsAutomationUsed = ParseYesNo(ExcelHelpers.GetString(row, colAuto));
-                    nom.ModeOfAccess = ExcelHelpers.GetString(row, colMode);
-                    var totalAcrStr = ExcelHelpers.GetString(row, colTotalAcr);
-                    nom.TotalAcr = totalAcrStr is not null && decimal.TryParse(totalAcrStr,
-                        System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var tacr) ? tacr : null;
-                    var nnrAcrStr = ExcelHelpers.GetString(row, colNnrAcr);
-                    nom.NnrAcr = nnrAcrStr is not null && decimal.TryParse(nnrAcrStr,
-                        System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var nacr) ? nacr : null;
-                    nom.NominatedDate = ParseExcelDate(row, colNominated);
-                    nom.ApprovalDate = ParseExcelDate(row, colApprovalDate);
-                    nom.ActualStartDate = ParseExcelDate(row, colActualStart);
-                    nom.ActualEndDate = ParseExcelDate(row, colActualEnd);
-                    nom.PlannedStartDate = ParseExcelDate(row, colPlannedStart);
-                    nom.PlannedEndDate = ParseExcelDate(row, colPlannedEnd);
-                    nom.TotalDays = nom.ActualStartDate is { } ds && nom.ActualEndDate is { } de && de >= ds
-                        ? de.DayNumber - ds.DayNumber : null;
+                    var customer = ExcelHelpers.GetString(row, colCustomer) ?? (tpid.Length > 0 ? $"TPID {tpid}" : "Unknown");
+                    var region = NormRegion(ExcelHelpers.GetString(row, colRegion));
+                    accountsByTpid.TryGetValue(tpid, out var acct);
+                    if (acct is null && tpid.Length > 0)
+                    {
+                        acct = new Account { AccountName = customer, Tpid = tpid, Region = region, Segment = segment, Status = "Active" };
+                        _db.Accounts.Add(acct);
+                        await _db.SaveChangesAsync(ct);
+                        accountsByTpid[tpid] = acct;
+                        accountsCreated++;
+                        if (!string.IsNullOrWhiteSpace(segment) && knownSegments.Add(segment))
+                            _db.Segments.Add(new SegmentConfiguration { Name = segment, SortOrder = ++maxSort });
+                    }
+                    var newNom = new Nomination
+                    {
+                        ExternalTaskId = task,
+                        AccountId = acct?.AccountId,
+                        AccountName = acct?.AccountName ?? customer,
+                        Region = region,
+                        Status = NominationStatusType.Completed,
+                        ApprovalStatus = "Approved",
+                        Technology = ExcelHelpers.GetString(row, colOffering),
+                        MigrationStatus = ExcelHelpers.GetString(row, colMigration),
+                        CurrentState = ExcelHelpers.GetString(row, colCurrent),
+                        OpenedDate = ParseExcelDate(row, colNominated) ?? DateOnly.FromDateTime(DateTime.UtcNow),
+                    };
+                    SetFields(newNom, row);
+                    _db.Nominations.Add(newNom);
+                    byKey[(tpid, task)] = newNom;
                 }
             }
 
@@ -627,9 +687,10 @@ public class DataRefreshService(
             if (apply)
                 await _db.SaveChangesAsync(ct);
             result.Success = true;
-            result.Messages.Add($"{(apply ? "Applied" : "Preview")}: nominations matched (TPID+TaskId)={nomMatched}, " +
-                $"task-id not found={taskNotFound}, tpid-mismatch={tpidMismatch}; account Segment updates={segUpdated}, " +
-                $"tpid not in master={tpidNotInMaster}. Data rows={rowsUsed.Count - 1}.");
+            result.Messages.Add($"{(apply ? "Applied" : "Preview")}: matched={nomMatched} (marked completed={matchedCompleted}), " +
+                $"completed created={completedCreated} (accounts created={accountsCreated}), tpid-mismatch={tpidMismatch}, " +
+                $"unmatched-open (no end date)={taskNotFound}; segment updates={segUpdated}, tpid not in master={tpidNotInMaster}. " +
+                $"Data rows={rowsUsed.Count - 1}.");
         }
         catch (Exception ex)
         {
