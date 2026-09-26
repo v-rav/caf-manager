@@ -33,6 +33,12 @@ public class ExportController(IExportService export) : ControllerBase
     public async Task<IActionResult> Summary([FromQuery] string? region, CancellationToken ct)
         => File(await export.ExecutiveSummaryAsync(region, ct), Xlsx, $"executive-summary_{Stamp}.xlsx");
 
+    [HttpGet("analytics")]
+    public async Task<IActionResult> Analytics([FromQuery] string? region, [FromQuery] string basis = "completed",
+        [FromQuery] string granularity = "month", [FromQuery] string measure = "count", [FromQuery] string? splitBy = null,
+        [FromQuery] int? fy = null, CancellationToken ct = default)
+        => File(await export.AnalyticsAsync(region, basis, granularity, measure, splitBy, fy, ct), Xlsx, $"analytics_{Stamp}.xlsx");
+
     [HttpGet("reconciliation")]
     public async Task<IActionResult> Reconciliation([FromQuery] string? region, CancellationToken ct)
         => File(await export.ReconciliationAsync(region, ct), Xlsx, $"reconciliation_{Stamp}.xlsx");

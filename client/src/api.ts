@@ -71,7 +71,7 @@ export const api = {
       .then((r) => r.data),
 
   exportUrl: (
-    what: 'resources' | 'capacity' | 'nominations' | 'performance' | 'summary' | 'reconciliation',
+    what: 'resources' | 'capacity' | 'nominations' | 'performance' | 'summary' | 'analytics' | 'reconciliation',
     region?: string,
     extra?: Record<string, string | undefined>,
   ) => {

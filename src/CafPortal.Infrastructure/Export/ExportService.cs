@@ -11,6 +11,7 @@ public class ExportService(
     INominationService nominations,
     IPerformanceReviewService performance,
     IReconciliationService reconciliation,
+    IAnalyticsService analytics,
     IDashboardService dashboard) : IExportService
 {
     private const string HeaderHtml = "#0F6CBD";
@@ -260,6 +261,101 @@ public class ExportService(
         using var ms = new MemoryStream();
         wb.SaveAs(ms);
         return ms.ToArray();
+    }
+
+    // One workbook capturing the whole Analytics page: KPIs, distributions, value cuts, and the current Trend view.
+    public async Task<byte[]> AnalyticsAsync(string? region, string basis, string granularity, string measure,
+        string? splitBy, int? fy, CancellationToken ct = default)
+    {
+        var a = await analytics.GetAsync(region, ct);
+        var ts = await analytics.GetTimeSeriesAsync(region, basis, granularity, measure, splitBy, null, null, fy, ct);
+
+        using var wb = new XLWorkbook();
+
+        var ws = wb.AddWorksheet("Overview");
+        ws.Cell(1, 1).Value = "CAF Operations Portal \u2014 Migration Analytics";
+        ws.Cell(1, 1).Style.Font.Bold = true;
+        ws.Cell(1, 1).Style.Font.FontSize = 14;
+        ws.Cell(2, 1).Value = $"Scope: {(string.IsNullOrEmpty(region) ? "Global" : region)}   Generated (UTC): {DateTime.UtcNow:yyyy-MM-dd HH:mm}";
+        ws.Cell(2, 1).Style.Font.FontColor = XLColor.Gray;
+        WriteHeader(ws, new[] { "Metric", "Value" }, startRow: 4);
+        var kpis = new (string Label, double Value)[]
+        {
+            ("Total Approved", a.TotalApproved), ("In-Flight", a.InFlight), ("Completed", a.Completed),
+            ("Total ACR", a.TotalAcr), ("NNR ACR", a.NnrAcr), ("Total Cores", a.TotalCores), ("With ACR data", a.WithAcr),
+            ("Tool Attached", a.ToolAttached), ("Automation Used", a.AutomationUsed), ("Tool/Automation flag denom", a.ToolFlagDenom),
+        };
+        var kr = 5;
+        foreach (var (label, value) in kpis) { ws.Cell(kr, 1).Value = label; ws.Cell(kr, 2).Value = value; kr++; }
+        ws.SheetView.FreezeRows(1);
+        ws.Columns(1, 2).AdjustToContents();
+
+        WriteStackedSections(wb, "Distributions",
+            ("By stage", a.ByStage), ("Current-state health", a.ByHealth), ("SLA stale tier", a.BySla),
+            ("By region", a.ByRegion), ("By segment", a.BySegment), ("By migration path", a.ByMigrationPath),
+            ("By mode of access", a.ByModeOfAccess), ("Wave linkage", a.WaveLinkage));
+
+        WriteStackedSections(wb, "Value cuts",
+            ("ACR by region", a.AcrByRegion), ("ACR by segment", a.AcrBySegment), ("ACR by migration path", a.AcrByMigrationPath),
+            ("Cores by stage", a.CoresByStage), ("Top partners by ACR", a.TopPartnersByAcr));
+
+        BuildTrendSheet(wb, ts);
+
+        using var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        return ms.ToArray();
+    }
+
+    // Several label/value distributions stacked on one sheet (fewer tabs than one sheet each).
+    private static void WriteStackedSections(XLWorkbook wb, string sheetName, params (string Title, IReadOnlyList<NameValueDto> Data)[] sections)
+    {
+        var ws = wb.AddWorksheet(sheetName.Length > 31 ? sheetName[..31] : sheetName);
+        var r = 1;
+        foreach (var (title, data) in sections)
+        {
+            ws.Cell(r, 1).Value = title;
+            var head = ws.Range(r, 1, r, 2);
+            head.Style.Font.Bold = true;
+            head.Style.Fill.BackgroundColor = XLColor.FromHtml(HeaderHtml);
+            head.Style.Font.FontColor = XLColor.White;
+            r++;
+            foreach (var it in data) { ws.Cell(r, 1).Value = it.Name; ws.Cell(r, 2).Value = it.Value; r++; }
+            r++;
+        }
+        ws.Columns(1, 2).AdjustToContents();
+    }
+
+    // The current Trend view as a pivot: Period x series x Total (matches the on-screen table).
+    private static void BuildTrendSheet(XLWorkbook wb, TimeSeriesDto ts)
+    {
+        var ws = wb.AddWorksheet("Trend");
+        ws.Cell(1, 1).Value = $"Trend \u2014 {ts.Basis} \u00b7 {ts.Granularity} \u00b7 {ts.Measure}{(ts.SplitBy != "none" ? $" \u00b7 split by {ts.SplitBy}" : "")}";
+        ws.Cell(1, 1).Style.Font.Bold = true;
+        ws.Cell(1, 1).Style.Font.FontSize = 13;
+        ws.Cell(2, 1).Value = $"Buckets: {ts.Buckets.Count} \u00b7 Total: {ts.Total} \u00b7 Records without a {ts.Basis} date: {ts.RecordsWithoutDate}";
+        ws.Cell(2, 1).Style.Font.FontColor = XLColor.Gray;
+
+        var multi = ts.Series.Count > 1;
+        var headers = multi
+            ? new[] { "Period" }.Concat(ts.Series).Concat(new[] { "Total" }).ToArray()
+            : new[] { "Period", ts.Measure };
+        WriteHeader(ws, headers, startRow: 4);
+        var r = 5;
+        foreach (var b in ts.Buckets)
+        {
+            ws.Cell(r, 1).Value = b.Label;
+            if (multi)
+            {
+                for (int i = 0; i < ts.Series.Count; i++)
+                    ws.Cell(r, i + 2).Value = b.Values.FirstOrDefault(v => v.Name == ts.Series[i])?.Value ?? 0;
+                ws.Cell(r, ts.Series.Count + 2).Value = b.Total;
+            }
+            else ws.Cell(r, 2).Value = b.Total;
+            r++;
+        }
+        if (ts.Buckets.Count > 0) ws.Range(4, 1, ts.Buckets.Count + 4, headers.Length).SetAutoFilter();
+        ws.SheetView.FreezeRows(4);
+        ws.Columns(1, headers.Length).AdjustToContents();
     }
 
     private static void WriteDistribution(XLWorkbook wb, string name, IReadOnlyList<NameValueDto> data)

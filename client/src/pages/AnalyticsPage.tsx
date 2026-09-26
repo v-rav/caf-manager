@@ -54,12 +54,15 @@ function Pick({ label, value, options, onChange }: { label: string; value: strin
 }
 
 // Configurable time-series: basis × granularity × measure × split, with an aggregated table and click-to-drill detail.
-function TrendsSection({ region }: { region?: string }) {
-  const [basis, setBasis] = useState('completed')
-  const [granularity, setGranularity] = useState('month')
-  const [measure, setMeasure] = useState('count')
-  const [splitBy, setSplitBy] = useState('none')
-  const [fy, setFy] = useState('all')
+// Filter state is owned by the page so the page-level Export button can capture the live view.
+type TrendState = {
+  basis: string; setBasis: (v: string) => void
+  granularity: string; setGranularity: (v: string) => void
+  measure: string; setMeasure: (v: string) => void
+  splitBy: string; setSplitBy: (v: string) => void
+  fy: string; setFy: (v: string) => void
+}
+function TrendsSection({ region, basis, setBasis, granularity, setGranularity, measure, setMeasure, splitBy, setSplitBy, fy, setFy }: { region?: string } & TrendState) {
   const { data, loading } = useAsync(
     () => api.timeseries({ region, basis, granularity, measure, splitBy: splitBy === 'none' ? undefined : splitBy, fy: fy === 'all' ? undefined : fy }),
     [region, basis, granularity, measure, splitBy, fy],
@@ -151,17 +154,33 @@ export function AnalyticsPage() {
   const { region } = useRegion()
   const { data, loading, error, reload } = useAsync(() => api.analytics(region), [region])
 
-  if (loading) return <Loading label="Crunching migration analytics…" />
+  const [basis, setBasis] = useState('completed')
+  const [granularity, setGranularity] = useState('month')
+  const [measure, setMeasure] = useState('count')
+  const [splitBy, setSplitBy] = useState('none')
+  const [fy, setFy] = useState('all')
+  const exportHref = api.exportUrl('analytics', region, {
+    basis, granularity, measure,
+    splitBy: splitBy === 'none' ? undefined : splitBy,
+    fy: fy === 'all' ? undefined : fy,
+  })
+
+  if (loading) return <Loading label="Crunching migration analytics\u2026" />
   if (error) return <ErrorText error={error} onRetry={reload} />
   if (!data) return null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <Text size={600} weight="bold">Migration Analytics</Text>
-      <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', marginTop: -12 }}>
-        Approved nominations{region ? ` · ${region}` : ' · all regions'} · {data.totalApproved} total ({data.inFlight} in-flight,
-        {' '}{data.completed} completed) · ACR/Cores from {data.withAcr} enriched records
-      </Text>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <Text size={600} weight="bold">Migration Analytics</Text>
+          <Text size={200} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
+            Approved nominations{region ? ` \u00b7 ${region}` : ' \u00b7 all regions'} \u00b7 {data.totalApproved} total ({data.inFlight} in-flight,
+            {' '}{data.completed} completed) \u00b7 ACR/Cores from {data.withAcr} enriched records
+          </Text>
+        </div>
+        <Button as="a" appearance="primary" href={exportHref}>Export</Button>
+      </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <KpiCard label="In-flight" value={num(data.inFlight)} tone="brand" />
@@ -172,7 +191,14 @@ export function AnalyticsPage() {
         <KpiCard label="Automation used" value={`${data.automationUsed} · ${pct(data.automationUsed, data.toolFlagDenom)}`} tone="brand" />
       </div>
 
-      <TrendsSection region={region} />
+      <TrendsSection
+        region={region}
+        basis={basis} setBasis={setBasis}
+        granularity={granularity} setGranularity={setGranularity}
+        measure={measure} setMeasure={setMeasure}
+        splitBy={splitBy} setSplitBy={setSplitBy}
+        fy={fy} setFy={setFy}
+      />
 
       <Section title="Pipeline health">
         <Panel title="Nominations by stage"><BarChart data={data.byStage} label="Nominations" /></Panel>
