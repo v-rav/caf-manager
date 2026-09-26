@@ -245,10 +245,31 @@ public static class SeedData
         ["Ashish Anand"] = "v-ashianand@microsoft.com",
         ["Debjyoti Biswas"] = "v-debiswas@microsoft.com",
         ["Swadhin Kumar Nayak"] = "v-swadnayak@microsoft.com",
-        ["Prasanta Pan"] = "v-praspan@microsoft.com",
+        ["Swadhin Kumar Nayak"] = "v-swadnayak@microsoft.com",
         ["Priydarshi Sharma"] = "v-priyadshar@microsoft.com",
         ["Xuejun Li"] = "v-lixuejun@microsoft.com",
         ["Yangcheng Sen"] = "v-yangcshen@microsoft.com",
+        // From email.md (authoritative team roster)
+        ["Arunkumar Azariah Koilraj"] = "v-aazariahko@microsoft.com",
+        ["Amit Bengali"] = "v-abengali@microsoft.com",
+        ["Dhinakaran M"] = "v-dhim@microsoft.com",
+        ["Mathu Vijayakumar Amutha"] = "v-mathuv@microsoft.com",
+        ["Sushil Gupta"] = "v-sushigupta@microsoft.com",
+        ["Sanket Singh"] = "v-sankesingh@microsoft.com",
+        ["Hozefa Tinwala"] = "v-htinwala@microsoft.com",
+        ["Dharmendra Singh"] = "v-singhdha@microsoft.com",
+        ["Rama Subbu Lakshmi A"] = "v-ramasua@microsoft.com",
+        ["Abhirup Roy"] = "v-abhiruproy@microsoft.com",
+        ["Prasanna M"] = "v-praspan@microsoft.com",
+        ["Yogaraj M"] = "v-yogarajm@microsoft.com",
+        ["Abhishek Sarkar"] = "v-sarkara@microsoft.com",
+        ["Pawan Avu"] = "v-pawanavu@microsoft.com",
+        ["Mrinmoy Kundu"] = "v-mrkundu@microsoft.com",
+        ["Yahya Refai"] = "v-srefai@microsoft.com",
+        ["Naresh Muluguri"] = "v-mulugurin@microsoft.com",
+        ["Divya Sree Illa"] = "v-divilla@microsoft.com",
+        ["Renu Kumari"] = "v-renukumari@microsoft.com",
+        ["Negishi Takayuki"] = "v-ntakayuki@microsoft.com",
     };
 
     private static async Task SeedResourceEmailsAsync(AppDbContext db, CancellationToken ct)
@@ -258,6 +279,7 @@ public static class SeedData
         var byNorm = ResourceEmailSeed.ToDictionary(kv => Norm(kv.Key), kv => kv.Value);
 
         var all = await db.Resources.ToListAsync(ct);
+        var taken = new HashSet<string>(all.Where(x => !string.IsNullOrWhiteSpace(x.Email)).Select(x => x.Email!), StringComparer.OrdinalIgnoreCase);
         var changed = false;
         foreach (var r in all)
         {
@@ -267,7 +289,7 @@ public static class SeedData
             if (!string.IsNullOrWhiteSpace(r.Aliases))
                 keys.AddRange(r.Aliases.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(Norm));
             var email = keys.Select(k => byNorm.TryGetValue(k, out var e) ? e : null).FirstOrDefault(e => e is not null);
-            if (email is not null)
+            if (email is not null && taken.Add(email)) // unique email index: never assign the same address twice
             {
                 r.Email = email;
                 changed = true;
