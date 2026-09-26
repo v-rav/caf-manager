@@ -11,6 +11,9 @@ App_Data/
 # Source workbooks (contain operational data — do not commit)
 **/SourceData/*.xlsx
 data/*.xlsx
+# Loose contact/email data dropped in the repo root (operational data — do not commit)
+/email.md
+/emails.md
 
 # Node / React
 node_modules/
