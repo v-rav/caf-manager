@@ -10,7 +10,7 @@ import {
   Textarea,
   Tooltip,
 } from '@fluentui/react-components'
-import { AddRegular, ArrowDownloadRegular, ArrowUploadRegular, DeleteRegular, EditRegular } from '@fluentui/react-icons'
+import { AddRegular, ArrowDownloadRegular, ArrowUploadRegular, DeleteRegular, DismissRegular, EditRegular } from '@fluentui/react-icons'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { Modal } from '../components/Modal'
@@ -18,6 +18,7 @@ import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import { useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { Nomination, NominationUpdate } from '../types'
 
@@ -43,6 +44,18 @@ function presentWaves(n: Nomination): string[] {
   if (n.securityLinked) out.push('Sec')
   if (n.alzLinked) out.push('ALZ')
   return out
+}
+
+// True when the person (name substring) holds any ownership/assignment role on the nomination.
+function matchesPerson(n: Nomination, person: string): boolean {
+  const p = person.toLowerCase()
+  const has = (v?: string) => (v ?? '').toLowerCase().includes(p)
+  return (
+    has(n.projectCoordinator) ||
+    has(n.cftlPrimary) ||
+    has(n.solutionArchitect) ||
+    (n.assignedResources ?? []).some((r) => r.name.toLowerCase().includes(p))
+  )
 }
 
 // Labelled full-width form field for the Manage dialog (keeps controls aligned).
@@ -258,14 +271,18 @@ function recommendedAction(staleTier: string, ageDays: number): string | null {
 
 export function NominationsPage() {
   const { region } = useRegion()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // Drill-through from Capacity: ?person=<name> filters to that person's nominations (any role).
+  const person = searchParams.get('person') ?? ''
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
   const { data: resourceList } = useAsync(() => api.resources({}), [])
   const [currentStateFilter, setCurrentStateFilter] = useState('')
   const [migrationFilter, setMigrationFilter] = useState('')
   const [slaFilter, setSlaFilter] = useState('')
   const [linkFilter, setLinkFilter] = useState('')
-  // Default the pipeline to Approved nominations; other statuses are opt-in via the Approval filter.
-  const [approvalFilter, setApprovalFilter] = useState('Approved')
+  // Default the pipeline to Approved nominations; a person drill-through widens to all approvals.
+  const [approvalFilter, setApprovalFilter] = useState(person ? '' : 'Approved')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounced(search)
 
@@ -339,9 +356,10 @@ export function NominationsPage() {
             (linkFilter === 'Has any waves' && !n.noWavesLinked) ||
             (linkFilter === 'Has DB' && n.dbLinked) ||
             (linkFilter === 'Has Security' && n.securityLinked)) &&
+          (!person || matchesPerson(n, person)) &&
           (!debouncedSearch || (n.accountName ?? '').toLowerCase().includes(debouncedSearch.toLowerCase())),
       ),
-    [scoped, currentStateFilter, migrationFilter, slaFilter, linkFilter, debouncedSearch],
+    [scoped, currentStateFilter, migrationFilter, slaFilter, linkFilter, person, debouncedSearch],
   )
 
   const openManage = (n: Nomination) => {
@@ -449,6 +467,13 @@ export function NominationsPage() {
       <Text size={600} weight="bold">
         Nomination Pipeline
       </Text>
+
+      {person && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 6, background: 'var(--colorBrandBackground2)', border: '1px solid var(--colorBrandStroke2)', alignSelf: 'flex-start' }}>
+          <Text size={300}>Filtered to <strong>{person}</strong> (PM / CFTL / SA / assigned)</Text>
+          <Button size="small" appearance="subtle" icon={<DismissRegular />} onClick={() => navigate('/nominations')}>Clear</Button>
+        </div>
+      )}
 
       {loading ? (
         <Loading />

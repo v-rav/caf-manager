@@ -1,7 +1,7 @@
-import { Button, SearchBox, Text, Tooltip } from '@fluentui/react-components'
-import { ArrowDownloadRegular } from '@fluentui/react-icons'
+import { Badge, Button, Link, SearchBox, Text, Tooltip } from '@fluentui/react-components'
+import { ArrowDownloadRegular, WarningRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { ErrorText, FilterSelect, Loading, Panel, StatusBadge, UtilizationBar } from '../components/common'
@@ -16,7 +16,18 @@ const heat: Record<string, string> = {
   Red: 'var(--colorPaletteRedBackground2)',
 }
 
-const CAPACITY_STATUSES = ['Available', 'Partially Utilized', 'Fully Utilized', 'Overloaded']
+const BENCH = 'Bench (0 accounts)'
+const CAPACITY_STATUSES = ['Available', 'Partially Utilized', 'Fully Utilized', 'Overloaded', BENCH]
+
+// Free slots left = limit − assigned accounts; red once at/over capacity.
+function headroomCell(c: CapacityRow) {
+  const h = c.capacityLimit - c.accountCount
+  return (
+    <span style={{ fontWeight: 600, color: h <= 0 ? 'var(--colorPaletteRedForeground1)' : 'var(--colorPaletteGreenForeground1)' }}>
+      {h}
+    </span>
+  )
+}
 
 // Accounts count with a hover listing the actual in-flight accounts the resource is assigned to.
 function accountsCell(c: CapacityRow) {
@@ -54,6 +65,7 @@ const BANDS: { status: string; bg: string }[] = [
 
 export function CapacityPage() {
   const { region } = useRegion()
+  const navigate = useNavigate()
   const { data, loading, error, reload } = useAsync(() => api.capacity(region), [region])
   const { data: clashes } = useAsync(() => api.leaveClashes(region), [region])
   const [searchParams] = useSearchParams()
@@ -62,12 +74,16 @@ export function CapacityPage() {
   const debouncedSearch = useDebounced(search)
 
   const overloaded = (data ?? []).filter((c) => c.capacityStatus === 'Overloaded')
+  // Region is already applied by the API; these summarise the visible (active) resources.
+  const availableCapacity = (data ?? []).reduce((sum, c) => sum + Math.max(0, c.capacityLimit - c.accountCount), 0)
+  const benchCount = (data ?? []).filter((c) => c.accountCount === 0).length
+  const clashById = useMemo(() => new Map((clashes ?? []).map((c) => [c.resourceId, c])), [clashes])
 
   const rows = useMemo(
     () =>
       (data ?? []).filter(
         (c) =>
-          (!status || c.capacityStatus === status) &&
+          (!status || (status === BENCH ? c.accountCount === 0 : c.capacityStatus === status)) &&
           (!debouncedSearch || c.resourceName.toLowerCase().includes(debouncedSearch.toLowerCase())),
       ),
     [data, status, debouncedSearch],
@@ -82,6 +98,13 @@ export function CapacityPage() {
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <KpiCard label="Overloaded resources" value={overloaded.length} tone={overloaded.length ? 'danger' : 'success'} />
         <KpiCard label="Leave-clash risks" value={clashes?.length ?? 0} tone={(clashes?.length ?? 0) ? 'warning' : 'success'} />
+        <KpiCard label="Available capacity (free slots)" value={availableCapacity} tone={availableCapacity ? 'success' : 'neutral'} />
+        <KpiCard
+          label="Bench (0 accounts)"
+          value={benchCount}
+          tone={benchCount ? 'brand' : 'neutral'}
+          onClick={() => setStatus(status === BENCH ? '' : BENCH)}
+        />
       </div>
 
       {data && data.length > 0 && (
@@ -131,11 +154,12 @@ export function CapacityPage() {
             defaultSort={{ key: 'utilization', dir: 'desc' }}
             emptyMessage="None."
             columns={[
-              { key: 'resource', header: 'Resource', sortValue: (c) => c.resourceName },
+              { key: 'resource', header: 'Resource', sortValue: (c) => c.resourceName, render: (c) => <Link onClick={() => navigate(`/nominations?person=${encodeURIComponent(c.resourceName)}`)}>{c.resourceName}</Link> },
               { key: 'region', header: 'Region', sortValue: (c) => c.region },
               { key: 'role', header: 'Role', sortValue: (c) => c.role },
               { key: 'accounts', header: 'Accounts', align: 'center', sortValue: (c) => c.accountCount, render: accountsCell },
               { key: 'limit', header: 'Limit', align: 'center', sortValue: (c) => c.capacityLimit },
+              { key: 'headroom', header: 'Headroom', align: 'center', sortValue: (c) => c.capacityLimit - c.accountCount, render: headroomCell },
               { key: 'utilization', header: 'Utilization', minWidth: 140, sortValue: (c) => c.utilizationPercent, render: (c) => <UtilizationBar percent={c.utilizationPercent} /> },
             ]}
           />
@@ -187,13 +211,24 @@ export function CapacityPage() {
             rowStyle={(c) => (heat[c.heatColor] ? { background: heat[c.heatColor] } : undefined)}
             emptyMessage="No resources match your filters."
             columns={[
-              { key: 'resource', header: 'Resource', sortValue: (c) => c.resourceName },
+              { key: 'resource', header: 'Resource', sortValue: (c) => c.resourceName, render: (c) => <Link onClick={() => navigate(`/nominations?person=${encodeURIComponent(c.resourceName)}`)}>{c.resourceName}</Link> },
               { key: 'region', header: 'Region', sortValue: (c) => c.region },
               { key: 'role', header: 'Role', sortValue: (c) => c.role },
               { key: 'accounts', header: 'Accounts', align: 'center', sortValue: (c) => c.accountCount, render: accountsCell },
               { key: 'limit', header: 'Limit', align: 'center', sortValue: (c) => c.capacityLimit },
+              { key: 'headroom', header: 'Headroom', align: 'center', sortValue: (c) => c.capacityLimit - c.accountCount, render: headroomCell },
               { key: 'utilization', header: 'Utilization', minWidth: 140, sortValue: (c) => c.utilizationPercent, render: (c) => <UtilizationBar percent={c.utilizationPercent} /> },
               { key: 'status', header: 'Status', sortValue: (c) => c.capacityStatus, render: (c) => <StatusBadge status={c.capacityStatus} /> },
+              { key: 'leave', header: 'Leave', align: 'center', sortValue: (c) => (clashById.has(c.resourceId) ? 1 : 0), render: (c) => {
+                const cl = clashById.get(c.resourceId)
+                return cl ? (
+                  <Tooltip relationship="label" withArrow content={`On leave ${cl.nextLeaveStart} \u2192 ${cl.nextLeaveEnd} \u00b7 ${cl.activeAccounts} active account${cl.activeAccounts === 1 ? '' : 's'} (${cl.leaveDaysInWindow}d in window)`}>
+                    <Badge appearance="tint" color="warning" size="small" icon={<WarningRegular />}>Clash</Badge>
+                  </Tooltip>
+                ) : (
+                  <span style={{ color: 'var(--colorNeutralForeground4)' }}>{'\u2014'}</span>
+                )
+              } },
             ]}
           />
         )}

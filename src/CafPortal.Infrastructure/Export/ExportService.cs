@@ -48,7 +48,7 @@ public class ExportService(
         var rows = await capacity.GetAsync(region, ct);
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("Capacity");
-        var headers = new[] { "Resource", "Region", "Role", "Accounts", "Capacity Limit", "Utilization %", "Status", "Heat" };
+        var headers = new[] { "Resource", "Region", "Role", "Accounts", "Assigned Accounts", "Capacity Limit", "Utilization %", "Status", "Heat" };
         WriteHeader(ws, headers);
         var r = 2;
         foreach (var x in rows)
@@ -57,10 +57,11 @@ public class ExportService(
             ws.Cell(r, 2).Value = x.Region;
             ws.Cell(r, 3).Value = x.Role;
             ws.Cell(r, 4).Value = x.AccountCount;
-            ws.Cell(r, 5).Value = x.CapacityLimit;
-            ws.Cell(r, 6).Value = x.UtilizationPercent;
-            ws.Cell(r, 7).Value = x.CapacityStatus;
-            ws.Cell(r, 8).Value = x.HeatColor;
+            ws.Cell(r, 5).Value = string.Join("; ", x.Accounts);
+            ws.Cell(r, 6).Value = x.CapacityLimit;
+            ws.Cell(r, 7).Value = x.UtilizationPercent;
+            ws.Cell(r, 8).Value = x.CapacityStatus;
+            ws.Cell(r, 9).Value = x.HeatColor;
             r++;
         }
         return Finish(wb, ws, headers.Length);
