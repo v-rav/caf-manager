@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Application.Dtos;
 using Microsoft.EntityFrameworkCore;
 
@@ -110,5 +111,109 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
                 .Where(x => x.Value > 0).OrderByDescending(x => x.Value).Take(8).ToList(),
         };
         return dto;
+    }
+
+    public async Task<TimeSeriesDto> GetTimeSeriesAsync(string? region, string basis, string granularity, string measure,
+        string? splitBy, DateOnly? from, DateOnly? to, CancellationToken ct = default)
+    {
+        basis = (basis ?? "completed").ToLowerInvariant();
+        granularity = (granularity ?? "month").ToLowerInvariant();
+        measure = (measure ?? "count").ToLowerInvariant();
+        var split = (splitBy ?? "none").ToLowerInvariant();
+        var (noms, segByAccount) = await LoadApprovedAsync(region, ct);
+
+        double Val(NominationDto n) => measure switch
+        {
+            "acr" => (double)(n.TotalAcr ?? 0m),
+            "nnr" => (double)(n.NnrAcr ?? 0m),
+            "cores" => n.TotalCores ?? 0,
+            _ => 1,
+        };
+        string Ser(NominationDto n) => SeriesOf(n, split, segByAccount);
+
+        var acc = new Dictionary<string, Dictionary<string, double>>();
+        var meta = new Dictionary<string, (long Sort, string Label)>();
+        var seriesSet = new HashSet<string>();
+        int noDate = 0;
+        foreach (var n in noms)
+        {
+            var d = BasisDate(n, basis);
+            if (d is null) { noDate++; continue; }
+            if (from is not null && d < from) continue;
+            if (to is not null && d > to) continue;
+            var (sort, key, label) = FiscalCalendar.Bucket(d.Value, granularity);
+            meta[key] = (sort, label);
+            var ser = Ser(n);
+            seriesSet.Add(ser);
+            if (!acc.TryGetValue(key, out var m)) { m = new(); acc[key] = m; }
+            m[ser] = m.GetValueOrDefault(ser) + Val(n);
+        }
+
+        var series = seriesSet.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+        var buckets = acc.Keys.OrderBy(k => meta[k].Sort)
+            .Select(k => new TimeBucketDto
+            {
+                Key = k,
+                Label = meta[k].Label,
+                Values = series.Select(s => new NameValueDto(s, acc[k].GetValueOrDefault(s))).ToList(),
+                Total = acc[k].Values.Sum(),
+            }).ToList();
+
+        return new TimeSeriesDto
+        {
+            Basis = basis, Granularity = granularity, Measure = measure, SplitBy = split,
+            Series = series, Buckets = buckets, Total = buckets.Sum(b => b.Total), RecordsWithoutDate = noDate,
+        };
+    }
+
+    public async Task<IReadOnlyList<NominationDto>> GetTimeSeriesDetailAsync(string? region, string basis, string granularity,
+        string bucketKey, string? splitBy, string? series, CancellationToken ct = default)
+    {
+        basis = (basis ?? "completed").ToLowerInvariant();
+        granularity = (granularity ?? "month").ToLowerInvariant();
+        var split = (splitBy ?? "none").ToLowerInvariant();
+        var (noms, segByAccount) = await LoadApprovedAsync(region, ct);
+
+        var rows = new List<(DateOnly D, NominationDto N)>();
+        foreach (var n in noms)
+        {
+            var d = BasisDate(n, basis);
+            if (d is null) continue;
+            var (_, key, _) = FiscalCalendar.Bucket(d.Value, granularity);
+            if (!string.Equals(key, bucketKey, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!string.IsNullOrWhiteSpace(series) && !string.Equals(SeriesOf(n, split, segByAccount), series, StringComparison.OrdinalIgnoreCase)) continue;
+            rows.Add((d.Value, n));
+        }
+        return rows.OrderBy(x => x.D).Select(x => x.N).ToList();
+    }
+
+    private static DateOnly? BasisDate(NominationDto n, string basis) => basis switch
+    {
+        "nominated" => n.NominatedDate,
+        "approved" => n.ApprovalDate,
+        "started" => n.ActualStartDate,
+        _ => n.ActualEndDate,
+    };
+
+    private static string SeriesOf(NominationDto n, string split, IReadOnlyDictionary<int, string> segByAccount) => split switch
+    {
+        "region" => string.IsNullOrWhiteSpace(n.Region) ? "Unspecified" : n.Region,
+        "segment" => n.AccountId is int id && segByAccount.TryGetValue(id, out var s) && !string.IsNullOrWhiteSpace(s) ? s : "Unspecified",
+        "path" => string.IsNullOrWhiteSpace(n.PrimaryMigrationPath) ? "Unspecified" : n.PrimaryMigrationPath!,
+        "stage" => StageIndex(n.MigrationStatus) is int st ? StageLabels[st - 1] : "Unspecified",
+        "status" => string.IsNullOrWhiteSpace(n.Status) ? "Unspecified" : n.Status,
+        _ => "All",
+    };
+
+    private async Task<(List<NominationDto> Noms, Dictionary<int, string> SegByAccount)> LoadApprovedAsync(string? region, CancellationToken ct)
+    {
+        var all = await _nominations.GetAsync(region, null, ct);
+        var noms = all.Where(n => string.Equals(n.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)).ToList();
+        var accountIds = noms.Where(n => n.AccountId != null).Select(n => n.AccountId!.Value).Distinct().ToList();
+        var segByAccount = await _db.Accounts.AsNoTracking()
+            .Where(a => accountIds.Contains(a.AccountId))
+            .Select(a => new { a.AccountId, a.Segment })
+            .ToDictionaryAsync(a => a.AccountId, a => a.Segment ?? "Unspecified", ct);
+        return (noms, segByAccount);
     }
 }

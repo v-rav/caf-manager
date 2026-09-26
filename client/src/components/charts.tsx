@@ -8,7 +8,7 @@ import {
   Tooltip,
 } from 'chart.js'
 import { Bar, Doughnut } from 'react-chartjs-2'
-import type { NameValue } from '../types'
+import type { NameValue, TimeBucket } from '../types'
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
@@ -56,6 +56,28 @@ export function BarChart({ data, label }: { data: NameValue[]; label: string }) 
             tooltip: { callbacks: { title: (items) => data[items[0]?.dataIndex ?? 0]?.name ?? '' } },
           },
           scales: { x: { ticks: { maxRotation: 0 } }, y: { beginAtZero: true, ticks: { precision: 0 } } },
+        }}
+      />
+    </div>
+  )
+}
+
+// Stacked bar time series: one dataset per series (single dataset when SplitBy=none).
+export function TimeSeriesChart({ buckets, series }: { buckets: TimeBucket[]; series: string[] }) {
+  if (!buckets.length) return <EmptyChart />
+  const datasets = series.map((s, i) => ({
+    label: s,
+    data: buckets.map((b) => b.values.find((v) => v.name === s)?.value ?? 0),
+    backgroundColor: PALETTE[i % PALETTE.length],
+  }))
+  return (
+    <div style={{ maxHeight: 340 }}>
+      <Bar
+        data={{ labels: buckets.map((b) => b.label), datasets }}
+        options={{
+          responsive: true,
+          plugins: { legend: { display: series.length > 1, position: 'bottom' } },
+          scales: { x: { stacked: true, ticks: { maxRotation: 0 } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } },
         }}
       />
     </div>

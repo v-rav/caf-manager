@@ -5,6 +5,24 @@ export interface NameValue {
   value: number
 }
 
+export interface TimeBucket {
+  key: string
+  label: string
+  values: NameValue[]
+  total: number
+}
+
+export interface TimeSeries {
+  basis: string
+  granularity: string
+  measure: string
+  splitBy: string
+  series: string[]
+  buckets: TimeBucket[]
+  total: number
+  recordsWithoutDate: number
+}
+
 export interface Analytics {
   totalApproved: number
   inFlight: number

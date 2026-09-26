@@ -29,6 +29,7 @@ import type {
   RestoreResult,
   RoleCapacity,
   SegmentOption,
+  TimeSeries,
   WaveLink,
   WaveLinkUpsert,
 } from './types'
@@ -42,6 +43,12 @@ export const api = {
 
   analytics: (region?: string) =>
     http.get<Analytics>('/api/analytics', { params: { region } }).then((r) => r.data),
+
+  timeseries: (params: Record<string, string | undefined>) =>
+    http.get<TimeSeries>('/api/analytics/timeseries', { params }).then((r) => r.data),
+
+  timeseriesDetail: (params: Record<string, string | undefined>) =>
+    http.get<Nomination[]>('/api/analytics/timeseries/detail', { params }).then((r) => r.data),
 
   adminStatus: () => http.get<DataStatus>('/api/admin/status').then((r) => r.data),
 
