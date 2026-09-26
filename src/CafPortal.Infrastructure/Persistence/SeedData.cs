@@ -480,9 +480,9 @@ public static class SeedData
 
         var resources = new List<Resource>
         {
-            new() { Psid = "P1001", Name = "Ravinder Rana", Email = "ravinder.rana@example.com", Region = "EMEA", Role = "Regional Lead", PrimarySkill = "Cloud Architecture", Skills = "Azure;Migration", ExperienceYears = 14, Status = "Active", DedicatedFlag = true, CapacityLimit = 8 },
-            new() { Psid = "P1002", Name = "Arunkumar Azariah Koilraj", Email = "arun.koilraj@example.com", Region = "EMEA", Role = "Global Lead", PrimarySkill = "CAF Governance", Skills = "Strategy;Azure", ExperienceYears = 18, Status = "Active", DedicatedFlag = true, CapacityLimit = 8 },
-            new() { Psid = "P1003", Name = "Amit Bengali", Email = "amit.bengali@example.com", Region = "ASIA", Role = "Regional Lead", PrimarySkill = "Cloud Architecture", Skills = "Azure;AKS", ExperienceYears = 15, Status = "Active", DedicatedFlag = true, CapacityLimit = 8 },
+            new() { Psid = "P1001", Name = "Ravinder Rana", Email = "ravinder.rana@example.com", Region = "EMEA", Role = "Regional Lead", PrimarySkill = "Cloud Architecture", Skills = "Azure;Migration", ExperienceYears = 14, Status = "Active", CapacityLimit = 8 },
+            new() { Psid = "P1002", Name = "Arunkumar Azariah Koilraj", Email = "arun.koilraj@example.com", Region = "EMEA", Role = "Global Lead", PrimarySkill = "CAF Governance", Skills = "Strategy;Azure", ExperienceYears = 18, Status = "Active", CapacityLimit = 8 },
+            new() { Psid = "P1003", Name = "Amit Bengali", Email = "amit.bengali@example.com", Region = "ASIA", Role = "Regional Lead", PrimarySkill = "Cloud Architecture", Skills = "Azure;AKS", ExperienceYears = 15, Status = "Active", CapacityLimit = 8 },
             new() { Psid = "P1004", Name = "Sofia Muller", Email = "sofia.muller@example.com", Region = "EMEA", Role = "App Architect", PrimarySkill = "App Modernization", Skills = ".NET;Containers", ExperienceYears = 10, Status = "Active" },
             new() { Psid = "P1005", Name = "Liam O'Brien", Email = "liam.obrien@example.com", Region = "EMEA", Role = "App Engineer", PrimarySkill = "Java", Skills = "Spring;AKS", ExperienceYears = 7, Status = "Active" },
             new() { Psid = "P1006", Name = "Noah Schmidt", Email = "noah.schmidt@example.com", Region = "EMEA", Role = "DevOps Engineer", PrimarySkill = "DevOps", Skills = "GitHub Actions;Bicep", ExperienceYears = 8, Status = "Active" },

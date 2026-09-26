@@ -92,7 +92,7 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
             Skills = baseDto.Skills,
             ExperienceYears = baseDto.ExperienceYears,
             Status = baseDto.Status,
-            DedicatedFlag = baseDto.DedicatedFlag,
+            Separated = baseDto.Separated,
             CapacityLimit = baseDto.CapacityLimit,
             ActiveFlag = baseDto.ActiveFlag,
             AccountCount = baseDto.AccountCount,
@@ -189,9 +189,9 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
         resource.Skills = input.Skills;
         resource.ExperienceYears = input.ExperienceYears;
         resource.Status = input.Status;
-        resource.DedicatedFlag = input.DedicatedFlag;
+        resource.Separated = input.Separated;
         resource.CapacityLimit = input.CapacityLimit > 0 ? input.CapacityLimit : 5;
-        resource.ActiveFlag = input.ActiveFlag;
+        resource.ActiveFlag = input.Separated ? false : input.ActiveFlag; // separated employees are always inactive
         if (!string.IsNullOrWhiteSpace(input.OnboardingStatus)
             && Enum.TryParse<CafPortal.Domain.Enums.OnboardingStatusType>(
                 input.OnboardingStatus.Replace(" ", string.Empty), true, out var onboarding))
@@ -221,7 +221,7 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
             Skills = r.Skills,
             ExperienceYears = r.ExperienceYears,
             Status = r.Status,
-            DedicatedFlag = r.DedicatedFlag,
+            Separated = r.Separated,
             CapacityLimit = limit,
             ActiveFlag = r.ActiveFlag,
             AccountCount = accountCount,

@@ -18,7 +18,7 @@ public class Resource : AuditableEntity
     public string? Skills { get; set; }
     public double ExperienceYears { get; set; }
     public string? Status { get; set; }
-    public bool DedicatedFlag { get; set; }
+    public bool Separated { get; set; }
     public int CapacityLimit { get; set; } = 5;
     public bool ActiveFlag { get; set; } = true;
 

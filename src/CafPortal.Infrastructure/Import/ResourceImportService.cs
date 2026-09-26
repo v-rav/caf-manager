@@ -59,7 +59,7 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
         var colStatus = ExcelHelpers.FindColumn(h, "Status");
         var colRegion = ExcelHelpers.FindColumn(h, "Region", "Geo");
         var colRole = ExcelHelpers.FindColumn(h, "Role", "Designation");
-        var colDedicated = ExcelHelpers.FindColumn(h, "Dedicated");
+        var colSeparated = ExcelHelpers.FindColumn(h, "Separated");
 
         var count = 0;
         foreach (var row in rows.Skip(1))
@@ -85,8 +85,8 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
             resource.Skills = skill ?? resource.Skills;
             resource.ExperienceYears = ParseExperience(ExcelHelpers.GetString(row, colExp), resource.ExperienceYears);
             resource.Status = Clean(ExcelHelpers.GetString(row, colStatus)) ?? resource.Status ?? "Active";
-            resource.DedicatedFlag = ParseFlag(ExcelHelpers.GetString(row, colDedicated), resource.DedicatedFlag);
-            resource.ActiveFlag = true;
+            resource.Separated = ParseFlag(ExcelHelpers.GetString(row, colSeparated), resource.Separated);
+            resource.ActiveFlag = !resource.Separated;
             if (resource.CapacityLimit <= 0)
                 resource.CapacityLimit = 5;
             resource.UpdatedUtc = DateTimeOffset.UtcNow;
@@ -110,7 +110,7 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
         var colName = ExcelHelpers.FindColumn(h, "Name", "Resource");
         var colRegion = ExcelHelpers.FindColumn(h, "Region", "Geo");
         var colRole = ExcelHelpers.FindColumn(h, "Role", "Designation");
-        var colDedicated = ExcelHelpers.FindColumn(h, "Dedicated");
+        var colSeparated = ExcelHelpers.FindColumn(h, "Separated");
         var colPrimary = ExcelHelpers.FindColumn(h, "Primary Account", "Primary Accounts");
         var colSecondary = ExcelHelpers.FindColumn(h, "Secondary Account", "Secondary Accounts");
         // Single-column fallback if this sheet uses one combined account column.
@@ -133,10 +133,10 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
             if (string.IsNullOrWhiteSpace(resource.Region) || resource.Region == "UNSPECIFIED")
                 resource.Region = region;
             resource.Role = ExcelHelpers.GetString(row, colRole) ?? resource.Role;
-            resource.DedicatedFlag = ParseFlag(ExcelHelpers.GetString(row, colDedicated), resource.DedicatedFlag);
+            resource.Separated = ParseFlag(ExcelHelpers.GetString(row, colSeparated), resource.Separated);
             if (resource.CapacityLimit <= 0)
                 resource.CapacityLimit = 5;
-            resource.ActiveFlag = true;
+            resource.ActiveFlag = !resource.Separated;
             await EnsureRegionAsync(region, ct);
             await _db.SaveChangesAsync(ct); // materialize resource id
 
@@ -194,7 +194,7 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
         var colSkills = ExcelHelpers.FindColumn(headers, "Skills", "Secondary Skill", "Technology");
         var colExp = ExcelHelpers.FindColumn(headers, "Experience", "Exp");
         var colStatus = ExcelHelpers.FindColumn(headers, "Status");
-        var colDedicated = ExcelHelpers.FindColumn(headers, "Dedicated");
+        var colSeparated = ExcelHelpers.FindColumn(headers, "Separated");
         var colAccounts = ExcelHelpers.FindColumn(headers, "Account", "Customer", "Mapping");
         var colRelationship = ExcelHelpers.FindColumn(headers, "Primary/Secondary", "Relationship", "Primary Secondary");
 
@@ -221,8 +221,8 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
             resource.Skills = ExcelHelpers.GetString(row, colSkills) ?? resource.Skills;
             resource.ExperienceYears = ParseExperience(ExcelHelpers.GetString(row, colExp), resource.ExperienceYears);
             resource.Status = Clean(ExcelHelpers.GetString(row, colStatus)) ?? resource.Status ?? "Active";
-            resource.DedicatedFlag = ParseFlag(ExcelHelpers.GetString(row, colDedicated), resource.DedicatedFlag);
-            resource.ActiveFlag = true;
+            resource.Separated = ParseFlag(ExcelHelpers.GetString(row, colSeparated), resource.Separated);
+            resource.ActiveFlag = !resource.Separated;
             if (resource.CapacityLimit <= 0)
                 resource.CapacityLimit = 5;
             resource.UpdatedUtc = DateTimeOffset.UtcNow;

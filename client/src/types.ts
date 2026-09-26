@@ -79,7 +79,7 @@ export interface Resource {
   skills?: string
   experienceYears: number
   status?: string
-  dedicatedFlag: boolean
+  separated: boolean
   capacityLimit: number
   activeFlag: boolean
   accountCount: number
@@ -408,7 +408,7 @@ export interface ResourceUpsert {
   skills?: string
   experienceYears: number
   status?: string
-  dedicatedFlag: boolean
+  separated: boolean
   capacityLimit: number
   activeFlag: boolean
   onboardingStatus?: string

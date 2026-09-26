@@ -14,7 +14,7 @@ public class ResourceDto
     public string? Skills { get; set; }
     public double ExperienceYears { get; set; }
     public string? Status { get; set; }
-    public bool DedicatedFlag { get; set; }
+    public bool Separated { get; set; }
     public int CapacityLimit { get; set; }
     public bool ActiveFlag { get; set; }
     public int AccountCount { get; set; }

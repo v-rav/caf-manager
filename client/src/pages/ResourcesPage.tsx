@@ -39,7 +39,7 @@ const emptyForm: ResourceUpsert = {
   skills: '',
   experienceYears: 0,
   status: 'Active',
-  dedicatedFlag: false,
+  separated: false,
   capacityLimit: 5,
   activeFlag: true,
   onboardingStatus: 'Active',
@@ -95,7 +95,7 @@ export function ResourcesPage() {
       skills: r.skills ?? '',
       experienceYears: r.experienceYears,
       status: r.status ?? 'Active',
-      dedicatedFlag: r.dedicatedFlag,
+      separated: r.separated,
       capacityLimit: r.capacityLimit,
       activeFlag: r.activeFlag,
       onboardingStatus: r.onboardingStatus,
@@ -241,8 +241,8 @@ export function ResourcesPage() {
               <Input style={{ flex: 1 }} type="number" placeholder="Capacity Limit" value={String(form.capacityLimit)} onChange={(_, d) => patch({ capacityLimit: Number(d.value) || 5 })} />
             </div>
             <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-              <Switch label="Dedicated" checked={form.dedicatedFlag} onChange={(_, d) => patch({ dedicatedFlag: d.checked })} />
-              <Switch label="Active" checked={form.activeFlag} onChange={(_, d) => patch({ activeFlag: d.checked })} />
+              <Switch label="Separated" checked={form.separated} onChange={(_, d) => patch({ separated: d.checked, activeFlag: d.checked ? false : form.activeFlag })} />
+              <Switch label="Active" checked={form.activeFlag} disabled={form.separated} onChange={(_, d) => patch({ activeFlag: d.checked })} />
               <Dropdown
                 style={{ flex: 1, minWidth: 180 }}
                 placeholder="Onboarding"
