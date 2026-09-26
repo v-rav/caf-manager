@@ -34,6 +34,13 @@ public class NominationDto
     public string? ModeOfAccess { get; set; }
     public decimal? TotalAcr { get; set; }
     public decimal? NnrAcr { get; set; }
+    public DateOnly? NominatedDate { get; set; }
+    public DateOnly? ApprovalDate { get; set; }
+    public DateOnly? ActualStartDate { get; set; }
+    public DateOnly? ActualEndDate { get; set; }
+    public DateOnly? PlannedStartDate { get; set; }
+    public DateOnly? PlannedEndDate { get; set; }
+    public int? TotalDays { get; set; }
 
     /// <summary>Whole days since last update. Drives stale detection.</summary>
     public int DaysSinceUpdate { get; set; }

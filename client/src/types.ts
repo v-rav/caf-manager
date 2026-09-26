@@ -238,6 +238,13 @@ export interface Nomination {
   modeOfAccess?: string
   totalAcr?: number
   nnrAcr?: number
+  nominatedDate?: string
+  approvalDate?: string
+  actualStartDate?: string
+  actualEndDate?: string
+  plannedStartDate?: string
+  plannedEndDate?: string
+  totalDays?: number
   daysSinceUpdate: number
   staleTier: string
   dbLinked: boolean

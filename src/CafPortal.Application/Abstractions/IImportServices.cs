@@ -47,6 +47,9 @@ public interface IDataRefreshService
     /// <summary>One-time enrichment: matches "Summary of All Offerings" rows by TPID + Task Id to set nomination offering fields, and updates Account.Segment by TPID. apply=false previews.</summary>
     Task<DataRefreshResultDto> ImportOfferingsAsync(Stream workbook, bool apply, CancellationToken ct = default);
 
+    /// <summary>One-time import of DE-Completed: adds finished migrations as Completed nominations (or marks matching rows Completed) with dates + duration. apply=false previews.</summary>
+    Task<DataRefreshResultDto> ImportCompletedAsync(Stream workbook, bool apply, CancellationToken ct = default);
+
     /// <summary>Re-runs the one-time seed on demand (configuration + resource enrichments). Normally seeding runs only once.</summary>
     Task<DataRefreshResultDto> ReseedAsync(CancellationToken ct = default);
 

@@ -44,6 +44,15 @@ public class Nomination : AuditableEntity
     public decimal? TotalAcr { get; set; }
     public decimal? NnrAcr { get; set; }
 
+    // Dates + duration from the Offerings/Summary export (and DE-Completed for completed migrations).
+    public DateOnly? NominatedDate { get; set; }
+    public DateOnly? ApprovalDate { get; set; }
+    public DateOnly? ActualStartDate { get; set; }
+    public DateOnly? ActualEndDate { get; set; }
+    public DateOnly? PlannedStartDate { get; set; }
+    public DateOnly? PlannedEndDate { get; set; }
+    public int? TotalDays { get; set; }
+
     public Account? Account { get; set; }
     public ICollection<WaveLink> WaveLinks { get; set; } = new List<WaveLink>();
     public ICollection<NominationResource> ResourceAssignments { get; set; } = new List<NominationResource>();

@@ -185,7 +185,8 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
         var withdrawnCount = 0;
         foreach (var n in existing.Where(n => !string.IsNullOrWhiteSpace(n.ExternalTaskId)
             && !seenTaskIds.Contains(n.ExternalTaskId!)
-            && n.Status is not NominationStatusType.Withdrawn and not NominationStatusType.Closed))
+            && n.Status is not NominationStatusType.Withdrawn and not NominationStatusType.Closed
+            and not NominationStatusType.Completed and not NominationStatusType.CustomerDeferred))
         {
             n.Status = NominationStatusType.Withdrawn;
             run.Changes.Add(new ImportChange { ExternalKey = n.ExternalTaskId, Label = n.AccountName, ChangeType = "Withdrawn" });
