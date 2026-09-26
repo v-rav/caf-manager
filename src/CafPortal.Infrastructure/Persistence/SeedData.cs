@@ -147,7 +147,8 @@ public static class SeedData
             ("StageTargetDays3", "5", "Target days for Stage 3 - Finalize Scope"),
             ("StageTargetDays4", "23", "Target days for Stage 4 - Executing Migration"),
             ("LeaveClashWindowDays", "30", "Upcoming-leave window used to detect coverage clashes"),
-            ("PerformanceTrainingThreshold", "4", "Review dimension score below which a training need is flagged")
+            ("PerformanceTrainingThreshold", "4", "Review dimension score below which a training need is flagged"),
+            ("AcrTarget2027", "26957420", "Annual ACR target for FY27 (Azure Consumed Revenue, whole dollars)")
         };
         var existing = await db.ApplicationSettings.Select(s => s.Key).ToListAsync(ct);
         foreach (var (key, value, desc) in defaults)

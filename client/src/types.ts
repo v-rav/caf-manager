@@ -422,6 +422,12 @@ export interface OperationsSetting {
   description?: string
 }
 
+export interface AcrTarget {
+  fiscalYear: number
+  label: string
+  target: number
+}
+
 export interface PerformanceReview {
   id: number
   personName: string

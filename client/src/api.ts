@@ -3,6 +3,7 @@ import type {
   Account,
   AccountDetail,
   AccountUpsert,
+  AcrTarget,
   Analytics,
   CapacityRow,
   ExecutiveDashboard,
@@ -179,6 +180,11 @@ export const api = {
     http.get<OperationsSetting[]>('/api/configuration/settings').then((r) => r.data),
   updateOperationsSettings: (updates: { key: string; value: string }[]) =>
     http.put<OperationsSetting[]>('/api/configuration/settings', updates).then((r) => r.data),
+
+  acrTargets: () =>
+    http.get<AcrTarget[]>('/api/configuration/acr-targets').then((r) => r.data),
+  updateAcrTargets: (updates: { fiscalYear: number; target: number }[]) =>
+    http.put<AcrTarget[]>('/api/configuration/acr-targets', updates).then((r) => r.data),
 
   performance: (region?: string) =>
     http.get<PerformanceReview[]>('/api/performance', { params: { region } }).then((r) => r.data),

@@ -121,6 +121,7 @@ export function ConfigurationPage() {
         update={(id, n) => api.updateSkill(id, n)}
       />
       <OperationsSettingsPanel />
+      <FiscalTargetsPanel />
     </div>
   )
 }
@@ -279,6 +280,120 @@ function VocabPanel({ title, placeholder, hint, load, add, update }: VocabPanelP
                 </div>
               ),
             )}
+          </div>
+        </>
+      )}
+    </Panel>
+  )
+}
+
+// Annual ACR (Azure Consumed Revenue) targets by fiscal year — the plan the attainment view measures against.
+function FiscalTargetsPanel() {
+  const { data, loading, error, reload } = useAsync(() => api.acrTargets(), [])
+  const [edits, setEdits] = useState<Record<number, number>>({})
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [newFy, setNewFy] = useState(() => { const d = new Date(); return d.getMonth() + 1 >= 7 ? d.getFullYear() + 1 : d.getFullYear() })
+
+  useEffect(() => {
+    if (data) setEdits(Object.fromEntries(data.map((t) => [t.fiscalYear, t.target])))
+  }, [data])
+
+  const dirty = useMemo(() => {
+    const base = new Map((data ?? []).map((t) => [t.fiscalYear, t.target]))
+    const keys = new Set<number>([...base.keys(), ...Object.keys(edits).map(Number)])
+    return [...keys].some((fy) => (base.get(fy) ?? 0) !== (edits[fy] ?? 0))
+  }, [data, edits])
+
+  const fmt = (n: number) =>
+    n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${Math.round(n)}`
+  const label = (fy: number) => `FY${String(fy % 100).padStart(2, '0')}`
+
+  const addFy = () => {
+    if (edits[newFy] != null) return
+    setSaved(false)
+    setEdits((e) => ({ ...e, [newFy]: 0 }))
+  }
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      // Send every current row; the API upserts and treats target<=0 as a removal.
+      const updates = Object.entries(edits).map(([fy, target]) => ({ fiscalYear: Number(fy), target: Number(target) || 0 }))
+      await api.updateAcrTargets(updates)
+      setSaved(true)
+      reload()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const years = useMemo(
+    () => [...new Set([...(data ?? []).map((t) => t.fiscalYear), ...Object.keys(edits).map(Number)])].sort((a, b) => b - a),
+    [data, edits],
+  )
+
+  return (
+    <Panel
+      title="Fiscal-year ACR targets"
+      action={
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {saved && !dirty && (
+            <Text size={200} style={{ color: 'var(--colorPaletteGreenForeground1)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <CheckmarkCircleRegular /> Saved
+            </Text>
+          )}
+          <Button appearance="primary" icon={<SaveRegular />} onClick={save} disabled={!dirty || saving}>
+            {saving ? 'Saving\u2026' : 'Save changes'}
+          </Button>
+        </div>
+      }
+    >
+      {loading ? (
+        <Loading />
+      ) : error ? (
+        <ErrorText error={error} onRetry={reload} />
+      ) : (
+        <>
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
+            Annual ACR (Azure Consumed Revenue) plan per fiscal year (Jul\u2013Jun, labelled by end year). This is the
+            target the migration attainment view measures completed + in-flight ACR against. Set a target to 0 to remove
+            a year.
+          </Text>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+            {years.map((fy) => {
+              const changed = (data?.find((t) => t.fiscalYear === fy)?.target ?? 0) !== (edits[fy] ?? 0)
+              return (
+                <div
+                  key={fy}
+                  style={{
+                    border: `1px solid ${changed ? 'var(--colorBrandStroke1)' : 'var(--colorNeutralStroke2)'}`,
+                    borderRadius: 8, padding: 14, display: 'flex', flexDirection: 'column', gap: 8,
+                    background: 'var(--colorNeutralBackground1)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <Text weight="semibold">{label(fy)}</Text>
+                    <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>{fmt(edits[fy] ?? 0)}</Text>
+                  </div>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={String(edits[fy] ?? 0)}
+                    onChange={(_, d) => { setSaved(false); setEdits((e) => ({ ...e, [fy]: Math.max(0, Math.round(Number(d.value) || 0)) })) }}
+                    contentBefore={<Text size={200}>$</Text>}
+                    aria-label={`${label(fy)} ACR target`}
+                  />
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Text size={100} style={{ color: 'var(--colorNeutralForeground3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Add fiscal year</Text>
+              <SpinButton min={2000} max={2100} value={newFy} onChange={(_, d) => setNewFy(Math.round(d.value ?? Number(d.displayValue) ?? newFy))} style={{ width: 120 }} aria-label="New fiscal year" />
+            </div>
+            <Button appearance="secondary" icon={<AddRegular />} onClick={addFy} disabled={edits[newFy] != null}>Add {label(newFy)}</Button>
           </div>
         </>
       )}

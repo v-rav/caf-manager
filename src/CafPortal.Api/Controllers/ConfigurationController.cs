@@ -241,4 +241,52 @@ public class ConfigurationController(
     }
 
     public record SettingUpsert(string Key, string Value);
+
+    // ---- Fiscal-year ACR targets (annual Azure Consumed Revenue plan, keyed AcrTarget<fullYear>) ----
+    public record AcrTargetDto(int FiscalYear, string Label, decimal Target);
+    public record AcrTargetUpsert(int FiscalYear, decimal Target);
+
+    /// <summary>Annual ACR targets by fiscal year (end-year label, e.g. FY27). Drives the attainment view.</summary>
+    [HttpGet("acr-targets")]
+    public async Task<IActionResult> GetAcrTargets(CancellationToken ct)
+    {
+        var rows = await db.ApplicationSettings.AsNoTracking()
+            .Where(s => s.Key.StartsWith("AcrTarget"))
+            .Select(s => new { s.Key, s.Value })
+            .ToListAsync(ct);
+        var list = rows
+            .Select(x => (Ok: int.TryParse(x.Key["AcrTarget".Length..], out var fy), Fy: fy, x.Value))
+            .Where(x => x.Ok)
+            .Select(x => new AcrTargetDto(x.Fy, $"FY{x.Fy % 100:00}",
+                decimal.TryParse(x.Value, System.Globalization.CultureInfo.InvariantCulture, out var t) ? t : 0m))
+            .OrderByDescending(x => x.FiscalYear)
+            .ToList();
+        return Ok(list);
+    }
+
+    [HttpPut("acr-targets")]
+    public async Task<IActionResult> UpsertAcrTargets([FromBody] IReadOnlyList<AcrTargetUpsert> updates, CancellationToken ct)
+    {
+        if (updates is null) return BadRequest("No targets supplied.");
+        var keys = updates.Where(u => u.FiscalYear is >= 2000 and <= 2100).Select(u => $"AcrTarget{u.FiscalYear}").ToList();
+        var existing = await db.ApplicationSettings.Where(s => keys.Contains(s.Key)).ToListAsync(ct);
+        foreach (var u in updates)
+        {
+            if (u.FiscalYear is < 2000 or > 2100) continue;
+            var key = $"AcrTarget{u.FiscalYear}";
+            var row = existing.FirstOrDefault(r => r.Key == key);
+            if (u.Target <= 0)
+            {
+                if (row is not null) db.ApplicationSettings.Remove(row); // clearing a FY removes it
+                continue;
+            }
+            var val = u.Target.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (row is null)
+                db.ApplicationSettings.Add(new ApplicationSetting { Key = key, Value = val, Description = $"Annual ACR target for FY{u.FiscalYear % 100:00} (Azure Consumed Revenue, whole dollars)." });
+            else
+                row.Value = val;
+        }
+        await db.SaveChangesAsync(ct);
+        return await GetAcrTargets(ct);
+    }
 }
