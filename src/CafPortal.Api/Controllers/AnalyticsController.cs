@@ -23,4 +23,8 @@ public class AnalyticsController(IAnalyticsService analytics) : ControllerBase
         [FromQuery] string granularity, [FromQuery] string bucket, [FromQuery] string? splitBy = null,
         [FromQuery] string? series = null, CancellationToken ct = default)
         => Ok(await analytics.GetTimeSeriesDetailAsync(region, basis, granularity, bucket, splitBy, series, ct));
+
+    [HttpGet("attainment")]
+    public async Task<IActionResult> Attainment([FromQuery] string? region, [FromQuery] int? fy = null, CancellationToken ct = default)
+        => Ok(await analytics.GetAttainmentAsync(region, fy, ct));
 }

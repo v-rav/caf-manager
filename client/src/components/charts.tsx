@@ -5,14 +5,20 @@ import {
   Chart as ChartJS,
   Legend,
   LinearScale,
+  LineController,
+  LineElement,
+  PointElement,
   Tooltip,
 } from 'chart.js'
-import { Bar, Doughnut } from 'react-chartjs-2'
-import type { NameValue, TimeBucket } from '../types'
+import { Bar, Chart, Doughnut } from 'react-chartjs-2'
+import type { AttainmentBucket, NameValue, TimeBucket } from '../types'
 
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
+ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip, Legend)
 
 const PALETTE = ['#0f6cbd', '#107c10', '#f7630c', '#c50f1f', '#8764b8', '#00b7c3', '#ca5010', '#498205']
+
+const moneyShort = (n: number) =>
+  n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${Math.round(n)}`
 
 // Truncate long category labels; the full name stays available via the tooltip.
 const short = (s: string) => (s.length > 16 ? `${s.slice(0, 15)}\u2026` : s)
@@ -56,6 +62,39 @@ export function BarChart({ data, label }: { data: NameValue[]; label: string }) 
             tooltip: { callbacks: { title: (items) => data[items[0]?.dataIndex ?? 0]?.name ?? '' } },
           },
           scales: { x: { ticks: { maxRotation: 0 } }, y: { beginAtZero: true, ticks: { precision: 0 } } },
+        }}
+      />
+    </div>
+  )
+}
+
+// Attainment: cumulative Completed + In-flight ACR (stacked bars) against the Target curve (line).
+export function AttainmentChart({ buckets }: { buckets: AttainmentBucket[] }) {
+  if (!buckets.length) return <EmptyChart />
+  const labels = buckets.map((b) => b.label)
+  const data = {
+    labels,
+    datasets: [
+      { type: 'bar' as const, label: 'Completed', data: buckets.map((b) => b.completed), backgroundColor: '#107c10', stack: 'actual' },
+      { type: 'bar' as const, label: 'In-flight', data: buckets.map((b) => b.inflight), backgroundColor: '#5b9bd5', stack: 'actual' },
+      { type: 'line' as const, label: 'Target', data: buckets.map((b) => b.target), borderColor: '#c50f1f', backgroundColor: '#c50f1f', borderWidth: 2, pointRadius: 0, tension: 0.2 },
+    ],
+  }
+  return (
+    <div style={{ maxHeight: 320 }}>
+      <Chart
+        type="bar"
+        data={data as never}
+        options={{
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${moneyShort(Number(c.parsed.y))}` } },
+          },
+          scales: {
+            x: { stacked: true, ticks: { maxRotation: 0 } },
+            y: { stacked: true, beginAtZero: true, ticks: { callback: (v) => moneyShort(Number(v)) } },
+          },
         }}
       />
     </div>

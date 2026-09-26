@@ -191,6 +191,94 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         return rows.OrderBy(x => x.D).Select(x => x.N).ToList();
     }
 
+    // Factory attainment: cumulative Target curve vs Completed (landed) + In-flight NNR ACR, by fiscal month.
+    public async Task<AttainmentDto> GetAttainmentAsync(string? region, int? fy, CancellationToken ct = default)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var fiscalYear = fy ?? FiscalCalendar.FiscalYear(today);
+        var fyStart = new DateOnly(fiscalYear - 1, 7, 1);
+        var fyEnd = new DateOnly(fiscalYear, 6, 30);
+
+        // Annual ACR target from Configuration (AcrTarget<fiscalYear>); absent → prompt to set it.
+        var setting = await _db.ApplicationSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == $"AcrTarget{fiscalYear}", ct);
+        decimal annual = 0m;
+        var targetSet = setting is not null && decimal.TryParse(setting.Value,
+            System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out annual);
+
+        var (noms, _) = await LoadApprovedAsync(region, ct);
+        decimal Acr(NominationDto n) => n.NnrAcr ?? 0m;
+        static int MonthIndex(DateOnly d) => (d.Month + 5) % 12 + 1; // Jul=1 … Jun=12
+
+        // Per-fiscal-month increments: completed by ActualEndDate, in-flight by ApprovalDate (carryover → month 1).
+        var completedInc = new decimal[13];
+        var completedCnt = new int[13];
+        var inflightInc = new decimal[13];
+        foreach (var n in noms)
+        {
+            if (n.ActualEndDate is DateOnly aed && aed >= fyStart && aed <= fyEnd)
+            {
+                var mi = MonthIndex(aed);
+                completedInc[mi] += Acr(n);
+                completedCnt[mi] += 1;
+            }
+            else if (n.ActualEndDate is null)
+            {
+                var acr = Acr(n);
+                if (acr <= 0) continue;
+                DateOnly? apd = n.ApprovalDate;
+                if (apd is DateOnly d && d > fyEnd) continue;          // approved after this FY → not yet in play
+                var mi = apd is DateOnly a && a >= fyStart && a <= fyEnd ? MonthIndex(a) : 1; // carryover shows from Jul
+                inflightInc[mi] += acr;
+            }
+        }
+
+        var buckets = new List<AttainmentBucketDto>(12);
+        decimal cumC = 0, cumI = 0;
+        for (int m = 1; m <= 12; m++)
+        {
+            cumC += completedInc[m];
+            cumI += inflightInc[m];
+            var calMonth = (m + 5) % 12 + 1;
+            var calYear = calMonth >= 7 ? fiscalYear - 1 : fiscalYear;
+            var target = annual * m / 12m;
+            buckets.Add(new AttainmentBucketDto
+            {
+                Key = $"{calYear}-{calMonth:00}",
+                Label = System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(calMonth),
+                MonthIndex = m,
+                Target = target,
+                Completed = cumC,
+                Inflight = cumI,
+                Vtt = target - (cumC + cumI),
+            });
+        }
+
+        var curIdx = today >= fyStart && today <= fyEnd ? MonthIndex(today) : 12;
+        var cur = buckets[curIdx - 1];
+        var completedCntYtd = completedCnt.Take(curIdx + 1).Sum();
+        var avgSize = completedCntYtd > 0 ? cur.Completed / completedCntYtd : 0m;
+
+        return new AttainmentDto
+        {
+            FiscalYear = fiscalYear,
+            Label = FiscalCalendar.FyLabel(fiscalYear),
+            Measure = "NNR ACR",
+            AnnualTarget = annual,
+            TargetSet = targetSet,
+            Buckets = buckets,
+            CurrentMonthIndex = curIdx,
+            TargetToDate = cur.Target,
+            CompletedYtd = cur.Completed,
+            InflightYtd = cur.Inflight,
+            Vtt = cur.Vtt,
+            AttainmentPct = annual > 0 ? (double)(cur.Completed / annual) * 100 : 0,
+            PacePct = cur.Target > 0 ? (double)(cur.Completed / cur.Target) * 100 : 0,
+            CompletedCount = completedCntYtd,
+            AvgNominationSize = avgSize,
+            NominationsNeeded = avgSize > 0 ? (double)(cur.Vtt / avgSize) : 0,
+        };
+    }
+
     private static DateOnly? BasisDate(NominationDto n, string basis) => basis switch
     {
         "nominated" => n.NominatedDate,

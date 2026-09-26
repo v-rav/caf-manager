@@ -16,6 +16,8 @@ public interface IAnalyticsService
 
     Task<IReadOnlyList<NominationDto>> GetTimeSeriesDetailAsync(string? region, string basis, string granularity,
         string bucketKey, string? splitBy, string? series, CancellationToken ct = default);
+
+    Task<AttainmentDto> GetAttainmentAsync(string? region, int? fy, CancellationToken ct = default);
 }
 
 public interface IResourceService

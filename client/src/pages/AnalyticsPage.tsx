@@ -1,13 +1,14 @@
 import { Button, Dropdown, Link, Option, Text } from '@fluentui/react-components'
 import { useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
-import { BarChart, DoughnutChart, TimeSeriesChart } from '../components/charts'
+import { AttainmentChart, BarChart, DoughnutChart, TimeSeriesChart } from '../components/charts'
 import { DataTable } from '../components/DataTable'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
-import type { Nomination, TimeBucket } from '../types'
+import type { AttainmentBucket, Nomination, TimeBucket } from '../types'
 
 // Heat-band colours reused for the health doughnut (On Track → Blocked → Other).
 const HEALTH_COLORS = ['#107c10', '#eaa300', '#c50f1f', '#8a8886']
@@ -49,6 +50,61 @@ function Pick({ label, value, options, onChange }: { label: string; value: strin
       >
         {options.map((o) => <Option key={o.v} value={o.v}>{o.t}</Option>)}
       </Dropdown>
+    </div>
+  )
+}
+
+// Factory attainment vs the fiscal-year ACR target: cumulative Target curve vs Completed + In-flight ACR.
+function AttainmentSection({ region }: { region?: string }) {
+  const { data, loading, error, reload } = useAsync(() => api.attainment(region), [region])
+
+  if (loading) return <Panel title="Attainment"><Loading /></Panel>
+  if (error) return <Panel title="Attainment"><ErrorText error={error} onRetry={reload} /></Panel>
+  if (!data) return null
+
+  if (!data.targetSet) {
+    return (
+      <Panel title={`Attainment vs ${data.label} target`}>
+        <Text size={300} style={{ color: 'var(--colorNeutralForeground3)' }}>
+          No ACR target is set for {data.label}. Add it in{' '}
+          <RouterLink to="/configuration">Configuration → Fiscal-year ACR targets</RouterLink> to see attainment.
+        </Text>
+      </Panel>
+    )
+  }
+
+  const behind = data.vtt > 0
+  const needed = Math.max(0, Math.round(data.nominationsNeeded))
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <Text size={400} weight="semibold">Attainment vs {data.label} target · {data.measure}</Text>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+        <KpiCard label={`${data.label} target`} value={money(data.annualTarget)} tone="neutral" />
+        <KpiCard label="Completed (landed) YTD" value={money(data.completedYtd)} tone="success" />
+        <KpiCard label="In-flight pipeline" value={money(data.inflightYtd)} tone="brand" />
+        <KpiCard label="Attainment" value={`${Math.round(data.attainmentPct)}%`} tone={data.attainmentPct >= 100 ? 'success' : 'neutral'} />
+        <KpiCard label={behind ? 'Behind plan (to date)' : 'Ahead of plan (to date)'} value={money(Math.abs(data.vtt))} tone={behind ? 'danger' : 'success'} />
+        <KpiCard label="Nominations needed" value={behind ? num(needed) : 'On track'} tone={behind ? 'warning' : 'success'} />
+      </div>
+      <Panel title={`Cumulative ACR vs target · completed + in-flight against the ${money(data.annualTarget)} plan`}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <AttainmentChart buckets={data.buckets} />
+          <DataTable<AttainmentBucket>
+            ariaLabel="Attainment by fiscal month"
+            rows={data.buckets}
+            rowKey={(b) => b.key}
+            defaultSort={{ key: 'month', dir: 'asc' }}
+            emptyMessage="No data."
+            columns={[
+              { key: 'month', header: 'Month', sortValue: (b) => b.monthIndex, render: (b) => b.label },
+              { key: 'target', header: 'Target', align: 'end', sortValue: (b) => b.target, render: (b) => money(b.target) },
+              { key: 'completed', header: 'Completed', align: 'end', sortValue: (b) => b.completed, render: (b) => money(b.completed) },
+              { key: 'inflight', header: 'In-flight', align: 'end', sortValue: (b) => b.inflight, render: (b) => money(b.inflight) },
+              { key: 'vtt', header: 'VTT (gap)', align: 'end', sortValue: (b) => b.vtt, render: (b) => `${b.vtt > 0 ? '' : '+'}${money(Math.abs(b.vtt))}` },
+            ]}
+          />
+        </div>
+      </Panel>
     </div>
   )
 }
@@ -169,7 +225,7 @@ export function AnalyticsPage() {
     fy: fy === 'all' ? undefined : fy,
   })
 
-  if (loading) return <Loading label="Crunching migration analytics\u2026" />
+  if (loading) return <Loading label="Crunching migration analytics…" />
   if (error) return <ErrorText error={error} onRetry={reload} />
   if (!data) return null
 
@@ -179,8 +235,8 @@ export function AnalyticsPage() {
         <div>
           <Text size={600} weight="bold">Migration Analytics</Text>
           <Text size={200} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
-            Approved nominations{region ? ` \u00b7 ${region}` : ' \u00b7 all regions'} \u00b7 {data.totalApproved} total ({data.inFlight} in-flight,
-            {' '}{data.completed} completed) \u00b7 ACR/Cores from {data.withAcr} enriched records
+            Approved nominations{region ? ` · ${region}` : ' · all regions'} · {data.totalApproved} total ({data.inFlight} in-flight,
+            {' '}{data.completed} completed) · ACR/Cores from {data.withAcr} enriched records
           </Text>
         </div>
         <Button as="a" appearance="primary" href={exportHref}>Export</Button>
@@ -194,6 +250,8 @@ export function AnalyticsPage() {
         <KpiCard label="Tool attached" value={`${data.toolAttached} · ${pct(data.toolAttached, data.toolFlagDenom)}`} tone="brand" />
         <KpiCard label="Automation used" value={`${data.automationUsed} · ${pct(data.automationUsed, data.toolFlagDenom)}`} tone="brand" />
       </div>
+
+      <AttainmentSection region={region} />
 
       <TrendsSection
         region={region}

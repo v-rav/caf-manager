@@ -5,6 +5,7 @@ import type {
   AccountUpsert,
   AcrTarget,
   Analytics,
+  Attainment,
   CapacityRow,
   ExecutiveDashboard,
   DataStatus,
@@ -44,6 +45,8 @@ export const api = {
 
   analytics: (region?: string) =>
     http.get<Analytics>('/api/analytics', { params: { region } }).then((r) => r.data),
+  attainment: (region?: string, fy?: number) =>
+    http.get<Attainment>('/api/analytics/attainment', { params: { region, fy } }).then((r) => r.data),
 
   timeseries: (params: Record<string, string | undefined>) =>
     http.get<TimeSeries>('/api/analytics/timeseries', { params }).then((r) => r.data),
@@ -185,7 +188,6 @@ export const api = {
     http.get<AcrTarget[]>('/api/configuration/acr-targets').then((r) => r.data),
   updateAcrTargets: (updates: { fiscalYear: number; target: number }[]) =>
     http.put<AcrTarget[]>('/api/configuration/acr-targets', updates).then((r) => r.data),
-
   performance: (region?: string) =>
     http.get<PerformanceReview[]>('/api/performance', { params: { region } }).then((r) => r.data),
   performanceHistory: (personName: string) =>

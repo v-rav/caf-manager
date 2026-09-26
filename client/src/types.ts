@@ -428,6 +428,35 @@ export interface AcrTarget {
   target: number
 }
 
+export interface AttainmentBucket {
+  key: string
+  label: string
+  monthIndex: number
+  target: number
+  completed: number
+  inflight: number
+  vtt: number
+}
+
+export interface Attainment {
+  fiscalYear: number
+  label: string
+  measure: string
+  annualTarget: number
+  targetSet: boolean
+  buckets: AttainmentBucket[]
+  currentMonthIndex: number
+  targetToDate: number
+  completedYtd: number
+  inflightYtd: number
+  vtt: number
+  attainmentPct: number
+  pacePct: number
+  completedCount: number
+  avgNominationSize: number
+  nominationsNeeded: number
+}
+
 export interface PerformanceReview {
   id: number
   personName: string
