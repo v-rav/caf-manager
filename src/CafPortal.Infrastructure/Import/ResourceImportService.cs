@@ -78,7 +78,9 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
             resource.Name = name ?? resource.Name;
             resource.Psid = psid ?? resource.Psid;
             resource.Email = email ?? resource.Email;
-            resource.Region = region;
+            // Don't clobber a known region with UNSPECIFIED from a blank cell (preserves portal edits).
+            if (region != "UNSPECIFIED" || string.IsNullOrWhiteSpace(resource.Region))
+                resource.Region = region;
             resource.Role = ExcelHelpers.GetString(row, colRole) ?? resource.Role;
             var skill = ExcelHelpers.GetString(row, colSkill);
             resource.PrimarySkill = skill ?? resource.PrimarySkill;
@@ -215,7 +217,9 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
             resource.Name = name ?? resource.Name;
             resource.Psid = psid ?? resource.Psid;
             resource.Email = email ?? resource.Email;
-            resource.Region = region;
+            // Don't clobber a known region with UNSPECIFIED from a blank cell (preserves portal edits).
+            if (region != "UNSPECIFIED" || string.IsNullOrWhiteSpace(resource.Region))
+                resource.Region = region;
             resource.Role = ExcelHelpers.GetString(row, colRole) ?? resource.Role;
             resource.PrimarySkill = ExcelHelpers.GetString(row, colPrimarySkill) ?? resource.PrimarySkill;
             resource.Skills = ExcelHelpers.GetString(row, colSkills) ?? resource.Skills;
