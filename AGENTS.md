@@ -156,15 +156,15 @@ import the **web app is the system of record**.
   **Import History** page (`/history`, `GET /api/imports`, `GET /api/imports/{id}/changes`). History rows
   (not nominations) are pruned after `HistoryRetentionDays` (90). Upload filename is stamped onto the run.
 - **Nomination enrichment (one-time, keyed by TPID + Task Id)**: `POST /api/admin/import-offerings?apply=`
-  reads `Summary of All Offerings.xlsx` and sets **offering fields** (`PrimaryMigrationPath`, `PartnerName`,
-  `TotalCores`, `IsToolAttached`, `IsAutomationUsed`, `ModeOfAccess`, `TotalAcr`, `NnrAcr`) and **dates**
-  (`NominatedDate`, `ApprovalDate`, `ActualStartDate`, `ActualEndDate`, `PlannedStartDate`, `PlannedEndDate`,
-  derived `TotalDays`) on matched nominations, and refreshes `Account.Segment` by TPID. `POST
-  /api/admin/import-completed?apply=` loads `DE-Completed.xlsx` as `Completed` nominations (create/mark by
-  TPID + Task Id; creates missing accounts). Both are on-demand admin ops (NOT wired into refresh/seed),
-  serial-date-aware, `apply=false` previews.
-  > ⚠ **Planned:** the Summary file is the superset (356 rows carry a completion `Actual End Date` vs 80 in
-  > DE-Completed) — consolidating to one Summary-sourced import that also *creates* the completed set is next.
+  reads `Summary of All Offerings.xlsx` (the **single source**) and (a) sets **offering fields**
+  (`PrimaryMigrationPath`, `PartnerName`, `TotalCores`, `IsToolAttached`, `IsAutomationUsed`, `ModeOfAccess`,
+  `TotalAcr`, `NnrAcr`) + **dates** (`NominatedDate`, `ApprovalDate`, `ActualStartDate`, `ActualEndDate`,
+  `PlannedStartDate`, `PlannedEndDate`, derived `TotalDays`) on matched nominations — marking a matched row
+  `Completed` once it carries an `ActualEndDate`; (b) **creates a `Completed` nomination for any unmatched row
+  that has an `ActualEndDate`** (resolving/creating the account by TPID); rows with no end date are skipped;
+  (c) refreshes `Account.Segment` by TPID. On-demand admin op (NOT wired into refresh/seed), serial-date-aware,
+  `apply=false` previews. This one import supersedes the retired DE-Completed/DE-Inflight imports (the Summary is
+  the superset — 356 rows carry a completion `Actual End Date`).
 - `GET /api/admin/status` → counts + `lastRefreshUtc` (stamped by `DataRefreshService` on every
   successful import). Surfaced as "Updated Xm ago" in the header.
 - `GET /api/export/{resources|capacity|nominations|performance|summary}` → `.xlsx` (ClosedXML

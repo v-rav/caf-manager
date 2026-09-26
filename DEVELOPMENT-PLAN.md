@@ -154,8 +154,9 @@ and are best done as follow-ups once the cockpit changes prove out.
 - **Nomination enrichment** — offering fields (ACR, cores, tool/automation, mode, path, partner) + dates
   (nominated/approval/actual-start/actual-end/planned, derived `TotalDays`) via `POST /api/admin/import-offerings`
   (Summary, by TPID+Task Id); completed migrations via `POST /api/admin/import-completed` (DE-Completed). FDO
-  withdraw guard now protects Completed/CustomerDeferred. **Next:** consolidate to a single Summary-sourced
-  import that also creates the completed set (356 Summary rows carry a completion date vs 80 in DE-Completed).
+  withdraw guard now protects Completed/CustomerDeferred. **Consolidated:** a single Summary-sourced
+  `import-offerings` now both enriches in-flight and *creates* the Completed set (356 rows with a completion
+  date) — the separate DE-Completed/DE-Inflight imports were retired.
 
 ## 7. Pending / to verify (known caveats)
 

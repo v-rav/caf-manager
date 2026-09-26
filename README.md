@@ -120,8 +120,7 @@ Open <http://localhost:5080> — the API serves the SPA and the JSON endpoints t
 | POST | `/api/admin/merge-accounts?apply=` | Preview/merge casing-punctuation duplicate accounts into the TPID master (re-points FKs, keeps the variant as an alias). `apply=false` previews. |
 | POST | `/api/admin/park-accounts?apply=` | Preview/move no-TPID (non-canonical) accounts out of the master into `ParkedAccount`; skips any a nomination references (no orphans). Reversible. |
 | POST | `/api/admin/unpark-accounts` | Restore every parked account (re-creates the account, its resource links, and nomination references). |
-| POST | `/api/admin/import-offerings?apply=` | One-time: enrich nominations by TPID+Task Id from "Summary of All Offerings" (offering fields + dates) and refresh `Account.Segment`. `apply=false` previews. |
-| POST | `/api/admin/import-completed?apply=` | One-time: load DE-Completed as `Completed` nominations (create/mark by TPID+Task Id; creates missing accounts). `apply=false` previews. |
+| POST | `/api/admin/import-offerings?apply=` | One-time single-source import from "Summary of All Offerings": by TPID+Task Id, enriches matched nominations (offering fields + dates), **creates `Completed` nominations for rows with an Actual End Date**, and refreshes `Account.Segment`. `apply=false` previews. |
 
 ---
 

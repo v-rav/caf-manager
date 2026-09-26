@@ -39,16 +39,6 @@ public class AdminController(IDataRefreshService refresh) : ControllerBase
         return Ok(await refresh.ImportOfferingsAsync(stream, apply, ct));
     }
 
-    [HttpPost("import-completed")]
-    [RequestSizeLimit(52_428_800)] // 50 MB
-    public async Task<IActionResult> ImportCompleted([FromForm] IFormFile file, [FromQuery] bool apply = false, CancellationToken ct = default)
-    {
-        if (file is null || file.Length == 0)
-            return BadRequest("No file uploaded.");
-        await using var stream = file.OpenReadStream();
-        return Ok(await refresh.ImportCompletedAsync(stream, apply, ct));
-    }
-
     [HttpPost("upload")]
     [RequestSizeLimit(52_428_800)] // 50 MB
     public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromQuery] string kind = "nominations", CancellationToken ct = default)
