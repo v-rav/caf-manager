@@ -28,6 +28,7 @@ public static class SeedData
         await SeedResourceAliasesAsync(db, ct);
         await SeedResourceEmailsAsync(db, ct);
         await SeedResourceMobilesAsync(db, ct);
+        await SeedResourceRegionsAsync(db, ct);
         await SeedStrategicAccountsAsync(db, ct);
         await db.SaveChangesAsync(ct);
 
@@ -360,6 +361,40 @@ public static class SeedData
             if (mobile is not null)
             {
                 r.Mobile = mobile;
+                changed = true;
+            }
+        }
+        if (changed)
+            await db.SaveChangesAsync(ct);
+    }
+
+    // Name -> region for people who arrive via import without a region. Fills only blank/UNSPECIFIED (never overwrites).
+    private static readonly Dictionary<string, string> ResourceRegionSeed = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Higor Barbosa"] = "LATAM",
+        ["Diego Barriguete Rodriguez"] = "AMER",
+        ["Felipe Oliveira"] = "LATAM",
+        ["Rajdeep Nag Choudhury"] = "ASIA",
+    };
+
+    private static async Task SeedResourceRegionsAsync(AppDbContext db, CancellationToken ct)
+    {
+        static string Norm(string? s) => new string((s ?? string.Empty).ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+        var byNorm = ResourceRegionSeed.ToDictionary(kv => Norm(kv.Key), kv => kv.Value);
+
+        var all = await db.Resources.ToListAsync(ct);
+        var changed = false;
+        foreach (var r in all)
+        {
+            if (!string.IsNullOrWhiteSpace(r.Region) && r.Region != "UNSPECIFIED")
+                continue;
+            var keys = new List<string> { Norm(r.Name) };
+            if (!string.IsNullOrWhiteSpace(r.Aliases))
+                keys.AddRange(r.Aliases.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(Norm));
+            var region = keys.Select(k => byNorm.TryGetValue(k, out var g) ? g : null).FirstOrDefault(g => g is not null);
+            if (region is not null)
+            {
+                r.Region = region;
                 changed = true;
             }
         }
