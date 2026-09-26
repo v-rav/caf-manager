@@ -155,7 +155,7 @@ export function AnalyticsPage() {
   const { data, loading, error, reload } = useAsync(() => api.analytics(region), [region])
 
   const [basis, setBasis] = useState('completed')
-  const [granularity, setGranularity] = useState('quarter')
+  const [granularity, setGranularity] = useState('month')
   const [measure, setMeasure] = useState('count')
   const [splitBy, setSplitBy] = useState('none')
   // Default the FY filter to the current fiscal year (Jul 1 start, end-year label).
