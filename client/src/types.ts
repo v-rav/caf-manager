@@ -5,6 +5,32 @@ export interface NameValue {
   value: number
 }
 
+export interface Analytics {
+  totalApproved: number
+  inFlight: number
+  completed: number
+  totalAcr: number
+  nnrAcr: number
+  totalCores: number
+  withAcr: number
+  toolAttached: number
+  automationUsed: number
+  toolFlagDenom: number
+  byStage: NameValue[]
+  byHealth: NameValue[]
+  bySla: NameValue[]
+  byRegion: NameValue[]
+  bySegment: NameValue[]
+  byMigrationPath: NameValue[]
+  byModeOfAccess: NameValue[]
+  waveLinkage: NameValue[]
+  acrByRegion: NameValue[]
+  acrBySegment: NameValue[]
+  acrByMigrationPath: NameValue[]
+  coresByStage: NameValue[]
+  topPartnersByAcr: NameValue[]
+}
+
 export interface ExecutiveDashboard {
   totalResources: number
   activeAccounts: number

@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<ICapacityCalculationService, CapacityCalculationService>();
         services.AddScoped<ICapacityRebuildService, CapacityRebuildService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IAnalyticsService, AnalyticsService>();
         services.AddScoped<IResourceService, ResourceService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<ICapacityService, CapacityService>();

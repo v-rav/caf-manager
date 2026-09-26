@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { AccountsPage } from './pages/AccountsPage'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 import { BackupPage } from './pages/BackupPage'
 import { CapacityPage } from './pages/CapacityPage'
 import { ConfigurationPage } from './pages/ConfigurationPage'
@@ -19,6 +20,7 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: 'analytics', element: <AnalyticsPage /> },
       { path: 'resources', element: <ResourcesPage /> },
       { path: 'accounts', element: <AccountsPage /> },
       { path: 'capacity', element: <CapacityPage /> },

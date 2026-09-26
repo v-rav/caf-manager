@@ -7,6 +7,11 @@ public interface IDashboardService
     Task<ExecutiveDashboardDto> GetExecutiveAsync(string? region, CancellationToken ct = default);
 }
 
+public interface IAnalyticsService
+{
+    Task<AnalyticsDto> GetAsync(string? region, CancellationToken ct = default);
+}
+
 public interface IResourceService
 {
     Task<IReadOnlyList<ResourceDto>> GetAllAsync(ResourceQuery query, CancellationToken ct = default);

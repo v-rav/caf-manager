@@ -3,6 +3,7 @@ import type {
   Account,
   AccountDetail,
   AccountUpsert,
+  Analytics,
   CapacityRow,
   ExecutiveDashboard,
   DataStatus,
@@ -38,6 +39,9 @@ const http = axios.create({ baseURL: '' })
 export const api = {
   dashboard: (region?: string) =>
     http.get<ExecutiveDashboard>('/api/dashboard/executive', { params: { region } }).then((r) => r.data),
+
+  analytics: (region?: string) =>
+    http.get<Analytics>('/api/analytics', { params: { region } }).then((r) => r.data),
 
   adminStatus: () => http.get<DataStatus>('/api/admin/status').then((r) => r.data),
 

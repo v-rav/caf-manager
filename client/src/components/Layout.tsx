@@ -5,6 +5,7 @@ import {
   CalendarLtrRegular,
   DatabaseRegular,
   DataPieRegular,
+  DataTrendingRegular,
   GaugeRegular,
   HistoryRegular,
   LinkMultipleRegular,
@@ -22,6 +23,7 @@ import { useRegion } from '../region'
 
 const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
   { to: '/', label: 'Executive Dashboard', end: true, icon: <DataPieRegular /> },
+  { to: '/analytics', label: 'Migration Analytics', icon: <DataTrendingRegular /> },
   { to: '/resources', label: 'Resource Hub', icon: <PeopleRegular /> },
   { to: '/accounts', label: 'Account Hub', icon: <BuildingRegular /> },
   { to: '/capacity', label: 'Capacity', icon: <GaugeRegular /> },
