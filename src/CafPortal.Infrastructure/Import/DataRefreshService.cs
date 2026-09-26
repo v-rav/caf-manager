@@ -48,22 +48,14 @@ public class DataRefreshService(
                 ? _sources.Directory
                 : Path.Combine(_env.ContentRootPath, _sources.Directory);
 
-            var resourcePath = Path.Combine(baseDir, _sources.ResourceFile);
             var leavePath = Path.Combine(baseDir, _sources.LeaveFile);
             var engagementPath = Path.Combine(baseDir, _sources.EngagementFile);
             var nominationPath = Path.Combine(baseDir, _sources.NominationFile);
             var accountMasterPath = Path.Combine(baseDir, _sources.AccountMasterFile);
 
-            // Only clear a fact table when its source file exists; otherwise preserve seeded/manual data.
-            if (File.Exists(resourcePath))
-            {
-                await _db.ResourceAccounts.ExecuteDeleteAsync(ct);
-                result.ResourcesImported = await TryImportAsync(resourcePath, _resourceImport, "Resource mapping", result, ct);
-            }
-            else
-            {
-                result.Messages.Add($"Resource mapping: source file not found ({_sources.ResourceFile}), preserved existing data.");
-            }
+            // Resources are the system of record in the app: managed manually or via an explicit
+            // Excel upload only. The general refresh never imports/overwrites the resources table.
+            result.Messages.Add("Resources: not refreshed (manual / Excel-upload only).");
 
             if (File.Exists(leavePath))
             {
@@ -133,10 +125,16 @@ public class DataRefreshService(
         if (!fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Only .xlsx workbooks are supported.");
 
-        var target = kind?.Trim().ToLowerInvariant() switch
+        var normalizedKind = kind?.Trim().ToLowerInvariant();
+
+        // Resources are manual / upload-only: import the uploaded workbook directly (one-shot) and
+        // never stage it into SourceData, where the general refresh would otherwise re-import it.
+        if (normalizedKind is "resources" or "resource")
+            return await ImportResourcesUploadAsync(content, fileName, ct);
+
+        var target = normalizedKind switch
         {
             "nominations" or "nomination" => _sources.NominationFile,
-            "resources" or "resource" => _sources.ResourceFile,
             "leave" => _sources.LeaveFile,
             "engagement" => _sources.EngagementFile,
             "accounts" or "account-master" or "accountmaster" => _sources.AccountMasterFile,
@@ -164,6 +162,37 @@ public class DataRefreshService(
             run.FileName = Path.GetFileName(fileName);
             await _db.SaveChangesAsync(ct);
         }
+        return result;
+    }
+
+    // Imports an uploaded resources workbook directly (upsert), then rebuilds capacity. Not staged into
+    // SourceData, so it never becomes a recurring auto-source — the resources table stays manual/upload-only.
+    private async Task<DataRefreshResultDto> ImportResourcesUploadAsync(Stream content, string fileName, CancellationToken ct)
+    {
+        var result = new DataRefreshResultDto { StartedUtc = DateTimeOffset.UtcNow };
+        try
+        {
+            using var buffer = new MemoryStream(); // buffer so the workbook reader can seek the upload stream
+            await content.CopyToAsync(buffer, ct);
+            buffer.Position = 0;
+
+            result.ResourcesImported = await _resourceImport.ImportAsync(buffer, ct);
+            result.ResourceAccountLinks = await _db.ResourceAccounts.CountAsync(ct);
+            result.AccountsImported = await _db.Accounts.CountAsync(ct);
+            await SyncStrategicFlagsAsync(ct);
+            result.CapacityRowsRebuilt = await _capacityRebuild.RebuildAllAsync(ct);
+            result.Messages.Add($"Resources imported from upload ({Path.GetFileName(fileName)}); capacity rebuilt.");
+            result.Success = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Resource upload import failed");
+            result.Success = false;
+            result.Messages.Add($"Resource import failed: {ex.Message}");
+        }
+        result.CompletedUtc = DateTimeOffset.UtcNow;
+        if (result.Success)
+            await StampRefreshAsync(result.CompletedUtc, ct);
         return result;
     }
 

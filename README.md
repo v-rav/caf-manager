@@ -111,7 +111,8 @@ Open <http://localhost:5080> — the API serves the SPA and the JSON endpoints t
 | GET | `/api/configuration/roles` | Configured roles + permissions |
 | GET · PUT | `/api/configuration/capacity` | Read / bulk-update optimal accounts per role (rebuilds capacity) |
 | GET · POST · PUT | `/api/configuration/segments` | List / add / rename account segments |
-| POST | `/api/admin/refresh` | On-demand import + capacity rebuild |
+| POST | `/api/admin/refresh` | On-demand import of operational data (nominations, accounts, leave, engagement) + capacity rebuild. **Does not touch the resources table.** |
+| POST | `/api/admin/upload?kind=` | Upload an `.xlsx` for a source. `kind=resources` imports the resources table directly (one-shot, not staged); other kinds stage into `SourceData/` and refresh. |
 
 ---
 
@@ -133,6 +134,12 @@ managing everything directly in the app:
 
 Startup only rebuilds the capacity snapshot — it never re-imports from the workbooks — so web edits
 persist across restarts. The nightly import job is disabled by default (`BackgroundRefresh:Enabled`).
+
+**The resources table is never auto-imported.** `Refresh Data` imports only operational data
+(nominations, accounts, leave, engagement). Resources are the app's system of record: add / edit /
+delete them **manually in the UI**, or do a deliberate **Excel upload** (`POST /api/admin/upload?kind=resources`).
+A resources upload is a one-shot import — it is not staged in `SourceData/`, so it never becomes a
+recurring source that re-creates deleted or renamed people on the next refresh.
 
 ---
 
@@ -182,3 +189,7 @@ Notes:
   already live in configuration tables.
 - **Phase 3 — AI recommendations** (who can take a nomination, skills/leave-aware matching).
 - **Phase 4 — Global CAF platform** across EMEA / ASIA / AMER in one governance portal.
+
+
+DB
+src/CafPortal.Api/App_Data/cafdb.sqlite
