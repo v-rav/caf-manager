@@ -45,6 +45,11 @@ import the **web app is the system of record**.
 - **Capacity model**: `1 resource = 5 active accounts`. `Utilization = AccountCount / CapacityLimit`.
   Bands: 0–2 Available · 3–4 Partially Utilized · 5 Fully Utilized · 6+ Overloaded. `CapacityRowDto`
   carries a `HeatColor` (Green/Amber/Red).
+  - **Account count is nomination-derived**: distinct in-flight accounts via `NominationResource → Nomination
+    → Account` (Approved + not settled), NOT the noisy `ResourceAccounts` links. Both the live `CapacityService`
+    (Capacity page/export) and the materialized `CapacityFact` (Dashboard + Resources page) use this basis and the
+    same `ResolveCapacityLimitAsync` limit engine, so all three agree. `CapacityRebuildService` rebuilds
+    `CapacityFact` on startup and after every import/merge/park.
 - **Nomination = migration tracking**. Two distinct tracking fields, keep them separate:
   - **Stage** (`Nomination.MigrationStatus`): which **phase** of the migration journey. Show as a
     **number 1–4**, not raw text. Mapping (keyword → stage) lives in `STAGES` +
@@ -111,6 +116,15 @@ import the **web app is the system of record**.
     (segment-present = "in master list"). New master accounts get `Region=UNSPECIFIED` (not in the file).
     The **Accounts page** owns master + ownership actions only; associated info (resources, nominations,
     engagements) lives on its own page.
+  - **Account de-duplication** (`POST /api/admin/merge-accounts?apply=`): folds casing/punctuation variants
+    into the TPID-bearing master (re-points Nomination/ResourceAccount/WaveLink/EngagementFact/OwnershipHistory/
+    StrategicAccount FKs, keeps the variant as an alias). Skips non-Latin names and groups with ≥2 distinct TPIDs.
+  - **Account parking** (`POST /api/admin/park-accounts?apply=`, `POST /api/admin/unpark-accounts`): the master is
+    **TPID-keyed canonical customers**; **no-TPID rows are non-canonical** (departments / app names / abbreviations
+    from name-only imports) and move to the reversible **`ParkedAccount`** snapshot (full record + resource links +
+    referencing nomination ids). **Skips any no-TPID account a nomination still references** (kept in the master until
+    the next FDO drop gives it a TPID) so nothing is orphaned. Nullable FKs nulled; non-null `ResourceAccount`/
+    `OwnershipHistory` recorded then removed; **Unpark** fully restores. Signal: `no TPID ⇒ no segment ⇒ not in master`.
 - **Regions**: Global Lead → EMEA (Ravinder Rana) / ASIA. Region scope flows from `region.tsx`.
 
 ## UI conventions
@@ -142,7 +156,8 @@ import the **web app is the system of record**.
 - `GET /api/admin/status` → counts + `lastRefreshUtc` (stamped by `DataRefreshService` on every
   successful import). Surfaced as "Updated Xm ago" in the header.
 - `GET /api/export/{resources|capacity|nominations|performance|summary}` → `.xlsx` (ClosedXML
-  `ExportService` in Infrastructure). Keep export columns in sync when grid columns change. The
+  `ExportService` in Infrastructure). Keep export columns in sync when grid columns change. The **capacity**
+  export includes an **Assigned Accounts** column (semicolon-joined) matching the on-screen hover. The
   **nominations** export is filter-aware: it accepts the same query params as the grid
   (`approval`, `migrationStatus`, `currentState`, `sla`, `links`, `search`, `region`) so the file
   matches the on-screen view — the Export button passes the live filter state via
@@ -175,5 +190,13 @@ See `DEVELOPMENT-PLAN.md` §6 (Phase 4). Shipped: data-freshness banner, Excel e
 nominations export + Analysis sheet), dashboard drill-through, capacity heat-band, Nominations
 restructure (Stage/Status/Summary/TPID/PM/CFTL/SA), approval-status default-Approved, DB
 backup/restore (`/backup`).
+- **Capacity page cockpit**: Headroom column, Available-capacity + Bench KPIs, Bench filter,
+  per-row leave-clash flag, Resource→Nominations drill-through (`?person=`), capacity export account list.
+- **Dashboard data-source alignment**: `CapacityFact` is nomination-derived (matches the Capacity page);
+  **Active Nominations** = Approved & in-flight (not deprecated `Status==Open`); **Total Accounts** relabel;
+  **Strategic** KPI + coverage use `Segment == 'Strategic'` (68 canonical customers, not the seed flag);
+  capacity doughnut uses heat-band colours.
+- **Account data quality**: de-dup merge (`/api/admin/merge-accounts`) + reversible no-TPID parking
+  (`/api/admin/park-accounts` / `unpark-accounts`, `ParkedAccount` table); Accounts hub Segment/Status/TPID filters.
 Backlog: Leave intake data source, trends/snapshots, my-view, global search, Entra auth, in-app
 upload, API smoke tests.

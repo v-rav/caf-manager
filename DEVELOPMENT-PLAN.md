@@ -133,6 +133,22 @@ gap. Priority: 🔴 Now · 🟠 Next · ⚪ Later.
 data decision (leave source), new infra (auth, snapshots background job), or product scoping (my-view),
 and are best done as follow-ups once the cockpit changes prove out.
 
+### Shipped since Phase 4 (data-quality + cockpit)
+
+- **Capacity page cockpit** — Headroom column, Available-capacity + Bench KPIs, Bench filter, per-row
+  leave-clash flag, Resource→Nominations drill-through (`?person=`), and an **Assigned Accounts** column
+  in the capacity export.
+- **Dashboard data-source alignment** — `CapacityFact` now counts nomination-derived in-flight accounts
+  (Approved + not settled) and resolves limits via the shared engine, so Dashboard/Resources match the
+  live Capacity page. **Active Nominations** = Approved & in-flight (not the deprecated `Status==Open`).
+  **Strategic Accounts** KPI + coverage use `Segment == 'Strategic'` (canonical, not the seed flag).
+  Capacity doughnut uses heat-band colours.
+- **Account data quality** — `POST /api/admin/merge-accounts` folds casing/punctuation duplicates into
+  the TPID master (alias-preserving); `POST /api/admin/park-accounts` / `unpark-accounts` move no-TPID
+  non-canonical rows to a reversible `ParkedAccount` table, skipping any a nomination references.
+- **Consistent search + filters** — Accounts hub gains Segment/Status/TPID filters (parity with the
+  other grids).
+
 ## 7. Pending / to verify (known caveats)
 
 | # | Item | Why it matters | Status |

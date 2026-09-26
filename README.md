@@ -116,6 +116,9 @@ Open <http://localhost:5080> — the API serves the SPA and the JSON endpoints t
 | POST | `/api/admin/refresh` | On-demand import of operational data (nominations, accounts, leave, engagement) + capacity rebuild. **Does not touch the resources table.** |
 | POST | `/api/admin/upload?kind=` | Upload an `.xlsx` for a source. `kind=resources` imports the resources table directly (one-shot, not staged); other kinds stage into `SourceData/` and refresh. |
 | POST | `/api/admin/seed` | Re-run the one-time seed on demand (configuration + resource enrichments). Seeding otherwise runs only once, at first start. |
+| POST | `/api/admin/merge-accounts?apply=` | Preview/merge casing-punctuation duplicate accounts into the TPID master (re-points FKs, keeps the variant as an alias). `apply=false` previews. |
+| POST | `/api/admin/park-accounts?apply=` | Preview/move no-TPID (non-canonical) accounts out of the master into `ParkedAccount`; skips any a nomination references (no orphans). Reversible. |
+| POST | `/api/admin/unpark-accounts` | Restore every parked account (re-creates the account, its resource links, and nomination references). |
 
 ---
 
