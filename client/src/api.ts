@@ -14,6 +14,8 @@ import type {
   Blocker,
   NominationEvent,
   LookupValue,
+  AcrRates,
+  AcrEstimate,
   ImportChange,
   ImportRun,
   LeaveClash,
@@ -239,6 +241,12 @@ export const api = {
     http.put<LookupValue>(`/api/configuration/lookups/${id}`, { name }).then((r) => r.data),
   deleteLookup: (id: number) =>
     http.delete(`/api/configuration/lookups/${id}`).then((r) => r.data),
+  acrRates: () =>
+    http.get<AcrRates>('/api/acr/rates').then((r) => r.data),
+  saveAcrRates: (rates: AcrRates) =>
+    http.put<AcrRates>('/api/acr/rates', rates).then((r) => r.data),
+  acrEstimate: (body: { targetService: string; apps?: number | null; cores?: number | null }) =>
+    http.post<AcrEstimate>('/api/acr/estimate', body).then((r) => r.data),
   governanceEvents: (nominationId: number) =>
     http.get<NominationEvent[]>(`/api/nominations/${nominationId}/governance/events`).then((r) => r.data),
   performance: (region?: string) =>

@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IGovernanceService, GovernanceService>();
         services.AddScoped<ILookupService, LookupService>();
+        services.AddScoped<IAcrService, AcrService>();
         return services;
     }
 }

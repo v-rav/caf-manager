@@ -550,6 +550,24 @@ export interface LookupValue {
   value: string
   sortOrder: number
 }
+export interface AcrRates {
+  annualizationMonths: number
+  appServiceArpuPerCoreMonth: number
+  appServiceCoresPerApp: number
+  aksLinuxArpuPerCoreMonth: number
+  aksWindowsArpuPerCoreMonth: number
+  aksCoresPerApp: number
+  acaArpuPerCoreHour: number
+  acaUtilization: number
+  acaHoursPerMonth: number
+}
+export interface AcrEstimate {
+  targetService: string
+  cores: number
+  monthlyAcr: number
+  annualAcr: number
+  formula: string
+}
 
 export interface AttainmentBucket {
   key: string

@@ -5,7 +5,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
-import type { AppUser, RoleCapacity, UserRole } from '../types'
+import type { AppUser, RoleCapacity, UserRole, AcrRates, AcrEstimate } from '../types'
 
 export function ConfigurationPage() {
   const { data, loading, error, reload } = useAsync(() => api.roleCapacity(), [])
@@ -128,6 +128,7 @@ export function ConfigurationPage() {
       <LookupPanel title="Classifications" category="Classification" placeholder="New classification" hint="Operating-model classifications on a nomination (Standard Factory, Strategic Pilot, …)." />
       <LookupPanel title="Velocity impact" category="VelocityImpact" placeholder="New level" hint="Strategic-account velocity-impact levels." />
       <LookupPanel title="Milestone types" category="Milestone" placeholder="New milestone" hint="Dated app-factory events captured in the workspace (kick-off, runbook shared, actual migration start, …)." />
+      <AcrRatesPanel />
       <OperationsSettingsPanel />
       <FiscalTargetsPanel />
     </div>
@@ -353,6 +354,109 @@ function LookupPanel({ title, category, placeholder, hint }: { title: string; ca
           </div>
         </>
       )}
+    </Panel>
+  )
+}
+
+// Editable FDO ACR calculation rates (App Factory thumb-rules): rate master + live estimator.
+function AcrRatesPanel() {
+  const { data, loading, error, reload } = useAsync(() => api.acrRates(), [])
+  const [edits, setEdits] = useState<AcrRates | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [svc, setSvc] = useState('AppService')
+  const [apps, setApps] = useState('10')
+  const [cores, setCores] = useState('')
+  const [est, setEst] = useState<AcrEstimate | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => { if (data) setEdits(data) }, [data])
+  const set = (k: keyof AcrRates, v: string) => setEdits((e) => (e ? { ...e, [k]: Number(v) } : e))
+  const save = async () => {
+    if (!edits) return
+    setSaving(true)
+    try { await api.saveAcrRates(edits); setSaved(true); setTimeout(() => setSaved(false), 2500) } finally { setSaving(false) }
+  }
+  const estimate = async () => {
+    setBusy(true)
+    try { setEst(await api.acrEstimate({ targetService: svc, apps: apps ? Number(apps) : null, cores: cores ? Number(cores) : null })) } finally { setBusy(false) }
+  }
+  const money = (n: number) => `$${Math.round(n).toLocaleString()}`
+
+  const num = (label: string, k: keyof AcrRates) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Text size={100} style={{ color: 'var(--colorNeutralForeground3)' }}>{label}</Text>
+      <Input type="number" value={String(edits?.[k] ?? '')} onChange={(_, d) => set(k, d.value)} style={{ width: 140 }} />
+    </div>
+  )
+
+  return (
+    <Panel
+      title="ACR calculation rates"
+      action={
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {saved && <Text size={200} style={{ color: 'var(--colorPaletteGreenForeground1)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckmarkCircleRegular /> Saved</Text>}
+          <Button appearance="primary" icon={<SaveRegular />} onClick={save} disabled={saving || !edits}>{saving ? 'Saving…' : 'Save rates'}</Button>
+        </div>
+      }
+    >
+      {loading ? <Loading /> : error ? <ErrorText error={error} onRetry={reload} /> : edits ? (
+        <>
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
+            FDO App Factory thumb-rules: Annualized ACR = monthly consumption × months. App Service $98/core/mo (1 app = 2 cores),
+            AKS Linux $30, AKS Windows $56 (1 app ≈ 4 cores), ACA = ARPU/core/hr × cores × utilization × hours/mo. Editable — the estimator below uses these.
+          </Text>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18 }}>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>{num('Annualization (months)', 'annualizationMonths')}</div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', paddingLeft: 12, borderLeft: '1px solid var(--colorNeutralStroke2)' }}>
+              {num('App Service $/core/mo', 'appServiceArpuPerCoreMonth')}
+              {num('App Service cores/app', 'appServiceCoresPerApp')}
+            </div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', paddingLeft: 12, borderLeft: '1px solid var(--colorNeutralStroke2)' }}>
+              {num('AKS Linux $/core/mo', 'aksLinuxArpuPerCoreMonth')}
+              {num('AKS Windows $/core/mo', 'aksWindowsArpuPerCoreMonth')}
+              {num('AKS cores/app', 'aksCoresPerApp')}
+            </div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', paddingLeft: 12, borderLeft: '1px solid var(--colorNeutralStroke2)' }}>
+              {num('ACA $/core/hr', 'acaArpuPerCoreHour')}
+              {num('ACA utilization', 'acaUtilization')}
+              {num('ACA hours/mo', 'acaHoursPerMonth')}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--colorNeutralStroke2)' }}>
+            <Text weight="semibold" style={{ display: 'block', marginBottom: 8 }}>Estimator</Text>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Text size={100} style={{ color: 'var(--colorNeutralForeground3)' }}>Target service</Text>
+                <Dropdown value={svc} selectedOptions={[svc]} onOptionSelect={(_, d) => setSvc(d.optionValue ?? svc)} style={{ minWidth: 150 }}>
+                  <Option value="AppService">App Service</Option>
+                  <Option value="AksLinux">AKS Linux</Option>
+                  <Option value="AksWindows">AKS Windows</Option>
+                  <Option value="Aca">ACA</Option>
+                </Dropdown>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Text size={100} style={{ color: 'var(--colorNeutralForeground3)' }}>Apps in scope</Text>
+                <Input type="number" value={apps} onChange={(_, d) => setApps(d.value)} style={{ width: 120 }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Text size={100} style={{ color: 'var(--colorNeutralForeground3)' }}>Cores (override)</Text>
+                <Input type="number" value={cores} onChange={(_, d) => setCores(d.value)} placeholder="auto" style={{ width: 120 }} />
+              </div>
+              <Button appearance="secondary" onClick={estimate} disabled={busy}>Estimate</Button>
+            </div>
+            {est && (
+              <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <Badge appearance="tint" color="brand">{est.cores} cores</Badge>
+                <Badge appearance="tint" color="informative">{money(est.monthlyAcr)}/mo</Badge>
+                <Badge appearance="filled" color="success">{money(est.annualAcr)}/yr</Badge>
+                <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>{est.formula}</Text>
+              </div>
+            )}
+          </div>
+        </>
+      ) : null}
     </Panel>
   )
 }

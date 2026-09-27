@@ -250,6 +250,11 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   Vocab endpoints (`blocker-categories/owners`, `nominations/vocab`, `milestone-types`) read from it (fallback to
   defaults). `ILookupService.ValuesAsync(category)`. Existing rows keep their stored string, so editing/deleting a
   value never orphans data.
+- **ACR rate master + estimator** — editable FDO ACR thumb-rules stored as `ApplicationSettings` (`Acr*` keys, with
+  documented defaults: App Service $98/core/mo · 1 app = 2 cores · AKS Linux $30 · AKS Windows $56 · 1 app ≈ 4 cores ·
+  ACA = $/core/hr × cores × utilization × hours/mo · ×12 annualization). `IAcrService` reads/writes them and estimates
+  ACR from apps or cores: `GET/PUT /api/acr/rates`, `POST /api/acr/estimate`. Edited in **Configuration → ACR
+  calculation rates** (rate fields + a live estimator). Verified vs FDO: 10 App Service apps → $23,520/yr.
 
 ## Editing rules for agents
 - Read a file before editing; keep changes minimal and scoped to the request.
