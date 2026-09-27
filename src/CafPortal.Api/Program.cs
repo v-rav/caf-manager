@@ -1,4 +1,6 @@
+using CafPortal.Api.Auth;
 using CafPortal.Application;
+using CafPortal.Application.Abstractions;
 using CafPortal.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics;
@@ -17,6 +19,9 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 // Phase 1: no authentication. CORS opens the SPA dev origin; Program is structured so
 // Entra ID (AddAuthentication().AddMicrosoftIdentityWebApi(...)) can be added here later.

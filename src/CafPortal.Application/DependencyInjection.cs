@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<IImportHistoryService, ImportHistoryService>();
         services.AddScoped<IReconciliationService, ReconciliationService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IGovernanceService, GovernanceService>();
         return services;
     }
 }

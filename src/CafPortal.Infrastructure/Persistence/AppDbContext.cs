@@ -2,6 +2,7 @@ using CafPortal.Application.Abstractions;
 using CafPortal.Domain.Entities;
 using CafPortal.Domain.Entities.Auth;
 using CafPortal.Domain.Entities.Configuration;
+using CafPortal.Domain.Entities.Governance;
 using Microsoft.EntityFrameworkCore;
 
 namespace CafPortal.Infrastructure.Persistence;
@@ -34,6 +35,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CapacityConfiguration> CapacityConfigurations => Set<CapacityConfiguration>();
     public DbSet<ApplicationSetting> ApplicationSettings => Set<ApplicationSetting>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
+    public DbSet<GateDefinition> GateDefinitions => Set<GateDefinition>();
+    public DbSet<GateItemDefinition> GateItemDefinitions => Set<GateItemDefinition>();
+    public DbSet<NominationGateItem> NominationGateItems => Set<NominationGateItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

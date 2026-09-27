@@ -52,6 +52,9 @@ public static class DbInitializer
             logger.LogWarning("Seeded default admin (username 'admin', password 'admin') \u2014 must be changed on first login.");
         }
 
+        // Seed the 8-gate governance template (idempotent — only when empty).
+        await GateTemplateSeed.SeedAsync(db, ct);
+
         if (workbookExists && !hasResources)
         {
             // Fresh database + real workbook present: run the one-time import automatically.

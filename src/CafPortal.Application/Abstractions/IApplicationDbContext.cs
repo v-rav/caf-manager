@@ -1,6 +1,7 @@
 using CafPortal.Domain.Entities;
 using CafPortal.Domain.Entities.Auth;
 using CafPortal.Domain.Entities.Configuration;
+using CafPortal.Domain.Entities.Governance;
 using Microsoft.EntityFrameworkCore;
 
 namespace CafPortal.Application.Abstractions;
@@ -33,6 +34,9 @@ public interface IApplicationDbContext
     DbSet<CapacityConfiguration> CapacityConfigurations { get; }
     DbSet<ApplicationSetting> ApplicationSettings { get; }
     DbSet<AppUser> AppUsers { get; }
+    DbSet<GateDefinition> GateDefinitions { get; }
+    DbSet<GateItemDefinition> GateItemDefinitions { get; }
+    DbSet<NominationGateItem> NominationGateItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
