@@ -12,7 +12,8 @@ public record GateDto(
 public record NominationGovernanceDto(
     int NominationId, string? Account, string? Tpid, string? Classification, string? CurrentGateKey,
     int CompliancePercent, IReadOnlyList<GateDto> Gates, IReadOnlyList<BlockerDto> Blockers,
-    int MsiScore, string MsiBand);
+    int MsiScore, string MsiBand,
+    int? Stage = null, string? Pm = null, string? Cftl = null, string? Sa = null, int? AgeDays = null, int ClockStoppedDays = 0);
 
 public record BlockerDto(
     int Id, int NominationId, string? Account, int? GateItemDefId, string Category, bool ClockStopped, string? Owner,

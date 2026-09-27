@@ -499,6 +499,12 @@ export interface Governance {
   blockers: Blocker[]
   msiScore: number
   msiBand: string
+  stage?: number
+  pm?: string
+  cftl?: string
+  sa?: string
+  ageDays?: number
+  clockStoppedDays: number
 }
 export interface Blocker {
   id: number

@@ -15,7 +15,11 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
     {
         var nom = await _db.Nominations.AsNoTracking()
             .Where(n => n.Id == nominationId)
-            .Select(n => new { n.Id, n.AccountName, Tpid = n.Account != null ? n.Account.Tpid : null, n.GhcpAdoptionLevel })
+            .Select(n => new
+            {
+                n.Id, n.AccountName, Tpid = n.Account != null ? n.Account.Tpid : null, n.GhcpAdoptionLevel,
+                n.Classification, n.MigrationStatus, n.StageAgeDays, n.ProjectCoordinator, n.CftlPrimary, n.SolutionArchitect,
+            })
             .FirstOrDefaultAsync(ct);
         if (nom is null) return null;
 
@@ -34,7 +38,30 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             .OrderByDescending(b => b.BlockedSinceUtc)
             .ToListAsync(ct);
 
-        return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, nom.GhcpAdoptionLevel);
+        var now = DateTime.UtcNow;
+        var clockStoppedDays = openBlockers.Where(b => b.ClockStopped)
+            .Sum(b => Math.Max(0, (int)(now - b.BlockedSinceUtc).TotalDays));
+
+        return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, nom.GhcpAdoptionLevel) with
+        {
+            Classification = nom.Classification,
+            Stage = StageNum(nom.MigrationStatus),
+            Pm = nom.ProjectCoordinator,
+            Cftl = nom.CftlPrimary,
+            Sa = nom.SolutionArchitect,
+            AgeDays = nom.StageAgeDays,
+            ClockStoppedDays = clockStoppedDays,
+        };
+    }
+
+    private static int? StageNum(string? migration)
+    {
+        var m = migration?.ToLowerInvariant() ?? string.Empty;
+        if (m.Contains("executing migration")) return 4;
+        if (m.Contains("finalize")) return 3;
+        if (m.Contains("pre-requisite") || m.Contains("prerequisite") || m.Contains("pre requisite")) return 2;
+        if (m.Contains("validating")) return 1;
+        return null;
     }
 
     public static IReadOnlyList<string> BlockerCategories { get; } = new[]
