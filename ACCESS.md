@@ -17,6 +17,10 @@ On first run the portal seeds one administrator:
 > ⚠ Change the default password immediately. The default only exists to bootstrap the first admin and is
 > forced to change on first login.
 
+> **Note (current dev database):** on the checked-in dev instance the admin password has already been changed
+> to **`admin@1234`** (and the forced-change prompt cleared), so sign in with `admin` / `admin@1234` there. A
+> fresh database still seeds `admin` / `admin` with a forced change on first login, as above.
+
 ## Roles
 | Role | Purpose |
 |------|---------|

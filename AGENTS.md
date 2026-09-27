@@ -194,6 +194,63 @@ import the **web app is the system of record**.
   zip returns **400** with a message. ⚠ Restore is **unauthenticated** (like the rest pre-Entra) and
   `prerestore_*` copies accumulate in `App_Data` (gitignored) — add auth + a keep-last-N prune later.
 
+## Factory Operating System (P1–P5, shipped)
+The portal is now a gated, SA-owned **Factory Operating System** on top of the visibility portal. Blueprint:
+`FACTORY-OPERATING-SYSTEM.md`. All FOS data is **portal-owned** (never overwritten by FDO imports). Governance
+entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurations/GovernanceMaps.cs`;
+`GovernanceService` + `NominationService` compute the derived scores.
+
+- **Auth (custom logins, not Entra)** — cookie auth (`caf.auth`, HttpOnly, 8h sliding), PBKDF2 in
+  `PasswordHashing`, roles **Admin/Lead/SA**. `AppUser` entity; `AuthController` (login/logout/me/change-password),
+  `UsersController` (`[Authorize(Roles="Admin")]` CRUD + reset). `ICurrentUser`/`CurrentUser` read claims.
+  Frontend `auth.tsx` gates the router (`LoginPage`, forced password change). **Admin login `admin` / `admin@1234`.**
+  Default admin seeded idempotently in `DbInitializer`. `ACCESS.md` documents it. ⚠ Backup/restore still
+  unauthenticated.
+- **Gate engine (P1)** — 8-gate SA template (`GateDefinition` + `GateItemDefinition`, seeded idempotently by
+  `GateTemplateSeed`: G1 Discovery w10 · G2 Prerequisites w15 · G3 Assessment w15 · G4 Scope w20 · G5 Architecture
+  w10 · G6 Delivery Readiness w8 · G7 Delivery Governance w7 (17 items by SubStage) · G8 Closure w5). Per-nomination
+  state = `NominationGateItem` (Pending/Done/NotApplicable). **Readiness compliance %** = weight-weighted gate
+  completion. **Real SA Workspace** at `/nominations/:id` (`NominationWorkspacePage`): 3-column — gate stepper
+  (red "!" on current gate) │ current-gate checklist (checkbox + **N/A toggle**, kind chips, doc-ref link, mandatory
+  ⚑, **Advance ▸** button enabled only when the gate is Green) │ **Blockers + Milestones + Timeline** rail. Header:
+  account **· short-name**, classification + **FDO Stage** + TPID badges, **PM/CFTL/SA · Age · clock-stopped** meta,
+  **Readiness + MSI** cards. Account cell on `/nominations` links here.
+- **Blockers & clock-aware SLA (P2)** — `NominationBlocker` (category · **clock-stopped** · owner · ETA · notes ·
+  raised/resolved-by). Raise/resolve in the workspace; **Governance Board** at `/governance` (open blockers, KPIs,
+  by-category, aging table, resolve). **Clock-aware SLA**: `NominationService` subtracts clock-stopped windows from
+  stage age → `EffectiveAgeDays`; `StaleTier` runs off effective age (a live clock-stop freezes it). Grid shows a
+  **Paused** chip. `GET /api/governance/blockers|blocker-categories|blocker-owners`.
+- **Audit log (P2)** — append-only `NominationEvent` (type · field · old→new · by · at). Logged on gate-item change,
+  blocker raise/resolve, milestone add. **Timeline** panel on the workspace; `GET .../governance/events`.
+- **Classification & strategic register (P3)** — `Nomination.Classification` (vocab) + `VelocityImpact` +
+  strategic **time-threshold tier** (A.13 60/90/120 → Green/Amber/Red/Exec on days-in-flight). Grid **Class** column
+  + Classification filter; Manage-dialog fields. **Strategic Investment Register** at `/strategic` (tier KPIs,
+  %-of-active-pipeline, by-classification, aging table). `isStrategic` = classification ≠ Standard Factory.
+- **GHCP adoption (P4)** — `Nomination.GhcpAdoptionLevel` (0–7, A.10), Manage-dialog dropdown. **GHCP Adoption**
+  page at `/adoption` (licensed L4+ · awaiting L1–3 · used% · tool-attached% · 0–7 distribution · by-region).
+- **MSI (P5a)** — **Migration Success Index** (`MsiCalculator` in `Application/Common`): `30% Readiness (G1–3) +
+  20% Scope (G4–5) + 20% Delivery (G6–7) + 10% Risk (blockers) + 10% GHCP (level/7) + 10% Sign-off (G8)`, bands
+  Green >80 / Amber 60–80 / Red <60. Grid **MSI** column (component tooltip) + workspace header card; computed in
+  both `NominationService` (grid) and `GovernanceService` (workspace) so they agree.
+- **Migration Flow (P5b)** — `/flow` (`FlowPage`): funnel conversion/drop-off across the journey + bottleneck
+  analytics (in-flight by stage × age, blockers by category, SA workload, by migration type). Derived client-side.
+- **Executive Dashboard 4 views (P5c)** — `/` is a `TabList`: **Leadership** (totals · ACR influenced · avg MSI +
+  band rollup · adoption rate) · **Operational** (by-stage · **Standard-only** clock-aware SLA · blockers · avg
+  effective age · SA load) · **GHCP Adoption** (F4 embedded) · **Factory Productivity** (completed · ACR realized ·
+  cores · tool/automation adoption; value-realization KPIs await outcome capture). Composed from
+  dashboard + nominations + blockers feeds.
+- **Milestones & dates** — `NominationMilestone` (type · **date** · **tool used** · notes · recorded-by). Dated
+  app-factory events captured in the workspace **Milestones** panel (add/list/delete), logged to the Timeline.
+  Handles the lift-n-shift exception: **kick-off** and **actual-migration-start** are separate dated milestones.
+  `GET /api/governance/milestone-types`, `POST/DELETE .../governance/milestones`.
+- **Editable lookup master** — one generic `LookupValue` table (category + value + order) powers all governance
+  vocabularies: **BlockerCategory · BlockerOwner · Classification · VelocityImpact · Milestone** — plus the existing
+  Tool/Skill/Segment configs. Seeded idempotently per category by `LookupSeed`; admin CRUD via
+  `GET/POST/PUT/DELETE /api/configuration/lookups`; edited in **Configuration** (add/rename/delete panels).
+  Vocab endpoints (`blocker-categories/owners`, `nominations/vocab`, `milestone-types`) read from it (fallback to
+  defaults). `ILookupService.ValuesAsync(category)`. Existing rows keep their stored string, so editing/deleting a
+  value never orphans data.
+
 ## Editing rules for agents
 - Read a file before editing; keep changes minimal and scoped to the request.
 - Frontend-only change → `npm run build` + reload; backend change → rebuild + restart API.
@@ -202,12 +259,22 @@ import the **web app is the system of record**.
 - Do **not** commit `*.xlsx` source data or `*.log` (already in `.gitignore`). Never auto-commit or
   push without explicit user confirmation.
 - Don't create extra markdown docs unless asked. This file is the exception (living guide).
+- **FOS data is portal-owned** — governance/gates/blockers/milestones/classification/adoption/short-name are edited
+  in the portal and must **never** be overwritten by FDO/offering imports. Verify authenticated APIs via a browser
+  `page.evaluate(fetch(...))` (carries the auth cookie); Fluent form-submit clicks can time out under Playwright.
 
 ## Roadmap
-See `DEVELOPMENT-PLAN.md` §6 (Phase 4). Shipped: data-freshness banner, Excel export (filter-aware
-nominations export + Analysis sheet), dashboard drill-through, capacity heat-band, Nominations
-restructure (Stage/Status/Summary/TPID/PM/CFTL/SA), approval-status default-Approved, DB
-backup/restore (`/backup`).
+See `DEVELOPMENT-PLAN.md` and `FACTORY-OPERATING-SYSTEM.md`. **Shipped:** data-freshness banner, filter-aware
+Excel exports (+ Analysis sheet), dashboard drill-through, capacity heat-band, Nominations restructure, approval
+default-Approved, DB backup/restore, Migration Analytics + Trends + FY filter, Attainment, and the full **Factory
+Operating System P1–P5** (custom auth · 8-gate engine + SA Workspace · blockers + clock-aware SLA · audit timeline ·
+classification + strategic register · GHCP adoption · MSI · migration flow · 4-view exec dashboard), the
+workspace-mock-aligned redesign, the editable **lookup master**, and **milestones & dates**.
+**Backlog:** `NominationOutcome` value-capture (hours saved · defects · CSAT → real Factory Productivity);
+config-editable strategic time-thresholds + PV-01 stale-basis decision; surface key milestone dates
+(kick-off → actual-start lag) on the grid/analytics; retire the `/workspace` P0 mock (kept as reference);
+`ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered leave;
+Entra auth; in-app upload; API smoke tests.
 - **Capacity page cockpit**: Headroom column, Available-capacity + Bench KPIs, Bench filter,
   per-row leave-clash flag, Resource→Nominations drill-through (`?person=`), capacity export account list.
 - **Dashboard data-source alignment**: `CapacityFact` is nomination-derived (matches the Capacity page);

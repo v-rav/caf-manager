@@ -342,15 +342,28 @@ Leadership immediately sees conversion rate, **drop-off points**, and **bottlene
 
 ## 11. Phased delivery plan
 
-| Phase | Ships | Depends on |
-|-------|-------|------------|
-| **P0 — Design sign-off** | This doc approved · gate template finalized · **SA-guide screen mock** validated with a real SA | — |
-| **P1 — Gate engine + SA Guide** | GateDefinition/Item + NominationGate/Item tables · seed 8-gate template · **F1 Workspace guide** · Readiness Compliance % · Configuration templates (U3) | P0 |
-| **P2 — Blocker & SLA governance** | NominationBlocker + clock-stopped · **F2 Governance Board** · clock-aware velocity/SLA · NominationEvent audit log | P1 |
-| **P3 — Classification + Strategic register** | Classification vocab · StrategicInvestment · **F3 Register** · velocity-impact · time thresholds · exclude pilots from Standard denominators | P1 |
-| **P4 — GHCP adoption** | Tool/Activity usage · readiness items (as gate items) · AdoptionLevel 0–7 · **F4 Adoption** | P1 |
-| **P5 — Exec revamp + outcomes** | NominationOutcome · **U2 4-view dashboard** · **F6 Migration Flow (funnel + bottleneck)** · **MSI** health score · value-realization KPIs | P2–P4 |
-| **Cross-cutting** | **Custom login** (users · roles SA/Lead/Admin · password hash · session; provides `updated-by`) · U1 grid updates · vocab in Configuration | foundational |
+> **Delivery status (2026-09-27): P1–P5 shipped.** Custom login · 8-gate engine + real SA Workspace
+> (`/nominations/:id`) · blockers + clock-aware SLA + Governance Board (`/governance`) · NominationEvent audit
+> timeline · classification + velocity + Strategic Register (`/strategic`) · GHCP adoption 0–7 + Adoption page
+> (`/adoption`) · MSI health score · Migration Flow (`/flow`) · 4-view Executive Dashboard. **Beyond the original
+> plan:** the workspace was redesigned to match the P0 mock (3-column rail, Advance button, N/A toggle, header
+> badges/meta); a generic **editable lookup master** (`LookupValue`) now powers all governance vocabularies
+> (blocker categories/owners, classification, velocity, milestone types) with admin CRUD in Configuration; and a
+> **Milestones & dates** capability (`NominationMilestone`) captures dated app-factory events (kick-off, runbook
+> shared, **actual migration start**, …) with tool + notes — handling the lift-n-shift exception. **Still open:**
+> `NominationOutcome` value-capture (hours saved · defects · CSAT), config-editable strategic thresholds + PV-01
+> stale-basis decision, surfacing key milestone dates on the grid/analytics, retiring the `/workspace` P0 mock.
+
+| Phase | Ships | Depends on | Status |
+|-------|-------|------------|--------|
+| **P0 — Design sign-off** | This doc approved · gate template finalized · **SA-guide screen mock** validated with a real SA | — | ✅ mock at `/workspace` |
+| **P1 — Gate engine + SA Guide** | GateDefinition/Item + NominationGate/Item tables · seed 8-gate template · **F1 Workspace guide** · Readiness Compliance % · Configuration templates (U3) | P0 | ✅ shipped |
+| **P2 — Blocker & SLA governance** | NominationBlocker + clock-stopped · **F2 Governance Board** · clock-aware velocity/SLA · NominationEvent audit log | P1 | ✅ shipped |
+| **P3 — Classification + Strategic register** | Classification vocab · StrategicInvestment · **F3 Register** · velocity-impact · time thresholds · exclude pilots from Standard denominators | P1 | ✅ shipped |
+| **P4 — GHCP adoption** | Tool/Activity usage · readiness items (as gate items) · AdoptionLevel 0–7 · **F4 Adoption** | P1 | ✅ shipped |
+| **P5 — Exec revamp + outcomes** | NominationOutcome · **U2 4-view dashboard** · **F6 Migration Flow (funnel + bottleneck)** · **MSI** health score · value-realization KPIs | P2–P4 | ✅ except `NominationOutcome` value-capture |
+| **Cross-cutting** | **Custom login** (users · roles SA/Lead/Admin · password hash · session; provides `updated-by`) · U1 grid updates · vocab in Configuration | foundational | ✅ shipped |
+| **Extra — Milestones & lookup master** | `NominationMilestone` dated events (tool + notes) · editable `LookupValue` vocab master · workspace short-name | P1–P2 | ✅ shipped |
 
 **Recommended order:** **Custom login first** (foundational — accountability needs real users) → P0 → P1 →
 P2 → P3 → P4 → P5. "SA-owned" and "updated-by" are meaningless without real logins, and the decision is to

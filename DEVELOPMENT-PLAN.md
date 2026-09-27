@@ -15,6 +15,16 @@ Status: ☐ Not started · ◐ Partial (already in portal) · ✅ Done
 > **Status: Phase 1 + Phase 2 + Phase 3 implemented and verified** (migration `AddOperationsTracking`).
 > P3-02 (reminders) is delivered as the in-app Blocked/stale "Needs update" views rather than email;
 > P3-03 (comment-mining) is delivered as a heuristic blocker-reason suggestion in the Manage dialog.
+>
+> **Update 2026-09-27 — the portal has since grown into a Factory Operating System (see
+> `FACTORY-OPERATING-SYSTEM.md`, P1–P5 shipped):** custom login (Admin/Lead/SA), an 8-gate SA Workspace
+> (`/nominations/:id`), blockers + clock-aware SLA + Governance Board (`/governance`), a NominationEvent audit
+> timeline, classification + Strategic Register (`/strategic`), GHCP adoption 0–7 + Adoption page (`/adoption`),
+> the Migration Success Index (MSI), Migration Flow (`/flow`), and a 4-view Executive Dashboard. Plus a redesigned
+> workspace (matching the P0 mock), an editable **lookup master** for all governance vocabularies, and a
+> **Milestones & dates** capability (kick-off · runbook · **actual migration start** · … with tool + notes) that
+> handles the lift-n-shift exception. Also shipped earlier: Migration Analytics + Trends + FY filter, Attainment,
+> and filter-aware Excel exports. Remaining backlog is tracked in `AGENTS.md` (§Roadmap).
 
 ---
 
