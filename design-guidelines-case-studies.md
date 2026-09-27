@@ -601,3 +601,182 @@ Customer dependency
 Intentional strategic investment
 
 and provides a defensible explanation when strategic accounts consume disproportionate factory capacity.
+
+
+
+-----
+
+
+I completely agree. From a Factory perspective, migration success is rarely determined during the migration phase itself. Most delays occur because foundational activities were not completed, reviewed, tracked, or escalated early enough.
+
+For that reason, the Solution Architect should not be measured only on architecture quality, but also on migration readiness governance.
+
+SA Accountability Model
+
+The SA should be the single owner responsible for ensuring all migration readiness activities are completed correctly, on time, documented, and reflected in FDO/JIRA/Loop or other tracking systems.
+
+Phase 1: Discovery & Readiness
+
+SA Responsibilities
+
+Customer discovery sessions completed
+Application inventory validated
+Dependencies identified
+Hosting architecture understood
+Database, storage, networking, identity dependencies captured
+Risks and assumptions documented
+Missing information actively followed up
+Exit Criteria
+
+✅ Discovery complete
+ ✅ Dependency map available
+ ✅ Risks captured
+ ✅ Readiness status updated
+
+Phase 2: Prerequisites Validation
+
+SA Responsibilities
+
+Subscription readiness
+Landing zone readiness
+Network connectivity
+Firewall approvals
+Access onboarding
+Service principal creation
+AKS/App Service/VM prerequisites
+Database readiness
+CI/CD readiness
+Exit Criteria
+
+✅ Prerequisite tracker completed
+ ✅ Owners identified
+ ✅ Customer dependencies tracked
+ ✅ Open blockers visible
+
+Phase 3: Assessment
+
+SA Responsibilities
+
+AppCAT/Azure Migrate assessment completed
+Migration approach finalized
+Modernization opportunities identified
+Complexity validated
+Effort sizing completed
+Technical risks documented
+Exit Criteria
+
+✅ Assessment report completed
+ ✅ Migration strategy approved
+ ✅ Risk register available
+
+Phase 4: Scope Governance
+
+This is where many nominations fail.
+
+SA Responsibilities
+
+Scope document created
+In-Scope explicitly defined
+Out-of-Scope explicitly defined
+Customer responsibilities documented
+Factory responsibilities documented
+Assumptions documented
+Dependencies documented
+Acceptance criteria documented
+Exit Criteria
+
+✅ Signed scope document
+ ✅ No ambiguity on ownership
+ ✅ FDO updated
+
+Phase 5: Architecture Governance
+
+SA Responsibilities
+
+TAD prepared
+Architecture reviewed
+Target-state architecture approved
+Security review completed
+Customer signoff obtained
+Exit Criteria
+
+✅ TAD approved
+ ✅ Customer approval received
+ ✅ Architecture risks closed
+
+Phase 6: Delivery Readiness
+
+Before engineering starts:
+
+SA validates
+
+Scope frozen
+Access available
+Required environments ready
+Deployment methodology agreed
+Rollback strategy defined
+Customer contacts identified
+Exit Criteria
+
+✅ Engineering-ready status
+
+Phase 7: Delivery Governance
+
+During migration:
+
+SA Responsibilities
+
+Weekly status review
+Risks updates
+Dependency management
+Scope control
+Customer escalations
+FDO hygiene
+Status reporting
+Exit Criteria
+
+✅ Progress reflected in systems ✅ Issues escalated in time
+
+Phase 8: Closure Governance
+
+SA Responsibilities
+
+UAT completed
+Signoff obtained
+Documentation delivered
+Knowledge transfer completed
+Closure report submitted
+Exit Criteria
+
+✅ Customer signoff ✅ FDO closure ✅ Lessons learned captured
+
+Recommended Leadership Metric
+
+Instead of measuring only migration completion, measure Migration Readiness Compliance.
+
+Area	WeightDiscovery Completion	10%
+Prerequisites Completion	15%
+Assessment Quality	15%
+Scope Governance	20%
+TAD Approval	10%
+Status & FDO Hygiene	15%
+Risk Management	10%
+Closure Compliance	5%
+My Recommendation for App Factory
+
+Create a mandatory SA Governance Checklist in FDO.
+
+Every nomination should have:
+
+Gate	OwnerDiscovery Complete	SA
+Prerequisites Complete	SA
+Assessment Approved	SA
+Scope Signed	SA
+TAD Approved	SA
+Delivery Ready	SA
+UAT Complete	SA
+Closure Complete	SA
+
+A migration should not move to the next phase until the previous gate is green.
+
+This shifts the SA role from being only a technical architect to being a Migration Readiness Governor, which is critical if Factory wants predictable delivery timelines, fewer escalations, better FDO hygiene, and improved migration velocity.

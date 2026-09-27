@@ -202,3 +202,59 @@ Enable leadership to make informed investment decisions on high-value strategic 
 
 Key Message:
  Not every long-running project is a delivery problem. Some are deliberate strategic investments to secure larger customer transformation opportunities. These engagements require a different governance model than standard Factory delivery.
+
+
+
+
+ -------
+
+ Fair — let me make the UI and the SA's day-to-day concrete. Short answer: **yes, two new SA-facing pages** (plus small tweaks to the existing grid). Here's exactly what they are and how an SA works in them.
+
+## New page 1 — **Nomination Workspace** (`/nominations/:id`) — the SA's cockpit
+Clicking an account in the Nominations grid opens a **full page** (not the cramped Manage modal). This is where the SA drives one nomination end-to-end.
+
+```
+┌ SocGen · SGMR  ·  TPID 12345 ────────[Strategic Pilot]──[FDO Stage 3]──[Age 84d · 32d clock-stopped]─┐
+│ Readiness Compliance ◕ 62%     PM: A.Rana   CFTL: …   SA: you            [＋ Raise blocker] [Advance ▸] │
+├───────────────┬─────────────────────────────────────────────────────────────┬──────────────────────┤
+│  GATE STEPPER │  G4 · Scope Governance  (weight 20%)                          │  ▸ Blockers (1 open) │
+│  ● G1 Discovery  100%   │  Exit: signed scope · no ownership ambiguity · FDO updated       │  Awaiting Customer   │
+│  ● G2 Prereq     100%   │  ┌──────────────────────────────────────────────────────────┐  │  Approval · ⏸ clock  │
+│  ● G3 Assess     100%   │  │ ☑ Scope document created      Deliverable·done·[link] 📎 │  │  stopped · since 20  │
+│  ◐ G4 Scope  ◀   60%    │  │ ☑ In-scope defined            Task · done                │  │  Aug · owner: Cust.  │
+│  ○ G5 Arch        0%    │  │ ☐ Out-of-scope defined        Task · Pending             │  │  [Resolve]           │
+│  ○ G6 Deliv-Rdy   0%    │  │ ☐ Customer responsibilities   Task · ⛔ blocked           │  ├──────────────────────┤
+│  ○ G7 Delivery    0%    │  │ ☐ Signed scope doc ⚑mandatory Signoff · Pending          │  │  ▸ Timeline (log)    │
+│  ○ G8 Closure     0%    │  └──────────────────────────────────────────────────────────┘  │  ▸ Tools / Activities│
+└───────────────┴─────────────────────────────────────────────────────────────┴──────────────────────┘
+```
+
+**Regions:** header (identity + classification + clock-aware age + compliance ring + actions), left **8-gate stepper** (status dot + % per gate), center **current-gate checklist**, right **Blockers / Timeline / Tools** tabs.
+
+## How the SA interacts — click by click
+1. **Open** → lands on the **current gate**, with pending items highlighted. No hunting — the guide tells them what's next.
+2. **Tick an item** — toggle `Pending → Done`, paste a doc link (e.g., the Scope Document URL), optional note. **Autosaves** → writes a `NominationGateItem` row + a Timeline event. Compliance ring updates live.
+3. **Hit a wall** — click ⛔ on the stuck item → a modal: pick **blocker category** (Awaiting Customer Approval…), **owner**, **expected resolution date**, and **"SLA clock stopped?"** toggle → creates a `NominationBlocker` linked to that item. The gate shows *blocked*; if clock-stopped, the age timer pauses.
+4. **Advance** — when the gate's mandatory items are Done + exit criteria met, **"Advance ▸"** turns green. Soft-gated: if items remain, it warns *"3 items pending — advance anyway?"* rather than blocking.
+5. **Resolve blocker** — right rail → "Resolve" (stamps resolution date) → clock resumes.
+6. **At closure** — G8 shows an **outcome capture** panel (hours saved, CSAT, ACR influenced).
+7. Every action is logged in the **Timeline** (who/when/old→new) — the audit + forensic trail.
+
+## New page 2 — **My Work** (SA landing / `/my-work`) — the daily to-do
+Because an SA runs *many* nominations, they need a **cross-nomination pending list**, not to open each one:
+- **KPIs:** my active nominations · my pending gate items · my open blockers · my avg compliance %.
+- **"Pending items" table:** every open item across all my nominations, sorted by gate weight / age, each linking straight into that nomination's Workspace at the right gate.
+- **"My blockers"** and **"gates about to breach SLA."**
+
+This is what an SA opens each morning — it literally answers *"what do I need to do, what's pending."*
+
+## Existing grid — small additions (not a new page)
+`/nominations` gains columns: **Current Gate**, **Readiness %**, a **blocker chip**, and a **⏸ clock-stopped** icon — so the list view reflects governance at a glance. The quick **Manage modal stays** for one-field tweaks; the **Workspace** is for real driving.
+
+## Why a page, not a modal
+The 8-gate checklist + blockers + timeline is far too much for a dialog. A full page also lets the SA live in it during customer calls and update in real time. (One-tap item toggles keep meeting-time updates fast.)
+
+---
+So: **Workspace (drive one nomination)** + **My Work (see all my pending)** are the two new SA surfaces; leadership pages (Governance Board, Compliance, Adoption, Strategic Register) are read-mostly.
+
+Want me to **fold this "UI & SA interaction" detail into §7 of the blueprint**, and/or build a **clickable static mock of the Workspace** (seeded, no backend) so you can feel the flow before we commit tables?
