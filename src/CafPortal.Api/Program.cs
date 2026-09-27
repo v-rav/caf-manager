@@ -1,5 +1,6 @@
 using CafPortal.Application;
 using CafPortal.Infrastructure;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,6 +28,20 @@ builder.Services.AddCors(options => options.AddPolicy(SpaCors, policy =>
 
 builder.Services.AddProblemDetails();
 
+// Custom-login auth: HttpOnly cookie, same-origin SPA. API returns 401/403 instead of redirecting.
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "caf.auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+        options.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
+        options.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
+    });
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 // --- Database bootstrap ---------------------------------------------------
@@ -53,6 +68,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors(SpaCors);
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Serve the built React SPA (wwwroot) as a single deployment package.
 app.UseDefaultFiles();

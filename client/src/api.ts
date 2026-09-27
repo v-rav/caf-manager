@@ -6,6 +6,7 @@ import type {
   AcrTarget,
   Analytics,
   Attainment,
+  AppUser,
   CapacityRow,
   ExecutiveDashboard,
   DataStatus,
@@ -32,6 +33,7 @@ import type {
   RoleCapacity,
   SegmentOption,
   TimeSeries,
+  UserRole,
   WaveLink,
   WaveLinkUpsert,
 } from './types'
@@ -188,6 +190,20 @@ export const api = {
     http.get<AcrTarget[]>('/api/configuration/acr-targets').then((r) => r.data),
   updateAcrTargets: (updates: { fiscalYear: number; target: number }[]) =>
     http.put<AcrTarget[]>('/api/configuration/acr-targets', updates).then((r) => r.data),
+
+  login: (username: string, password: string) =>
+    http.post<AppUser>('/api/auth/login', { username, password }).then((r) => r.data),
+  logout: () => http.post('/api/auth/logout').then((r) => r.data),
+  me: () => http.get<AppUser>('/api/auth/me').then((r) => r.data),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    http.post('/api/auth/change-password', { currentPassword, newPassword }).then((r) => r.data),
+  users: () => http.get<AppUser[]>('/api/users').then((r) => r.data),
+  createUser: (input: { username: string; displayName: string; role: UserRole; active: boolean; password?: string }) =>
+    http.post<AppUser>('/api/users', input).then((r) => r.data),
+  updateUser: (id: number, input: { username: string; displayName: string; role: UserRole; active: boolean; password?: string }) =>
+    http.put<AppUser>(`/api/users/${id}`, input).then((r) => r.data),
+  resetUserPassword: (id: number, newPassword: string) =>
+    http.post(`/api/users/${id}/reset-password`, { newPassword }).then((r) => r.data),
   performance: (region?: string) =>
     http.get<PerformanceReview[]>('/api/performance', { params: { region } }).then((r) => r.data),
   performanceHistory: (personName: string) =>

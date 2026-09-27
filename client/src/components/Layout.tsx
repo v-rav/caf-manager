@@ -1,4 +1,24 @@
-import { Button, Dropdown, Option, Text, Tooltip } from '@fluentui/react-components'
+import {
+  Avatar,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  Dropdown,
+  Field,
+  Input,
+  Menu,
+  MenuItem,
+  MenuList,
+  MenuPopover,
+  MenuTrigger,
+  Option,
+  Text,
+  Tooltip,
+} from '@fluentui/react-components'
 import {
   ArrowClockwiseRegular,
   BuildingRegular,
@@ -18,6 +38,7 @@ import {
 import { useState, type ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { api } from '../api'
+import { useAuth } from '../auth'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 
@@ -50,6 +71,67 @@ function timeAgo(iso?: string): string {
   const hrs = Math.round(mins / 60)
   if (hrs < 24) return `${hrs}h ago`
   return `${Math.round(hrs / 24)}d ago`
+}
+
+// Header account menu: identity, change password, sign out.
+function UserMenu() {
+  const { user, logout } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [msg, setMsg] = useState<string | null>(null)
+  if (!user) return null
+
+  const change = async () => {
+    setMsg(null)
+    try {
+      await api.changePassword(current, next)
+      setMsg('Password updated.')
+      setCurrent('')
+      setNext('')
+    } catch {
+      setMsg('Current password is incorrect.')
+    }
+  }
+
+  return (
+    <>
+      <Menu>
+        <MenuTrigger disableButtonEnhancement>
+          <Button appearance="subtle" style={{ minWidth: 0 }}>
+            <Avatar name={user.displayName} size={24} color="colorful" />
+            <span style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>{user.displayName}</span>
+          </Button>
+        </MenuTrigger>
+        <MenuPopover>
+          <MenuList>
+            <MenuItem disabled>{user.username} · {user.role}</MenuItem>
+            <MenuItem onClick={() => { setMsg(null); setOpen(true) }}>Change password</MenuItem>
+            <MenuItem onClick={() => void logout()}>Sign out</MenuItem>
+          </MenuList>
+        </MenuPopover>
+      </Menu>
+      <Dialog open={open} onOpenChange={(_, d) => setOpen(d.open)}>
+        <DialogSurface style={{ maxWidth: 380 }}>
+          <DialogBody>
+            <DialogTitle>Change password</DialogTitle>
+            <DialogContent>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
+                <Field label="Current password"><Input type="password" value={current} onChange={(_, d) => setCurrent(d.value)} /></Field>
+                <Field label="New password" validationMessage={msg ?? undefined} validationState={msg && !msg.includes('updated') ? 'error' : msg ? 'success' : 'none'}>
+                  <Input type="password" value={next} onChange={(_, d) => setNext(d.value)} />
+                </Field>
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setOpen(false)}>Close</Button>
+              <Button appearance="primary" disabled={!current || next.length < 6} onClick={change}>Update</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+    </>
+  )
 }
 
 export function Layout() {
@@ -185,8 +267,7 @@ export function Layout() {
             </Dropdown>
             <Button appearance="secondary" icon={<ArrowClockwiseRegular />} disabled={refreshing} onClick={runRefresh}>
               {refreshing ? 'Refreshing…' : 'Refresh Data'}
-            </Button>
-          </div>
+            </Button>            <UserMenu />          </div>
         </header>
 
         <main style={{ padding: 24, flex: 1, minWidth: 0 }}>

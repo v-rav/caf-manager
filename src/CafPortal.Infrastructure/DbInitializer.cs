@@ -1,4 +1,6 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
+using CafPortal.Domain.Entities.Auth;
 using CafPortal.Infrastructure.Options;
 using CafPortal.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +35,22 @@ public static class DbInitializer
         // Seed configuration always; seed demo data only when there is no real workbook to import.
         logger.LogInformation("Seeding configuration{Demo}...", workbookExists ? string.Empty : " and demo data");
         await SeedData.SeedAsync(db, seedDemo: !workbookExists, ct);
+
+        // Bootstrap a default admin the first time (idempotent — only when no users exist).
+        if (!await db.AppUsers.AnyAsync(ct))
+        {
+            db.AppUsers.Add(new AppUser
+            {
+                Username = "admin",
+                DisplayName = "Administrator",
+                PasswordHash = PasswordHashing.Hash("admin"),
+                Role = UserRole.Admin,
+                Active = true,
+                MustChangePassword = true,
+            });
+            await db.SaveChangesAsync(ct);
+            logger.LogWarning("Seeded default admin (username 'admin', password 'admin') \u2014 must be changed on first login.");
+        }
 
         if (workbookExists && !hasResources)
         {

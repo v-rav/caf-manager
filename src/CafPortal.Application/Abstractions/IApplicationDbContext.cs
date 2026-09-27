@@ -1,4 +1,5 @@
 using CafPortal.Domain.Entities;
+using CafPortal.Domain.Entities.Auth;
 using CafPortal.Domain.Entities.Configuration;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,6 +32,7 @@ public interface IApplicationDbContext
     DbSet<StrategicAccountConfiguration> StrategicAccountConfigurations { get; }
     DbSet<CapacityConfiguration> CapacityConfigurations { get; }
     DbSet<ApplicationSetting> ApplicationSettings { get; }
+    DbSet<AppUser> AppUsers { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

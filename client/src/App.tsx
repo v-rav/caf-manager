@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { Spinner } from '@fluentui/react-components'
 import { Layout } from './components/Layout'
 import { AccountsPage } from './pages/AccountsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
@@ -8,11 +9,13 @@ import { ConfigurationPage } from './pages/ConfigurationPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { LeavePage } from './pages/LeavePage'
+import { LoginPage, ForcedPasswordChange } from './pages/LoginPage'
 import { NominationsPage } from './pages/NominationsPage'
 import { PerformancePage } from './pages/PerformancePage'
 import { ReconciliationPage } from './pages/ReconciliationPage'
 import { ResourcesPage } from './pages/ResourcesPage'
 import { WorkspaceMockPage } from './pages/WorkspaceMockPage'
+import { AuthProvider, useAuth } from './auth'
 import { RegionProvider } from './region'
 
 const router = createBrowserRouter([
@@ -37,10 +40,20 @@ const router = createBrowserRouter([
   },
 ])
 
+function AuthGate() {
+  const { user, loading } = useAuth()
+  if (loading) return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}><Spinner label="Loading…" /></div>
+  if (!user) return <LoginPage />
+  if (user.mustChangePassword) return <ForcedPasswordChange />
+  return <RouterProvider router={router} />
+}
+
 export default function App() {
   return (
-    <RegionProvider>
-      <RouterProvider router={router} />
-    </RegionProvider>
+    <AuthProvider>
+      <RegionProvider>
+        <AuthGate />
+      </RegionProvider>
+    </AuthProvider>
   )
 }

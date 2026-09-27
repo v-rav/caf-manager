@@ -429,6 +429,17 @@ export interface AcrTarget {
   target: number
 }
 
+export type UserRole = 'Admin' | 'Lead' | 'Sa'
+export interface AppUser {
+  id: number
+  username: string
+  displayName: string
+  role: UserRole
+  active: boolean
+  mustChangePassword: boolean
+  lastLoginUtc?: string
+}
+
 export interface AttainmentBucket {
   key: string
   label: string

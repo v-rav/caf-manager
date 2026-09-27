@@ -1,3 +1,4 @@
+using CafPortal.Domain.Entities.Auth;
 using CafPortal.Domain.Entities.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -99,5 +100,18 @@ public class ApplicationSettingMap : IEntityTypeConfiguration<ApplicationSetting
         builder.Property(x => x.Value).HasMaxLength(500).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(300);
         builder.HasIndex(x => x.Key).IsUnique();
+    }
+}
+
+public class AppUserMap : IEntityTypeConfiguration<AppUser>
+{
+    public void Configure(EntityTypeBuilder<AppUser> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Username).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.DisplayName).HasMaxLength(150).IsRequired();
+        builder.Property(x => x.PasswordHash).HasMaxLength(300).IsRequired();
+        builder.Property(x => x.Role).HasConversion<int>();
+        builder.HasIndex(x => x.Username).IsUnique();
     }
 }

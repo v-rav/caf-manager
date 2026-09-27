@@ -1,5 +1,6 @@
 using CafPortal.Application.Abstractions;
 using CafPortal.Domain.Entities;
+using CafPortal.Domain.Entities.Auth;
 using CafPortal.Domain.Entities.Configuration;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,6 +33,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<StrategicAccountConfiguration> StrategicAccountConfigurations => Set<StrategicAccountConfiguration>();
     public DbSet<CapacityConfiguration> CapacityConfigurations => Set<CapacityConfiguration>();
     public DbSet<ApplicationSetting> ApplicationSettings => Set<ApplicationSetting>();
+    public DbSet<AppUser> AppUsers => Set<AppUser>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

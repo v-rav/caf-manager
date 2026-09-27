@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IPerformanceReviewService, PerformanceReviewService>();
         services.AddScoped<IImportHistoryService, ImportHistoryService>();
         services.AddScoped<IReconciliationService, ReconciliationService>();
+        services.AddScoped<IUserService, UserService>();
         return services;
     }
 }
