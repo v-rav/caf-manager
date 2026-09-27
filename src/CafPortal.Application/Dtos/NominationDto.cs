@@ -5,6 +5,7 @@ public class NominationDto
     public int Id { get; set; }
     public int? AccountId { get; set; }
     public string? AccountName { get; set; }
+    public string? ShortName { get; set; }
     public string? Tpid { get; set; }
     public string? Technology { get; set; }
     public string Region { get; set; } = string.Empty;
@@ -115,6 +116,7 @@ public class NominationUpdateDto
     public string? Classification { get; set; }
     public string? VelocityImpact { get; set; }
     public int? GhcpAdoptionLevel { get; set; }
+    public string? ShortName { get; set; }
 }
 
 public class WaveLinkDto

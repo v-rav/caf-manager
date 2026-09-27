@@ -11,5 +11,7 @@ public interface IGovernanceService
     Task<NominationGovernanceDto?> ResolveBlockerAsync(int nominationId, int blockerId, CancellationToken ct = default);
     Task<IReadOnlyList<BlockerDto>> GetOpenBlockersAsync(string? region, CancellationToken ct = default);
     Task<IReadOnlyList<NominationEventDto>> GetEventsAsync(int nominationId, CancellationToken ct = default);
+    Task<NominationGovernanceDto?> AddMilestoneAsync(int nominationId, MilestoneUpsert req, CancellationToken ct = default);
+    Task<NominationGovernanceDto?> DeleteMilestoneAsync(int nominationId, int milestoneId, CancellationToken ct = default);
     IReadOnlyList<string> GetBlockerCategories();
 }

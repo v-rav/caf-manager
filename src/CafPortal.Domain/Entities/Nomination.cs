@@ -10,6 +10,8 @@ public class Nomination : AuditableEntity
     /// <summary>Stable external key from the FDO export ("Task Id") used for upsert-merge across drops.</summary>
     public string? ExternalTaskId { get; set; }
     public string? AccountName { get; set; }
+    /// <summary>App/system short name shown after the account in the workspace title (e.g. "SocGen · SGMR").</summary>
+    public string? ShortName { get; set; }
     public string? Technology { get; set; }
     public string Region { get; set; } = string.Empty;
     public NominationStatusType Status { get; set; } = NominationStatusType.Open;

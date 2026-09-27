@@ -18,7 +18,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             .Select(n => new
             {
                 n.Id, n.AccountName, Tpid = n.Account != null ? n.Account.Tpid : null, n.GhcpAdoptionLevel,
-                n.Classification, n.MigrationStatus, n.StageAgeDays, n.ProjectCoordinator, n.CftlPrimary, n.SolutionArchitect,
+                n.Classification, n.MigrationStatus, n.StageAgeDays, n.ProjectCoordinator, n.CftlPrimary, n.SolutionArchitect, n.ShortName,
             })
             .FirstOrDefaultAsync(ct);
         if (nom is null) return null;
@@ -42,6 +42,12 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         var clockStoppedDays = openBlockers.Where(b => b.ClockStopped)
             .Sum(b => Math.Max(0, (int)(now - b.BlockedSinceUtc).TotalDays));
 
+        var milestones = await _db.NominationMilestones.AsNoTracking()
+            .Where(x => x.NominationId == nominationId)
+            .OrderByDescending(x => x.OccurredOn).ThenByDescending(x => x.Id)
+            .Select(x => new MilestoneDto(x.Id, x.MilestoneKey, x.OccurredOn, x.ToolUsed, x.Notes, x.RecordedBy))
+            .ToListAsync(ct);
+
         return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, nom.GhcpAdoptionLevel) with
         {
             Classification = nom.Classification,
@@ -51,6 +57,8 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             Sa = nom.SolutionArchitect,
             AgeDays = nom.StageAgeDays,
             ClockStoppedDays = clockStoppedDays,
+            ShortName = nom.ShortName,
+            Milestones = milestones,
         };
     }
 
@@ -114,6 +122,33 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             .OrderByDescending(e => e.AtUtc).ThenByDescending(e => e.Id)
             .Select(e => new NominationEventDto(e.Id, e.NominationId, e.GateItemDefinitionId, e.Type, e.Field, e.OldValue, e.NewValue, e.ByUser, e.AtUtc))
             .ToListAsync(ct);
+
+    public async Task<NominationGovernanceDto?> AddMilestoneAsync(int nominationId, MilestoneUpsert req, CancellationToken ct = default)
+    {
+        if (!await _db.Nominations.AnyAsync(n => n.Id == nominationId, ct)) return null;
+        if (string.IsNullOrWhiteSpace(req.MilestoneKey)) return await GetForNominationAsync(nominationId, ct);
+        _db.NominationMilestones.Add(new NominationMilestone
+        {
+            NominationId = nominationId,
+            MilestoneKey = req.MilestoneKey.Trim(),
+            OccurredOn = req.OccurredOn,
+            ToolUsed = string.IsNullOrWhiteSpace(req.ToolUsed) ? null : req.ToolUsed.Trim(),
+            Notes = string.IsNullOrWhiteSpace(req.Notes) ? null : req.Notes.Trim(),
+            RecordedBy = _currentUser.Name,
+        });
+        Log(nominationId, "Milestone", req.MilestoneKey, null, $"{req.OccurredOn:yyyy-MM-dd}{(string.IsNullOrWhiteSpace(req.ToolUsed) ? "" : $" · {req.ToolUsed}")}", null);
+        await _db.SaveChangesAsync(ct);
+        return await GetForNominationAsync(nominationId, ct);
+    }
+
+    public async Task<NominationGovernanceDto?> DeleteMilestoneAsync(int nominationId, int milestoneId, CancellationToken ct = default)
+    {
+        var ms = await _db.NominationMilestones.FirstOrDefaultAsync(m => m.Id == milestoneId && m.NominationId == nominationId, ct);
+        if (ms is null) return null;
+        _db.NominationMilestones.Remove(ms);
+        await _db.SaveChangesAsync(ct);
+        return await GetForNominationAsync(nominationId, ct);
+    }
 
     private void Log(int nominationId, string type, string? field, string? oldValue, string? newValue, int? gateItemDefId)
         => _db.NominationEvents.Add(new NominationEvent

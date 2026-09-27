@@ -234,6 +234,7 @@ export interface Nomination {
   id: number
   accountId?: number
   accountName?: string
+  shortName?: string
   tpid?: string
   technology?: string
   region: string
@@ -401,6 +402,7 @@ export interface NominationUpdate {
   classification?: string
   velocityImpact?: string
   ghcpAdoptionLevel?: number
+  shortName?: string
 }
 
 export interface WaveLinkUpsert {
@@ -505,6 +507,16 @@ export interface Governance {
   sa?: string
   ageDays?: number
   clockStoppedDays: number
+  shortName?: string
+  milestones: Milestone[]
+}
+export interface Milestone {
+  id: number
+  milestoneKey: string
+  occurredOn: string
+  toolUsed?: string
+  notes?: string
+  recordedBy?: string
 }
 export interface Blocker {
   id: number

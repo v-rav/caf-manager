@@ -113,6 +113,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 Id = n.Id,
                 AccountId = n.AccountId,
                 AccountName = n.AccountName ?? n.Account?.AccountName,
+                ShortName = n.ShortName,
                 Tpid = n.Account?.Tpid,
                 Technology = n.Technology,
                 Region = n.Region,
@@ -215,6 +216,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
             n.VelocityImpact = string.IsNullOrWhiteSpace(input.VelocityImpact) ? null : input.VelocityImpact.Trim();
         if (input.GhcpAdoptionLevel is not null)
             n.GhcpAdoptionLevel = input.GhcpAdoptionLevel is >= 0 and <= 7 ? input.GhcpAdoptionLevel : n.GhcpAdoptionLevel;
+        if (input.ShortName is not null)
+            n.ShortName = string.IsNullOrWhiteSpace(input.ShortName) ? null : input.ShortName.Trim();
 
         // Stamp a blocked-since date automatically when moving into a blocked/waiting state without one.
         if (IsBlockedState(n.Status) && n.BlockedSince is null)

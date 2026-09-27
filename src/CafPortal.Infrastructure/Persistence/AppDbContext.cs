@@ -41,6 +41,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<NominationGateItem> NominationGateItems => Set<NominationGateItem>();
     public DbSet<NominationBlocker> NominationBlockers => Set<NominationBlocker>();
     public DbSet<NominationEvent> NominationEvents => Set<NominationEvent>();
+    public DbSet<NominationMilestone> NominationMilestones => Set<NominationMilestone>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

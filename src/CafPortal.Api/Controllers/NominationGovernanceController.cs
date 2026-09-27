@@ -42,4 +42,18 @@ public class NominationGovernanceController(IGovernanceService governance) : Con
     [HttpGet("events")]
     public async Task<IActionResult> Events(int nominationId, CancellationToken ct)
         => Ok(await governance.GetEventsAsync(nominationId, ct));
+
+    [HttpPost("milestones")]
+    public async Task<IActionResult> AddMilestone(int nominationId, [FromBody] MilestoneUpsert req, CancellationToken ct)
+    {
+        var dto = await governance.AddMilestoneAsync(nominationId, req, ct);
+        return dto is null ? NotFound() : Ok(dto);
+    }
+
+    [HttpDelete("milestones/{milestoneId:int}")]
+    public async Task<IActionResult> DeleteMilestone(int nominationId, int milestoneId, CancellationToken ct)
+    {
+        var dto = await governance.DeleteMilestoneAsync(nominationId, milestoneId, ct);
+        return dto is null ? NotFound() : Ok(dto);
+    }
 }

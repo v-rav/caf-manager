@@ -40,6 +40,7 @@ public interface IApplicationDbContext
     DbSet<NominationGateItem> NominationGateItems { get; }
     DbSet<NominationBlocker> NominationBlockers { get; }
     DbSet<NominationEvent> NominationEvents { get; }
+    DbSet<NominationMilestone> NominationMilestones { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

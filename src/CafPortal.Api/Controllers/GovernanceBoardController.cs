@@ -24,4 +24,8 @@ public class GovernanceBoardController(IGovernanceService governance, ILookupSer
     [HttpGet("blocker-owners")]
     public async Task<IActionResult> Owners(CancellationToken ct)
         => Ok(await lookups.ValuesAsync("BlockerOwner", ct));
+
+    [HttpGet("milestone-types")]
+    public async Task<IActionResult> MilestoneTypes(CancellationToken ct)
+        => Ok(await lookups.ValuesAsync("Milestone", ct));
 }

@@ -392,6 +392,7 @@ export function NominationsPage() {
       classification: n.classification ?? 'Standard Factory',
       velocityImpact: n.velocityImpact ?? '',
       ghcpAdoptionLevel: n.ghcpAdoptionLevel ?? 0,
+      shortName: n.shortName ?? '',
     })
     setWaveType('App')
     setWaveRef('')
@@ -896,6 +897,10 @@ export function NominationsPage() {
             onChange={(_, d) => setForm((f) => ({ ...f, remarks: d.value }))}
             rows={2}
           />
+        </Field>
+
+        <Field label="App / short name">
+          <Input style={{ width: '100%' }} value={form.shortName ?? ''} onChange={(_, d) => setForm((f) => ({ ...f, shortName: d.value }))} placeholder="app or system name (shown as Account · Name)" />
         </Field>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

@@ -127,6 +127,7 @@ export function ConfigurationPage() {
       <LookupPanel title="Blocker owners" category="BlockerOwner" placeholder="New owner" hint="Parties that can own a blocker (the Owner dropdown when raising a blocker)." />
       <LookupPanel title="Classifications" category="Classification" placeholder="New classification" hint="Operating-model classifications on a nomination (Standard Factory, Strategic Pilot, …)." />
       <LookupPanel title="Velocity impact" category="VelocityImpact" placeholder="New level" hint="Strategic-account velocity-impact levels." />
+      <LookupPanel title="Milestone types" category="Milestone" placeholder="New milestone" hint="Dated app-factory events captured in the workspace (kick-off, runbook shared, actual migration start, …)." />
       <OperationsSettingsPanel />
       <FiscalTargetsPanel />
     </div>

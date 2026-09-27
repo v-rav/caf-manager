@@ -10,6 +10,7 @@ public static class LookupSeed
     public const string BlockerOwner = "BlockerOwner";
     public const string Classification = "Classification";
     public const string VelocityImpact = "VelocityImpact";
+    public const string Milestone = "Milestone";
 
     private static readonly (string Category, string[] Values)[] Defaults =
     {
@@ -25,6 +26,11 @@ public static class LookupSeed
             "Standard Factory", "Strategic Pilot", "Lighthouse Engagement", "Innovation / POC", "Recovery Engagement",
         }),
         (VelocityImpact, new[] { "Low", "Medium", "High", "Critical" }),
+        (Milestone, new[]
+        {
+            "Kick-off Meeting", "Assessment Runbook Shared", "Analysis Shared with Customer", "Prerequisites Shared",
+            "Actual Migration Start", "Scope Signed", "Migration Complete", "UAT Complete", "Production Cutover",
+        }),
     };
 
     public static async Task SeedAsync(AppDbContext db, CancellationToken ct = default)

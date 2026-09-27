@@ -13,7 +13,7 @@ import { useParams, Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
-import type { Blocker, Gate, GateItem, Governance, NominationEvent } from '../types'
+import type { Blocker, Gate, GateItem, Governance, Milestone, NominationEvent } from '../types'
 
 const KIND_TONE: Record<string, 'brand' | 'success' | 'warning' | 'informative' | 'subtle'> = {
   Task: 'informative', Prerequisite: 'warning', Deliverable: 'brand', Approval: 'success', Signoff: 'success',
@@ -49,11 +49,20 @@ export function NominationWorkspacePage() {
   const [rNotes, setRNotes] = useState('')
   const [busyBlk, setBusyBlk] = useState(false)
   const [events, setEvents] = useState<NominationEvent[]>([])
+  const [msTypes, setMsTypes] = useState<string[]>([])
+  const [tools, setTools] = useState<string[]>([])
+  const [msKey, setMsKey] = useState('')
+  const [msDate, setMsDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [msTool, setMsTool] = useState('')
+  const [msNotes, setMsNotes] = useState('')
+  const [busyMs, setBusyMs] = useState(false)
 
   const loadEvents = () => { api.governanceEvents(nominationId).then(setEvents).catch(() => {}) }
 
   useEffect(() => { api.blockerCategories().then((c) => { setCategories(c); setRc((v) => v || c[0] || '') }).catch(() => {}) }, [])
   useEffect(() => { api.blockerOwners().then(setOwners).catch(() => {}) }, [])
+  useEffect(() => { api.milestoneTypes().then((t) => { setMsTypes(t); setMsKey((v) => v || t[0] || '') }).catch(() => {}) }, [])
+  useEffect(() => { api.tools().then((t) => setTools(t.map((x) => x.name))).catch(() => {}) }, [])
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -90,6 +99,7 @@ export function NominationWorkspacePage() {
 
   const pending = current.items.filter((i) => i.status !== 'Done').length
   const blockers = gov.blockers ?? []
+  const milestones = gov.milestones ?? []
 
   const raiseBlocker = async () => {
     if (!rc || busyBlk) return
@@ -105,6 +115,21 @@ export function NominationWorkspacePage() {
     if (busyBlk) return
     setBusyBlk(true)
     try { setGov(await api.resolveBlocker(nominationId, b.id)); loadEvents() } finally { setBusyBlk(false) }
+  }
+
+  const addMilestone = async () => {
+    if (!msKey || !msDate || busyMs) return
+    setBusyMs(true)
+    try {
+      setGov(await api.addMilestone(nominationId, { milestoneKey: msKey, occurredOn: msDate, toolUsed: msTool || null, notes: msNotes || null }))
+      setMsNotes(''); setMsTool('')
+      loadEvents()
+    } finally { setBusyMs(false) }
+  }
+  const deleteMilestone = async (m: Milestone) => {
+    if (busyMs) return
+    setBusyMs(true)
+    try { setGov(await api.deleteMilestone(nominationId, m.id)) } finally { setBusyMs(false) }
   }
 
   const setNA = async (item: GateItem) => {
@@ -127,7 +152,7 @@ export function NominationWorkspacePage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <Text size={600} weight="bold">{gov.account ?? `Nomination ${gov.nominationId}`}</Text>
+            <Text size={600} weight="bold">{gov.account ?? `Nomination ${gov.nominationId}`}{gov.shortName ? ` · ${gov.shortName}` : ''}</Text>
             {gov.classification && gov.classification !== 'Standard Factory' && <Badge appearance="tint" color="brand">{gov.classification}</Badge>}
             {gov.stage != null && <Badge appearance="outline">FDO Stage {gov.stage}</Badge>}
             {gov.tpid && <Badge appearance="outline">TPID {gov.tpid}</Badge>}
@@ -257,6 +282,55 @@ export function NominationWorkspacePage() {
                 </div>
                 {b.clockStopped && <Badge appearance="tint" color="warning">clock stopped</Badge>}
                 <Button size="small" disabled={busyBlk} onClick={() => void resolveBlocker(b)}>Resolve</Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      <Panel title={`Milestones${milestones.length ? ` · ${milestones.length}` : ''}`}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: milestones.length ? 12 : 0 }}>
+          <div>
+            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Event</Text>
+            <Dropdown value={msKey} selectedOptions={[msKey]} onOptionSelect={(_, d) => setMsKey(d.optionValue ?? msKey)} style={{ width: '100%' }}>
+              {msTypes.map((t) => <Option key={t} value={t}>{t}</Option>)}
+            </Dropdown>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Date</Text>
+              <input type="date" value={msDate} onChange={(e) => setMsDate(e.target.value)} style={{ width: '100%', padding: '5px 8px', borderRadius: 4, border: '1px solid var(--colorNeutralStroke1)' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Tool</Text>
+              <Dropdown value={msTool} selectedOptions={msTool ? [msTool] : []} placeholder="—" onOptionSelect={(_, d) => setMsTool(d.optionValue ?? '')} style={{ width: '100%' }}>
+                <Option value="">—</Option>
+                {tools.map((t) => <Option key={t} value={t}>{t}</Option>)}
+              </Dropdown>
+            </div>
+          </div>
+          <div>
+            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Notes</Text>
+            <Input value={msNotes} onChange={(_, d) => setMsNotes(d.value)} placeholder="context" style={{ width: '100%' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button appearance="primary" disabled={busyMs || !msKey || !msDate} onClick={() => void addMilestone()}>Record</Button>
+          </div>
+        </div>
+        {milestones.length === 0 ? (
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No milestones recorded.</Text>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {milestones.map((m) => (
+              <div key={m.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '4px 0', borderBottom: '1px solid var(--colorNeutralStroke3)' }}>
+                <Badge appearance="tint" color="brand">{m.occurredOn}</Badge>
+                <div style={{ flex: 1 }}>
+                  <Text size={300} weight="semibold">{m.milestoneKey}</Text>
+                  <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
+                    {m.toolUsed ? `tool ${m.toolUsed}` : ''}{m.toolUsed && (m.notes || m.recordedBy) ? ' · ' : ''}{m.notes ?? ''}{m.recordedBy ? `${m.notes ? ' · ' : ''}by ${m.recordedBy}` : ''}
+                  </Text>
+                </div>
+                <Button size="small" appearance="subtle" icon={<SubtractCircleRegular />} disabled={busyMs} onClick={() => void deleteMilestone(m)} aria-label="Delete milestone" />
               </div>
             ))}
           </div>

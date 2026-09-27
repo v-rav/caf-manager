@@ -74,3 +74,16 @@ public class NominationEventMap : IEntityTypeConfiguration<NominationEvent>
         builder.HasIndex(x => new { x.NominationId, x.AtUtc });
     }
 }
+
+public class NominationMilestoneMap : IEntityTypeConfiguration<NominationMilestone>
+{
+    public void Configure(EntityTypeBuilder<NominationMilestone> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.MilestoneKey).HasMaxLength(80).IsRequired();
+        builder.Property(x => x.ToolUsed).HasMaxLength(120);
+        builder.Property(x => x.Notes).HasMaxLength(1000);
+        builder.Property(x => x.RecordedBy).HasMaxLength(120);
+        builder.HasIndex(x => new { x.NominationId, x.OccurredOn });
+    }
+}

@@ -13,7 +13,12 @@ public record NominationGovernanceDto(
     int NominationId, string? Account, string? Tpid, string? Classification, string? CurrentGateKey,
     int CompliancePercent, IReadOnlyList<GateDto> Gates, IReadOnlyList<BlockerDto> Blockers,
     int MsiScore, string MsiBand,
-    int? Stage = null, string? Pm = null, string? Cftl = null, string? Sa = null, int? AgeDays = null, int ClockStoppedDays = 0);
+    int? Stage = null, string? Pm = null, string? Cftl = null, string? Sa = null, int? AgeDays = null, int ClockStoppedDays = 0,
+    string? ShortName = null, IReadOnlyList<MilestoneDto>? Milestones = null);
+
+public record MilestoneDto(int Id, string MilestoneKey, DateOnly OccurredOn, string? ToolUsed, string? Notes, string? RecordedBy);
+
+public record MilestoneUpsert(string MilestoneKey, DateOnly OccurredOn, string? ToolUsed, string? Notes);
 
 public record BlockerDto(
     int Id, int NominationId, string? Account, int? GateItemDefId, string Category, bool ClockStopped, string? Owner,
