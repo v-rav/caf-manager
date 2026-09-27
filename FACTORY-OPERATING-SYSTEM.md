@@ -350,10 +350,11 @@ Leadership immediately sees conversion rate, **drop-off points**, and **bottlene
 | **P3 — Classification + Strategic register** | Classification vocab · StrategicInvestment · **F3 Register** · velocity-impact · time thresholds · exclude pilots from Standard denominators | P1 |
 | **P4 — GHCP adoption** | Tool/Activity usage · readiness items (as gate items) · AdoptionLevel 0–7 · **F4 Adoption** | P1 |
 | **P5 — Exec revamp + outcomes** | NominationOutcome · **U2 4-view dashboard** · **F6 Migration Flow (funnel + bottleneck)** · **MSI** health score · value-realization KPIs | P2–P4 |
-| **Cross-cutting** | **Entra auth** (accountability needs identity) · U1 grid updates · vocab in Configuration | early |
+| **Cross-cutting** | **Custom login** (users · roles SA/Lead/Admin · password hash · session; provides `updated-by`) · U1 grid updates · vocab in Configuration | foundational |
 
-**Recommended order:** P0 → P1 → P2 → P3 → P4 → P5. Auth (identity) should land no later than P2, because
-"SA-owned" and "updated-by" are meaningless without real users.
+**Recommended order:** **Custom login first** (foundational — accountability needs real users) → P0 → P1 →
+P2 → P3 → P4 → P5. "SA-owned" and "updated-by" are meaningless without real logins, and the decision is to
+use **custom portal logins** (username/password + roles), not Entra.
 
 ---
 
@@ -363,7 +364,9 @@ Leadership immediately sees conversion rate, **drop-off points**, and **bottlene
 3. **Clock-stopped** excludes from **both** SLA and velocity, or SLA only? → recommend **both**.
 4. **Classification** who sets it & does changing it re-baseline metrics? → set at intake; changes are
    event-logged and apply forward.
-5. **Identity/auth** timing — needed for real accountability; confirm Entra availability.
+5. **Identity/auth** — **Resolved:** **custom portal logins** (users table, password hash, roles
+   SA/Lead/Admin, session) provide `updated-by` and gate ownership. Built **first** as the foundation; not
+   Entra. Restore/admin ops get locked behind the Admin role.
 6. **12-stage lifecycle** — **Resolved:** modelled as the **Level-2 delivery journey** (Appendix A.9, 16
    stages) whose sub-items are gate checklist items; rolls up to the **8 governance gates** (Level 3) and a
    **7-phase executive** view (Level 1). One data model, three altitudes — no competing stage models.
