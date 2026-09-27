@@ -39,6 +39,17 @@ public class SegmentConfigurationMap : IEntityTypeConfiguration<SegmentConfigura
     }
 }
 
+public class LookupValueMap : IEntityTypeConfiguration<LookupValue>
+{
+    public void Configure(EntityTypeBuilder<LookupValue> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Category).HasMaxLength(40).IsRequired();
+        builder.Property(x => x.Value).HasMaxLength(120).IsRequired();
+        builder.HasIndex(x => new { x.Category, x.Value }).IsUnique();
+    }
+}
+
 public class ToolConfigurationMap : IEntityTypeConfiguration<ToolConfiguration>
 {
     public void Configure(EntityTypeBuilder<ToolConfiguration> builder)

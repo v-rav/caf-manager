@@ -1,5 +1,5 @@
 import { Badge, Button, Dropdown, Field, Input, Option, SpinButton, Text } from '@fluentui/react-components'
-import { AddRegular, CheckmarkCircleRegular, EditRegular, SaveRegular } from '@fluentui/react-icons'
+import { AddRegular, CheckmarkCircleRegular, DeleteRegular, EditRegular, SaveRegular } from '@fluentui/react-icons'
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { useAuth } from '../auth'
@@ -123,6 +123,10 @@ export function ConfigurationPage() {
         add={(n) => api.addSkill(n)}
         update={(id, n) => api.updateSkill(id, n)}
       />
+      <LookupPanel title="Blocker categories" category="BlockerCategory" placeholder="New category" hint="Reasons a nomination can be blocked (Workspace → Raise blocker, Governance Board)." />
+      <LookupPanel title="Blocker owners" category="BlockerOwner" placeholder="New owner" hint="Parties that can own a blocker (the Owner dropdown when raising a blocker)." />
+      <LookupPanel title="Classifications" category="Classification" placeholder="New classification" hint="Operating-model classifications on a nomination (Standard Factory, Strategic Pilot, …)." />
+      <LookupPanel title="Velocity impact" category="VelocityImpact" placeholder="New level" hint="Strategic-account velocity-impact levels." />
       <OperationsSettingsPanel />
       <FiscalTargetsPanel />
     </div>
@@ -280,6 +284,68 @@ function VocabPanel({ title, placeholder, hint, load, add, update }: VocabPanelP
                       setEditName(s.name)
                     }}
                   />
+                </div>
+              ),
+            )}
+          </div>
+        </>
+      )}
+    </Panel>
+  )
+}
+
+function LookupPanel({ title, category, placeholder, hint }: { title: string; category: string; placeholder: string; hint: string }) {
+  const { data, loading, error, reload } = useAsync(() => api.lookups(category), [category])
+  const [newVal, setNewVal] = useState('')
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editVal, setEditVal] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const doAdd = async () => {
+    const v = newVal.trim()
+    if (!v) return
+    setBusy(true)
+    try { await api.addLookup(category, v); setNewVal(''); reload() } finally { setBusy(false) }
+  }
+  const saveEdit = async () => {
+    if (editId == null) return
+    const v = editVal.trim()
+    if (!v) return
+    setBusy(true)
+    try { await api.updateLookup(editId, v); setEditId(null); setEditVal(''); reload() } finally { setBusy(false) }
+  }
+  const doDelete = async (id: number, value: string) => {
+    if (!confirm(`Delete "${value}" from ${title}?`)) return
+    setBusy(true)
+    try { await api.deleteLookup(id); reload() } finally { setBusy(false) }
+  }
+
+  return (
+    <Panel
+      title={title}
+      action={
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Input placeholder={placeholder} value={newVal} onChange={(_, d) => setNewVal(d.value)} onKeyDown={(e) => e.key === 'Enter' && doAdd()} style={{ minWidth: 200 }} />
+          <Button appearance="primary" icon={<AddRegular />} onClick={doAdd} disabled={!newVal.trim() || busy}>Add</Button>
+        </div>
+      }
+    >
+      {loading ? <Loading /> : error ? <ErrorText error={error} onRetry={reload} /> : (
+        <>
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>{hint}</Text>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {data?.map((s) =>
+              editId === s.id ? (
+                <div key={s.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <Input value={editVal} onChange={(_, d) => setEditVal(d.value)} onKeyDown={(e) => e.key === 'Enter' && saveEdit()} style={{ minWidth: 160 }} />
+                  <Button size="small" appearance="primary" icon={<SaveRegular />} onClick={saveEdit} disabled={!editVal.trim() || busy} />
+                  <Button size="small" appearance="subtle" onClick={() => setEditId(null)} disabled={busy}>Cancel</Button>
+                </div>
+              ) : (
+                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4, border: '1px solid var(--colorNeutralStroke2)', borderRadius: 999, padding: '4px 4px 4px 12px', background: 'var(--colorNeutralBackground1)' }}>
+                  <Text>{s.value}</Text>
+                  <Button size="small" appearance="subtle" icon={<EditRegular />} title="Rename" onClick={() => { setEditId(s.id); setEditVal(s.value) }} />
+                  <Button size="small" appearance="subtle" icon={<DeleteRegular />} title="Delete" onClick={() => void doDelete(s.id, s.value)} disabled={busy} />
                 </div>
               ),
             )}

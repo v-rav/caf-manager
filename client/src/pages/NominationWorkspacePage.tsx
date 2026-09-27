@@ -42,6 +42,7 @@ export function NominationWorkspacePage() {
   const [selected, setSelected] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [categories, setCategories] = useState<string[]>([])
+  const [owners, setOwners] = useState<string[]>([])
   const [rc, setRc] = useState<string>('')
   const [rClock, setRClock] = useState(true)
   const [rOwner, setROwner] = useState('')
@@ -52,6 +53,7 @@ export function NominationWorkspacePage() {
   const loadEvents = () => { api.governanceEvents(nominationId).then(setEvents).catch(() => {}) }
 
   useEffect(() => { api.blockerCategories().then((c) => { setCategories(c); setRc((v) => v || c[0] || '') }).catch(() => {}) }, [])
+  useEffect(() => { api.blockerOwners().then(setOwners).catch(() => {}) }, [])
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -226,7 +228,10 @@ export function NominationWorkspacePage() {
           </div>
           <div>
             <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Owner</Text>
-            <Input value={rOwner} onChange={(_, d) => setROwner(d.value)} placeholder="who owns it" style={{ width: '100%' }} />
+            <Dropdown value={rOwner} selectedOptions={rOwner ? [rOwner] : []} placeholder="who owns it" onOptionSelect={(_, d) => setROwner(d.optionValue ?? '')} style={{ width: '100%' }}>
+              <Option value="">—</Option>
+              {owners.map((o) => <Option key={o} value={o}>{o}</Option>)}
+            </Dropdown>
           </div>
           <div>
             <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Notes</Text>

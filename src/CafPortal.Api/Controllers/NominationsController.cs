@@ -7,18 +7,23 @@ namespace CafPortal.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class NominationsController(INominationService nominations) : ControllerBase
+public class NominationsController(INominationService nominations, ILookupService lookups) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get([FromQuery] string? region, [FromQuery] string? status, CancellationToken ct)
         => Ok(await nominations.GetAsync(region, status, ct));
 
     [HttpGet("vocab")]
-    public IActionResult Vocab() => Ok(new
+    public async Task<IActionResult> Vocab(CancellationToken ct)
     {
-        classifications = new[] { "Standard Factory", "Strategic Pilot", "Lighthouse Engagement", "Innovation / POC", "Recovery Engagement" },
-        velocityImpacts = new[] { "Low", "Medium", "High", "Critical" },
-    });
+        var classifications = await lookups.ValuesAsync("Classification", ct);
+        var velocity = await lookups.ValuesAsync("VelocityImpact", ct);
+        return Ok(new
+        {
+            classifications = classifications.Count > 0 ? classifications : new[] { "Standard Factory", "Strategic Pilot", "Lighthouse Engagement", "Innovation / POC", "Recovery Engagement" },
+            velocityImpacts = velocity.Count > 0 ? velocity : new[] { "Low", "Medium", "High", "Critical" },
+        });
+    }
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] NominationUpdateDto input, CancellationToken ct)

@@ -55,6 +55,9 @@ public static class DbInitializer
         // Seed the 8-gate governance template (idempotent — only when empty).
         await GateTemplateSeed.SeedAsync(db, ct);
 
+        // Seed editable governance vocabularies (idempotent per category).
+        await LookupSeed.SeedAsync(db, ct);
+
         if (workbookExists && !hasResources)
         {
             // Fresh database + real workbook present: run the one-time import automatically.

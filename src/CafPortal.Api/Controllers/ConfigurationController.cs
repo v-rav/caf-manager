@@ -211,6 +211,57 @@ public class ConfigurationController(
 
     public record VocabUpsert(string Name);
 
+    /// <summary>Editable governance vocabularies (blocker categories/owners, classifications, velocity impacts).</summary>
+    [HttpGet("lookups")]
+    public async Task<IActionResult> GetLookups([FromQuery] string? category, CancellationToken ct)
+    {
+        var q = db.LookupValues.AsNoTracking().Where(l => l.ActiveFlag);
+        if (!string.IsNullOrWhiteSpace(category)) q = q.Where(l => l.Category == category);
+        return Ok(await q.OrderBy(l => l.Category).ThenBy(l => l.SortOrder).ThenBy(l => l.Value)
+            .Select(l => new { l.Id, l.Category, l.Value, l.SortOrder }).ToListAsync(ct));
+    }
+
+    [HttpPost("lookups")]
+    public async Task<IActionResult> AddLookup([FromBody] LookupUpsert input, CancellationToken ct)
+    {
+        var category = input.Category?.Trim();
+        var value = input.Value?.Trim();
+        if (string.IsNullOrEmpty(category) || string.IsNullOrEmpty(value)) return BadRequest("Category and value are required.");
+        if (await db.LookupValues.AnyAsync(l => l.Category == category && l.Value == value, ct)) return Conflict($"'{value}' already exists in {category}.");
+        var maxSort = await db.LookupValues.Where(l => l.Category == category).AnyAsync(ct)
+            ? await db.LookupValues.Where(l => l.Category == category).MaxAsync(l => l.SortOrder, ct) : 0;
+        var lookup = new LookupValue { Category = category, Value = value, SortOrder = maxSort + 1 };
+        db.LookupValues.Add(lookup);
+        await db.SaveChangesAsync(ct);
+        return Ok(new { lookup.Id, lookup.Category, lookup.Value, lookup.SortOrder });
+    }
+
+    [HttpPut("lookups/{id:int}")]
+    public async Task<IActionResult> UpdateLookup(int id, [FromBody] VocabUpsert input, CancellationToken ct)
+    {
+        var value = input.Name?.Trim();
+        if (string.IsNullOrEmpty(value)) return BadRequest("Value is required.");
+        var lookup = await db.LookupValues.FirstOrDefaultAsync(l => l.Id == id, ct);
+        if (lookup is null) return NotFound();
+        if (await db.LookupValues.AnyAsync(l => l.Category == lookup.Category && l.Value == value && l.Id != id, ct))
+            return Conflict($"'{value}' already exists in {lookup.Category}.");
+        lookup.Value = value;
+        await db.SaveChangesAsync(ct);
+        return Ok(new { lookup.Id, lookup.Category, lookup.Value, lookup.SortOrder });
+    }
+
+    [HttpDelete("lookups/{id:int}")]
+    public async Task<IActionResult> DeleteLookup(int id, CancellationToken ct)
+    {
+        var lookup = await db.LookupValues.FirstOrDefaultAsync(l => l.Id == id, ct);
+        if (lookup is null) return NotFound();
+        db.LookupValues.Remove(lookup);
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    public record LookupUpsert(string Category, string Value);
+
     /// <summary>Editable operational thresholds (stale tiers, leave-clash window).</summary>
     [HttpGet("settings")]
     public async Task<IActionResult> GetSettings(CancellationToken ct)

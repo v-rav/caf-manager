@@ -13,6 +13,7 @@ import type {
   Governance,
   Blocker,
   NominationEvent,
+  LookupValue,
   ImportChange,
   ImportRun,
   LeaveClash,
@@ -222,6 +223,16 @@ export const api = {
     http.get<Blocker[]>('/api/governance/blockers', { params: { region } }).then((r) => r.data),
   blockerCategories: () =>
     http.get<string[]>('/api/governance/blocker-categories').then((r) => r.data),
+  blockerOwners: () =>
+    http.get<string[]>('/api/governance/blocker-owners').then((r) => r.data),
+  lookups: (category?: string) =>
+    http.get<LookupValue[]>('/api/configuration/lookups', { params: { category } }).then((r) => r.data),
+  addLookup: (category: string, value: string) =>
+    http.post<LookupValue>('/api/configuration/lookups', { category, value }).then((r) => r.data),
+  updateLookup: (id: number, name: string) =>
+    http.put<LookupValue>(`/api/configuration/lookups/${id}`, { name }).then((r) => r.data),
+  deleteLookup: (id: number) =>
+    http.delete(`/api/configuration/lookups/${id}`).then((r) => r.data),
   governanceEvents: (nominationId: number) =>
     http.get<NominationEvent[]>(`/api/nominations/${nominationId}/governance/events`).then((r) => r.data),
   performance: (region?: string) =>

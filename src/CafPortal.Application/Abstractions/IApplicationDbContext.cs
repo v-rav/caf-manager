@@ -28,6 +28,7 @@ public interface IApplicationDbContext
     DbSet<RoleConfiguration> Roles { get; }
     DbSet<RolePermission> RolePermissions { get; }
     DbSet<SegmentConfiguration> Segments { get; }
+    DbSet<LookupValue> LookupValues { get; }
     DbSet<ToolConfiguration> Tools { get; }
     DbSet<SkillConfiguration> Skills { get; }
     DbSet<StrategicAccountConfiguration> StrategicAccountConfigurations { get; }

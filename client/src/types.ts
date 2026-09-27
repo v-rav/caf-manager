@@ -532,6 +532,12 @@ export interface NominationEvent {
   byUser?: string
   atUtc: string
 }
+export interface LookupValue {
+  id: number
+  category: string
+  value: string
+  sortOrder: number
+}
 
 export interface AttainmentBucket {
   key: string
