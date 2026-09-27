@@ -610,6 +610,7 @@ export function NominationsPage() {
                     const tone = staleTone[n.staleTier]
                     const details = (n.remarks ?? '').replace(/\s+/g, ' ').trim()
                     const age = n.stageAgeDays ?? n.daysSinceUpdate
+                    const paused = age - n.effectiveAgeDays
                     const action = recommendedAction(n.staleTier, age)
                     return (
                       <Tooltip
@@ -621,6 +622,8 @@ export function NominationsPage() {
                             {n.blockedSince && <div><b>Blocked since:</b> {n.blockedSince}</div>}
                             {n.followUpDate && <div><b>Follow-up:</b> {n.followUpDate}</div>}
                             <div><b>Age in stage:</b> {age} days{n.staleTier ? ` · SLA ${n.staleTier}` : ''}</div>
+                            {paused > 0 && <div><b>SLA clock:</b> {n.clockStopped ? 'stopped' : 'ran'} · {paused}d not counted · {n.effectiveAgeDays}d effective</div>}
+                            {n.openBlockerCount > 0 && <div><b>Open blockers:</b> {n.openBlockerCount}</div>}
                             {action && <div style={{ color: 'var(--colorPaletteRedForeground1)' }}><b>Next step:</b> {action}</div>}
                             {n.waves.length > 0 && <div><b>Waves:</b> {n.waves.map((w) => w.waveType).join(', ')}</div>}
                             {details && <div><b>Details:</b> {details}</div>}
@@ -628,6 +631,9 @@ export function NominationsPage() {
                         }
                       >
                         <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', cursor: 'help', flexWrap: 'wrap' }}>
+                          {n.clockStopped && (
+                            <Badge appearance="tint" color="warning" size="small">Paused</Badge>
+                          )}
                           {tone && (
                             <span style={{ background: tone.bg, color: tone.color, borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 600 }}>
                               SLA {tone.label}

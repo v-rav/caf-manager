@@ -44,6 +44,12 @@ public class NominationDto
 
     /// <summary>Whole days since last update. Drives stale detection.</summary>
     public int DaysSinceUpdate { get; set; }
+    /// <summary>Stage age minus time spent under a clock-stopping blocker. Drives the SLA tier.</summary>
+    public int EffectiveAgeDays { get; set; }
+    /// <summary>True when an open blocker is currently stopping the SLA clock.</summary>
+    public bool ClockStopped { get; set; }
+    /// <summary>Count of open blockers on this nomination.</summary>
+    public int OpenBlockerCount { get; set; }
     /// <summary>"", "Warn", "Escalate" or "Defer" per the Day 3/5/10 cadence.</summary>
     public string StaleTier { get; set; } = string.Empty;
 

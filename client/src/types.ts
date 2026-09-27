@@ -266,6 +266,9 @@ export interface Nomination {
   plannedEndDate?: string
   totalDays?: number
   daysSinceUpdate: number
+  effectiveAgeDays: number
+  clockStopped: boolean
+  openBlockerCount: number
   staleTier: string
   dbLinked: boolean
   alzLinked: boolean

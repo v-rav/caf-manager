@@ -28,12 +28,37 @@ public class NominationService(IApplicationDbContext db) : INominationService
         var items = await query.OrderByDescending(n => n.OpenedDate).ToListAsync(ct);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
+        // Clock-stopped blockers pause the SLA clock: subtract their elapsed window from the stage age.
+        var nomIds = items.Select(n => n.Id).ToList();
+        var nowUtc = DateTime.UtcNow;
+        var stops = await _db.NominationBlockers.AsNoTracking()
+            .Where(b => b.ClockStopped && nomIds.Contains(b.NominationId))
+            .Select(b => new { b.NominationId, b.BlockedSinceUtc, b.ResolvedUtc })
+            .ToListAsync(ct);
+        var openCounts = await _db.NominationBlockers.AsNoTracking()
+            .Where(b => b.ResolvedUtc == null && nomIds.Contains(b.NominationId))
+            .GroupBy(b => b.NominationId)
+            .Select(g => new { NominationId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.NominationId, x => x.Count, ct);
+        var stopsByNom = stops.GroupBy(b => b.NominationId).ToDictionary(g => g.Key, g => g.ToList());
+
         return items.Select(n =>
         {
             var lastTouch = n.UpdatedUtc ?? n.CreatedUtc;
             var updateDays = Math.Max(0, today.DayNumber - DateOnly.FromDateTime(lastTouch.UtcDateTime).DayNumber);
             // Age = days in the current migration stage when available; else fall back to update recency.
             var days = n.StageAgeDays ?? updateDays;
+            // Sum clock-stopped windows (open → now, resolved → resolved), capped so effective age stays >= 0.
+            var clockStoppedDays = 0;
+            var clockStopped = false;
+            if (stopsByNom.TryGetValue(n.Id, out var wins))
+                foreach (var w in wins)
+                {
+                    var end = w.ResolvedUtc ?? nowUtc;
+                    clockStoppedDays += Math.Max(0, (int)(end - w.BlockedSinceUtc).TotalDays);
+                    if (w.ResolvedUtc is null) clockStopped = true;
+                }
+            var effectiveDays = Math.Max(0, days - Math.Min(days, clockStoppedDays));
             // Wave links are informational (no required type); surface presence so empty records can be found.
             var waveTypes = n.WaveLinks.Select(w => w.WaveType).ToHashSet();
             var dbLinked = waveTypes.Contains(WaveType.Db);
@@ -76,7 +101,10 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 PlannedEndDate = n.PlannedEndDate,
                 TotalDays = n.TotalDays,
                 DaysSinceUpdate = days,
-                StaleTier = StaleTier(n.Status, StageIndex(n.MigrationStatus), days, warn, escalate, defer),
+                EffectiveAgeDays = effectiveDays,
+                ClockStopped = clockStopped,
+                OpenBlockerCount = openCounts.TryGetValue(n.Id, out var oc) ? oc : 0,
+                StaleTier = StaleTier(n.Status, StageIndex(n.MigrationStatus), effectiveDays, warn, escalate, defer),
                 DbLinked = dbLinked,
                 AlzLinked = alzLinked,
                 SecurityLinked = securityLinked,
