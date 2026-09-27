@@ -21,3 +21,7 @@ public record BlockerDto(
 public record UpdateGateItemRequest(string Status, string? Owner, string? Ref, string? Notes);
 
 public record RaiseBlockerRequest(string Category, bool ClockStopped, string? Owner, DateTime? ExpectedResolutionUtc, string? Notes, int? GateItemDefId);
+
+public record NominationEventDto(
+    int Id, int NominationId, int? GateItemDefId, string Type, string? Field, string? OldValue, string? NewValue,
+    string? ByUser, DateTime AtUtc);

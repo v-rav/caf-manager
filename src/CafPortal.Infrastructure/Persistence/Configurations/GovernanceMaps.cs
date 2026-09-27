@@ -60,3 +60,17 @@ public class NominationBlockerMap : IEntityTypeConfiguration<NominationBlocker>
         builder.HasIndex(x => new { x.NominationId, x.ResolvedUtc });
     }
 }
+
+public class NominationEventMap : IEntityTypeConfiguration<NominationEvent>
+{
+    public void Configure(EntityTypeBuilder<NominationEvent> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Type).HasMaxLength(40).IsRequired();
+        builder.Property(x => x.Field).HasMaxLength(200);
+        builder.Property(x => x.OldValue).HasMaxLength(500);
+        builder.Property(x => x.NewValue).HasMaxLength(500);
+        builder.Property(x => x.ByUser).HasMaxLength(120);
+        builder.HasIndex(x => new { x.NominationId, x.AtUtc });
+    }
+}

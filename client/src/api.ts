@@ -12,6 +12,7 @@ import type {
   DataStatus,
   Governance,
   Blocker,
+  NominationEvent,
   ImportChange,
   ImportRun,
   LeaveClash,
@@ -219,6 +220,8 @@ export const api = {
     http.get<Blocker[]>('/api/governance/blockers', { params: { region } }).then((r) => r.data),
   blockerCategories: () =>
     http.get<string[]>('/api/governance/blocker-categories').then((r) => r.data),
+  governanceEvents: (nominationId: number) =>
+    http.get<NominationEvent[]>(`/api/nominations/${nominationId}/governance/events`).then((r) => r.data),
   performance: (region?: string) =>
     http.get<PerformanceReview[]>('/api/performance', { params: { region } }).then((r) => r.data),
   performanceHistory: (personName: string) =>

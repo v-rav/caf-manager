@@ -1,4 +1,4 @@
-import { Badge, Button, Checkbox, Dropdown, Input, Option, Text, Tooltip } from '@fluentui/react-components'
+import { Badge, Button, Checkbox, Dropdown, Input, Option, Text } from '@fluentui/react-components'
 import {
   CheckmarkCircleFilled,
   CircleHalfFillRegular,
@@ -11,7 +11,7 @@ import { useParams, Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
-import type { Blocker, Gate, GateItem, Governance } from '../types'
+import type { Blocker, Gate, GateItem, Governance, NominationEvent } from '../types'
 
 const KIND_TONE: Record<string, 'brand' | 'success' | 'warning' | 'informative' | 'subtle'> = {
   Task: 'informative', Prerequisite: 'warning', Deliverable: 'brand', Approval: 'success', Signoff: 'success',
@@ -21,6 +21,13 @@ function stepIcon(g: Gate) {
   if (g.status === 'Green') return <CheckmarkCircleFilled style={{ color: '#107c10' }} />
   if (g.status === 'InProgress') return <CircleHalfFillRegular style={{ color: '#0f6cbd' }} />
   return <CircleRegular style={{ color: '#8a8886' }} />
+}
+
+function eventLabel(t: string) {
+  return t === 'ItemStatus' ? 'Item' : t === 'BlockerRaised' ? 'Blocked' : t === 'BlockerResolved' ? 'Unblocked' : t
+}
+function eventTone(t: string): 'brand' | 'danger' | 'success' | 'informative' {
+  return t === 'BlockerRaised' ? 'danger' : t === 'BlockerResolved' ? 'success' : t === 'ItemStatus' ? 'brand' : 'informative'
 }
 
 export function NominationWorkspacePage() {
@@ -37,6 +44,9 @@ export function NominationWorkspacePage() {
   const [rOwner, setROwner] = useState('')
   const [rNotes, setRNotes] = useState('')
   const [busyBlk, setBusyBlk] = useState(false)
+  const [events, setEvents] = useState<NominationEvent[]>([])
+
+  const loadEvents = () => { api.governanceEvents(nominationId).then(setEvents).catch(() => {}) }
 
   useEffect(() => { api.blockerCategories().then((c) => { setCategories(c); setRc((v) => v || c[0] || '') }).catch(() => {}) }, [])
 
@@ -52,7 +62,7 @@ export function NominationWorkspacePage() {
       setLoading(false)
     }
   }
-  useEffect(() => { void load() }, [nominationId])
+  useEffect(() => { void load(); loadEvents() }, [nominationId])
 
   const current = useMemo(() => gov?.gates.find((g) => g.key === selected) ?? gov?.gates[0], [gov, selected])
 
@@ -63,6 +73,7 @@ export function NominationWorkspacePage() {
       const next = item.status === 'Done' ? 'Pending' : 'Done'
       const updated = await api.updateGovernanceItem(nominationId, item.itemDefId, { status: next, owner: item.owner, ref: item.ref, notes: item.notes })
       setGov(updated)
+      loadEvents()
     } finally {
       setSaving(false)
     }
@@ -83,12 +94,13 @@ export function NominationWorkspacePage() {
       const updated = await api.raiseBlocker(nominationId, { category: rc, clockStopped: rClock, owner: rOwner || null, notes: rNotes || null })
       setGov(updated)
       setROwner(''); setRNotes('')
+      loadEvents()
     } finally { setBusyBlk(false) }
   }
   const resolveBlocker = async (b: Blocker) => {
     if (busyBlk) return
     setBusyBlk(true)
-    try { setGov(await api.resolveBlocker(nominationId, b.id)) } finally { setBusyBlk(false) }
+    try { setGov(await api.resolveBlocker(nominationId, b.id)); loadEvents() } finally { setBusyBlk(false) }
   }
 
   return (
@@ -213,9 +225,26 @@ export function NominationWorkspacePage() {
           </div>
         )}
       </Panel>
-      <Text size={100} style={{ color: 'var(--colorNeutralForeground4)' }}>
-        <Tooltip relationship="label" content="Blockers, timeline and gate-advance land in P2"><span>P1 · gated checklist</span></Tooltip>
-      </Text>
+
+      <Panel title={`Timeline${events.length ? ` · ${events.length}` : ''}`}>
+        {events.length === 0 ? (
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No activity yet.</Text>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {events.map((e) => (
+              <div key={e.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '4px 0', borderBottom: '1px solid var(--colorNeutralStroke3)' }}>
+                <Badge appearance="tint" color={eventTone(e.type)}>{eventLabel(e.type)}</Badge>
+                <div style={{ flex: 1 }}>
+                  <Text size={300}>{e.field ?? ''}{e.oldValue && e.newValue ? ` · ${e.oldValue} → ${e.newValue}` : e.newValue ? ` · ${e.newValue}` : ''}</Text>
+                  <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
+                    {e.byUser ? `${e.byUser} · ` : ''}{new Date(e.atUtc + 'Z').toLocaleString()}
+                  </Text>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
     </div>
   )
 }

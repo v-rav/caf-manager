@@ -38,4 +38,8 @@ public class NominationGovernanceController(IGovernanceService governance) : Con
         var dto = await governance.ResolveBlockerAsync(nominationId, blockerId, ct);
         return dto is null ? NotFound() : Ok(dto);
     }
+
+    [HttpGet("events")]
+    public async Task<IActionResult> Events(int nominationId, CancellationToken ct)
+        => Ok(await governance.GetEventsAsync(nominationId, ct));
 }

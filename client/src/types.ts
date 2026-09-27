@@ -496,6 +496,17 @@ export interface Blocker {
   daysBlocked: number
   raisedBy?: string
 }
+export interface NominationEvent {
+  id: number
+  nominationId: number
+  gateItemDefId?: number
+  type: string
+  field?: string
+  oldValue?: string
+  newValue?: string
+  byUser?: string
+  atUtc: string
+}
 
 export interface AttainmentBucket {
   key: string

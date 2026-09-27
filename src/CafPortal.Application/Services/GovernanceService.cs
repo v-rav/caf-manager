@@ -48,11 +48,12 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
     public async Task<NominationGovernanceDto?> RaiseBlockerAsync(int nominationId, RaiseBlockerRequest req, CancellationToken ct = default)
     {
         if (!await _db.Nominations.AnyAsync(n => n.Id == nominationId, ct)) return null;
+        var category = string.IsNullOrWhiteSpace(req.Category) ? "Internal Factory Dependency" : req.Category;
         _db.NominationBlockers.Add(new NominationBlocker
         {
             NominationId = nominationId,
             GateItemDefinitionId = req.GateItemDefId,
-            Category = string.IsNullOrWhiteSpace(req.Category) ? "Internal Factory Dependency" : req.Category,
+            Category = category,
             ClockStopped = req.ClockStopped,
             Owner = req.Owner,
             ExpectedResolutionUtc = req.ExpectedResolutionUtc,
@@ -60,6 +61,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             BlockedSinceUtc = DateTime.UtcNow,
             RaisedBy = _currentUser.Name,
         });
+        Log(nominationId, "BlockerRaised", category, null, req.ClockStopped ? "clock-stopped" : "clock-running", req.GateItemDefId);
         await _db.SaveChangesAsync(ct);
         return await GetForNominationAsync(nominationId, ct);
     }
@@ -72,10 +74,25 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         {
             blocker.ResolvedUtc = DateTime.UtcNow;
             blocker.ResolvedBy = _currentUser.Name;
+            Log(nominationId, "BlockerResolved", blocker.Category, null, null, blocker.GateItemDefinitionId);
             await _db.SaveChangesAsync(ct);
         }
         return await GetForNominationAsync(nominationId, ct);
     }
+
+    public async Task<IReadOnlyList<NominationEventDto>> GetEventsAsync(int nominationId, CancellationToken ct = default)
+        => await _db.NominationEvents.AsNoTracking()
+            .Where(e => e.NominationId == nominationId)
+            .OrderByDescending(e => e.AtUtc).ThenByDescending(e => e.Id)
+            .Select(e => new NominationEventDto(e.Id, e.NominationId, e.GateItemDefinitionId, e.Type, e.Field, e.OldValue, e.NewValue, e.ByUser, e.AtUtc))
+            .ToListAsync(ct);
+
+    private void Log(int nominationId, string type, string? field, string? oldValue, string? newValue, int? gateItemDefId)
+        => _db.NominationEvents.Add(new NominationEvent
+        {
+            NominationId = nominationId, Type = type, Field = field, OldValue = oldValue, NewValue = newValue,
+            GateItemDefinitionId = gateItemDefId, ByUser = _currentUser.Name, AtUtc = DateTime.UtcNow,
+        });
 
     public async Task<IReadOnlyList<BlockerDto>> GetOpenBlockersAsync(string? region, CancellationToken ct = default)
     {
@@ -105,6 +122,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
 
         var row = await _db.NominationGateItems
             .FirstOrDefaultAsync(x => x.NominationId == nominationId && x.GateItemDefinitionId == itemDefId, ct);
+        var oldStatus = row is null ? "Pending" : row.Status.ToString();
         if (row is null)
         {
             row = new NominationGateItem { NominationId = nominationId, GateItemDefinitionId = itemDefId };
@@ -118,6 +136,9 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         row.CompletedUtc = status == GateItemStatus.Done ? (row.CompletedUtc ?? DateTime.UtcNow) : null;
         row.UpdatedBy = _currentUser.Name;
         row.UpdatedUtc = DateTime.UtcNow;
+
+        if (oldStatus != status.ToString())
+            Log(nominationId, "ItemStatus", itemDef.Label, oldStatus, status.ToString(), itemDefId);
 
         await _db.SaveChangesAsync(ct);
         return await GetForNominationAsync(nominationId, ct);
