@@ -89,8 +89,8 @@ const SEED: Gate[] = [
     { id: 'g7p1', label: 'Build pipeline', kind: 'Task', status: 'Pending', owner: 'Eng · S.Rao', group: 'CI/CD' },
     { id: 'g7p2', label: 'Release pipeline', kind: 'Task', status: 'Pending', owner: 'Eng · S.Rao', group: 'CI/CD' },
     { id: 'g7p3', label: 'Deployment validation', kind: 'Task', status: 'Pending', owner: 'Eng · S.Rao', group: 'CI/CD' },
-    { id: 'g7x1', label: 'Migrate to AKS (target)', kind: 'Task', status: 'Pending', owner: 'Eng · R.Kumar', group: 'Execution' },
-    { id: 'g7x2', label: 'Smoke validation', kind: 'Task', status: 'Pending', owner: 'Eng · R.Kumar', group: 'Execution' },
+    { id: 'g7x1', label: 'Migrate to AKS (target)', kind: 'Task', status: 'Pending', owner: 'Eng · R.Kumar', group: 'Deployment' },
+    { id: 'g7x2', label: 'Smoke validation', kind: 'Task', status: 'Pending', owner: 'Eng · R.Kumar', group: 'Deployment' },
     { id: 'g7g1', label: 'Weekly status · FDO hygiene', kind: 'Task', status: 'Pending', owner: 'SA', group: 'Governance (SA)' },
   ] },
   { key: 'G8', name: 'Closure', weight: 5, exit: 'Customer signoff · FDO closure · Lessons learned', items: [

@@ -180,7 +180,7 @@ Classifications · Readiness/Prerequisite items (via GateItemDefinition).
 | **G4 Scope Governance** ⚑ | Scope document created · In-scope defined · Out-of-scope defined · Customer responsibilities · Factory responsibilities · Assumptions · Dependencies · Acceptance criteria | **Signed scope document** · No ownership ambiguity · FDO updated |
 | **G5 Architecture** | TAD prepared · Architecture reviewed · Target-state approved · Security review · Customer signoff | TAD approved · Customer approval · Architecture risks closed |
 | **G6 Delivery Readiness** | Scope frozen · Access available · Environments ready · Deployment methodology agreed · Rollback strategy · Customer contacts identified · **Target platform selected** (App Service/AKS/ACA/ARO/VM) | Engineering-ready status |
-| **G7 Delivery Governance** *(SA-tracked, engineer-executed; grouped by delivery sub-stage)* | **Modernization:** Version Upgrade · Code Remediation · Dependency Upgrade · Security Fixes · **Containerization:** Dockerfile · Container Image · Registry Push · **IaC:** Bicep · Terraform · Helm · AKS Manifests · **CI/CD:** Build Pipeline · Release Pipeline · Deployment Validation · **Execution:** Migrate to target · Smoke validation · **Governance:** Weekly status · FDO hygiene · Escalations | Progress reflected in systems · Issues escalated in time |
+| **G7 Delivery Governance** *(SA-tracked, engineer-executed; grouped by delivery sub-stage)* | **Modernization:** Version Upgrade · Code Remediation · Dependency Upgrade · Security Fixes · **Containerization:** Dockerfile · Container Image · Registry Push · **IaC:** Bicep · Terraform · Helm · AKS Manifests · **CI/CD:** Build Pipeline · Release Pipeline · Deployment Validation · **Deployment:** Migrate to target · Smoke validation · **Governance:** Weekly status · FDO hygiene · Escalations | Progress reflected in systems · Issues escalated in time |
 | **G8 Closure** | UAT completed · Signoff obtained · Documentation delivered · KT completed · Closure report submitted | Customer signoff · FDO closure · Lessons learned captured |
 
 ⚑ = highest-weight gate; the doc flags Scope Governance as *"where many nominations fail."*
@@ -480,5 +480,5 @@ deliverables, and PM/CFTL/SA ownership are tracked **throughout** the journey, n
 
 ### A.15 Delivery sub-stages (G7 grouping) & responsible role
 `Modernization` (Engineer) · `Containerization` (Engineer) · `IaC` (Engineer) · `CI/CD` (Engineer) ·
-`Execution` (Engineer) · `Governance` (SA) — the SA is Accountable for all; Engineers are Responsible for
+`Deployment` (Engineer) · `Governance` (SA) — the SA is Accountable for all; Engineers are Responsible for
 the technical groups.
