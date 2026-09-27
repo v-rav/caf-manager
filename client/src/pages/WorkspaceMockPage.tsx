@@ -7,14 +7,14 @@ import {
   ErrorCircleFilled,
   DocumentLinkRegular,
 } from '@fluentui/react-icons'
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 
 // ── Mock domain (P0 preview — no backend). Mirrors FACTORY-OPERATING-SYSTEM.md gate template. ──
 type Kind = 'Task' | 'Prerequisite' | 'Deliverable' | 'Approval' | 'Signoff'
 type ItemStatus = 'Pending' | 'Done'
-interface Item { id: string; label: string; kind: Kind; mandatory?: boolean; status: ItemStatus; owner?: string; ref?: string; blocked?: boolean }
+interface Item { id: string; label: string; kind: Kind; mandatory?: boolean; status: ItemStatus; owner?: string; ref?: string; blocked?: boolean; group?: string }
 interface Gate { key: string; name: string; weight: number; exit: string; items: Item[] }
 
 const KIND_TONE: Record<Kind, 'brand' | 'success' | 'warning' | 'informative' | 'subtle'> = {
@@ -74,9 +74,24 @@ const SEED: Gate[] = [
     { id: 'g6b', label: 'Environments ready', kind: 'Prerequisite', status: 'Pending' },
     { id: 'g6c', label: 'Rollback strategy defined', kind: 'Task', status: 'Pending' },
   ] },
-  { key: 'G7', name: 'Delivery Governance', weight: 7, exit: 'Progress in systems · Issues escalated in time', items: [
-    { id: 'g7a', label: 'Weekly status review', kind: 'Task', status: 'Pending' },
-    { id: 'g7b', label: 'FDO hygiene', kind: 'Task', status: 'Pending' },
+  { key: 'G7', name: 'Delivery Governance', weight: 7, exit: 'Progress in systems · Issues escalated in time · SA-tracked, engineers execute', items: [
+    { id: 'g7m1', label: 'Version upgrade', kind: 'Task', status: 'Pending', owner: 'Eng · R.Kumar', group: 'Modernization' },
+    { id: 'g7m2', label: 'Code remediation', kind: 'Task', status: 'Pending', owner: 'Eng · R.Kumar', group: 'Modernization' },
+    { id: 'g7m3', label: 'Dependency upgrade', kind: 'Task', status: 'Pending', owner: 'Eng · R.Kumar', group: 'Modernization' },
+    { id: 'g7m4', label: 'Security fixes', kind: 'Task', status: 'Pending', owner: 'Eng · R.Kumar', group: 'Modernization' },
+    { id: 'g7c1', label: 'Dockerfile', kind: 'Deliverable', status: 'Pending', owner: 'Eng · S.Rao', group: 'Containerization' },
+    { id: 'g7c2', label: 'Container image', kind: 'Deliverable', status: 'Pending', owner: 'Eng · S.Rao', group: 'Containerization' },
+    { id: 'g7c3', label: 'Registry push', kind: 'Task', status: 'Pending', owner: 'Eng · S.Rao', group: 'Containerization' },
+    { id: 'g7i1', label: 'Bicep', kind: 'Deliverable', status: 'Pending', owner: 'Eng · S.Rao', group: 'IaC' },
+    { id: 'g7i2', label: 'Terraform', kind: 'Deliverable', status: 'Pending', owner: 'Eng · S.Rao', group: 'IaC' },
+    { id: 'g7i3', label: 'Helm charts', kind: 'Deliverable', status: 'Pending', owner: 'Eng · S.Rao', group: 'IaC' },
+    { id: 'g7i4', label: 'AKS manifests', kind: 'Deliverable', status: 'Pending', owner: 'Eng · S.Rao', group: 'IaC' },
+    { id: 'g7p1', label: 'Build pipeline', kind: 'Task', status: 'Pending', owner: 'Eng · S.Rao', group: 'CI/CD' },
+    { id: 'g7p2', label: 'Release pipeline', kind: 'Task', status: 'Pending', owner: 'Eng · S.Rao', group: 'CI/CD' },
+    { id: 'g7p3', label: 'Deployment validation', kind: 'Task', status: 'Pending', owner: 'Eng · S.Rao', group: 'CI/CD' },
+    { id: 'g7x1', label: 'Migrate to AKS (target)', kind: 'Task', status: 'Pending', owner: 'Eng · R.Kumar', group: 'Execution' },
+    { id: 'g7x2', label: 'Smoke validation', kind: 'Task', status: 'Pending', owner: 'Eng · R.Kumar', group: 'Execution' },
+    { id: 'g7g1', label: 'Weekly status · FDO hygiene', kind: 'Task', status: 'Pending', owner: 'SA', group: 'Governance (SA)' },
   ] },
   { key: 'G8', name: 'Closure', weight: 5, exit: 'Customer signoff · FDO closure · Lessons learned', items: [
     { id: 'g8a', label: 'UAT completed', kind: 'Task', status: 'Pending' },
@@ -209,9 +224,14 @@ export function WorkspaceMockPage() {
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {current.items.map((i) => (
+            {current.items.map((i, idx) => {
+              const showGroup = i.group && i.group !== current.items[idx - 1]?.group
+              return (
+              <Fragment key={i.id}>
+                {showGroup && (
+                  <Text size={200} weight="semibold" style={{ marginTop: idx ? 8 : 0, color: 'var(--colorNeutralForeground2)' }}>{i.group}</Text>
+                )}
               <div
-                key={i.id}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6,
                   border: '1px solid var(--colorNeutralStroke2)',
@@ -239,7 +259,9 @@ export function WorkspaceMockPage() {
                   </Tooltip>
                 ) : null}
               </div>
-            ))}
+              </Fragment>
+              )
+            })}
           </div>
         </Panel>
 

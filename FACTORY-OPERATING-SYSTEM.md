@@ -81,6 +81,22 @@ velocity / SLA counted only when Classification = Standard
 This is the single change that lets leadership prove *"30% of Java capacity is strategic investment,
 not slow execution."*
 
+### 3.5 Roles (RACI) — SA manages, execution team delivers
+Delivery work is done by engineers, but the **SA owns the governance record**. Every gate item carries a
+**ResponsibleRole** (who does it) while the **SA is Accountable** (keeps the tracker current, ensures the
+gate goes green, escalates blockers).
+
+| Role | On a nomination | RACI |
+|------|-----------------|------|
+| **SA** | Owns all 8 gates + the checklist; keeps status truthful; raises/resolves blockers | **A** (accountable) |
+| **Engineer / Execution team** | Performs technical delivery items (upgrade, containerize, IaC, pipelines, migrate) | **R** (responsible) |
+| **PM** | Coordination, customer scheduling | **C** |
+| **CFTL** | Gate approvals, extension justification | **A/Approver** at gates |
+| **Customer** | Approvals, access, testing sign-off | **R** for customer-owned items |
+
+So the delivery-execution stages (journey 8–12) appear as **G7 checklist items the SA tracks**, even though
+engineers execute them — giving the SA a live view of delivery progress (and feeding MSI · Delivery Progress).
+
 ### 3.4 Migration Readiness Compliance %
 Weighted gate-completion score (from the SA model), a per-nomination, per-SA, and per-region KPI:
 
@@ -122,7 +138,9 @@ erDiagram
 ### 4.1 Configuration/template tables
 - **GateDefinition** — `Id, Key, Name, Order, Weight, OwnerRole (SA), Active`.
 - **GateItemDefinition** — `Id, GateId, Key, Label, Kind (Task|Prerequisite|Deliverable|Approval|Signoff),
-  Mandatory, Order, Active`.
+  SubStage (journey group — e.g. Modernization/Containerization/IaC/CI-CD/Execution), ResponsibleRole
+  (SA|Engineer|PM|Customer), Mandatory, Order, Active`. *(SA is always **Accountable**; ResponsibleRole is
+  who **does** the work.)*
 
 ### 4.2 Per-nomination tables
 - **NominationGate** — `Id, NominationId, GateId, Status (NotStarted|InProgress|Green|Blocked),
@@ -161,8 +179,8 @@ Classifications · Readiness/Prerequisite items (via GateItemDefinition).
 | **G3 Assessment** | AppCAT/Azure Migrate assessment · Migration approach finalized · Modernization opportunities · Complexity validated · Effort sizing · Technical risks documented | Assessment report complete · Migration strategy approved · Risk register available |
 | **G4 Scope Governance** ⚑ | Scope document created · In-scope defined · Out-of-scope defined · Customer responsibilities · Factory responsibilities · Assumptions · Dependencies · Acceptance criteria | **Signed scope document** · No ownership ambiguity · FDO updated |
 | **G5 Architecture** | TAD prepared · Architecture reviewed · Target-state approved · Security review · Customer signoff | TAD approved · Customer approval · Architecture risks closed |
-| **G6 Delivery Readiness** | Scope frozen · Access available · Environments ready · Deployment methodology agreed · Rollback strategy · Customer contacts identified | Engineering-ready status |
-| **G7 Delivery Governance** | Weekly status review · Risk updates · Dependency management · Scope control · Customer escalations · FDO hygiene · Status reporting | Progress reflected in systems · Issues escalated in time |
+| **G6 Delivery Readiness** | Scope frozen · Access available · Environments ready · Deployment methodology agreed · Rollback strategy · Customer contacts identified · **Target platform selected** (App Service/AKS/ACA/ARO/VM) | Engineering-ready status |
+| **G7 Delivery Governance** *(SA-tracked, engineer-executed; grouped by delivery sub-stage)* | **Modernization:** Version Upgrade · Code Remediation · Dependency Upgrade · Security Fixes · **Containerization:** Dockerfile · Container Image · Registry Push · **IaC:** Bicep · Terraform · Helm · AKS Manifests · **CI/CD:** Build Pipeline · Release Pipeline · Deployment Validation · **Execution:** Migrate to target · Smoke validation · **Governance:** Weekly status · FDO hygiene · Escalations | Progress reflected in systems · Issues escalated in time |
 | **G8 Closure** | UAT completed · Signoff obtained · Documentation delivered · KT completed · Closure report submitted | Customer signoff · FDO closure · Lessons learned captured |
 
 ⚑ = highest-weight gate; the doc flags Scope Governance as *"where many nominations fail."*
@@ -456,3 +474,11 @@ deliverables, and PM/CFTL/SA ownership are tracked **throughout** the journey, n
 ### A.13 Strategic-pilot time thresholds
 `0–60d` Green (normal) · `61–90d` Amber (leadership review) · `91–120d` Red (CFTL justification) ·
 `>120d` Executive decision (scale / fund / transition / close)
+
+### A.14 Target platform (Migration Execution)
+`App Service` · `AKS` · `ACA` · `ARO` · `VM` — single-select per nomination (G6 selects it; G7 executes it).
+
+### A.15 Delivery sub-stages (G7 grouping) & responsible role
+`Modernization` (Engineer) · `Containerization` (Engineer) · `IaC` (Engineer) · `CI/CD` (Engineer) ·
+`Execution` (Engineer) · `Governance` (SA) — the SA is Accountable for all; Engineers are Responsible for
+the technical groups.
