@@ -90,6 +90,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 Classification = classification,
                 VelocityImpact = n.VelocityImpact,
                 IsStrategic = isStrategic,
+                DaysInFlight = inFlightDays,
                 StrategicTier = strategicTier,
                 BlockedReason = n.BlockedReason?.ToDisplay(),
                 BlockedSince = n.BlockedSince,

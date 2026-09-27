@@ -272,6 +272,7 @@ export interface Nomination {
   classification: string
   velocityImpact?: string
   isStrategic: boolean
+  daysInFlight: number
   strategicTier: string
   staleTier: string
   dbLinked: boolean
