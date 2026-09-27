@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Application.Dtos;
 using CafPortal.Domain.Entities.Governance;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
     {
         var nom = await _db.Nominations.AsNoTracking()
             .Where(n => n.Id == nominationId)
-            .Select(n => new { n.Id, n.AccountName, Tpid = n.Account != null ? n.Account.Tpid : null })
+            .Select(n => new { n.Id, n.AccountName, Tpid = n.Account != null ? n.Account.Tpid : null, n.GhcpAdoptionLevel })
             .FirstOrDefaultAsync(ct);
         if (nom is null) return null;
 
@@ -33,7 +34,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             .OrderByDescending(b => b.BlockedSinceUtc)
             .ToListAsync(ct);
 
-        return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers);
+        return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, nom.GhcpAdoptionLevel);
     }
 
     public static IReadOnlyList<string> BlockerCategories { get; } = new[]
@@ -145,7 +146,8 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
     }
 
     private static NominationGovernanceDto Build(int nominationId, string? account, string? tpid,
-        List<GateDefinition> gates, IReadOnlyDictionary<int, NominationGateItem> state, List<NominationBlocker> openBlockers)
+        List<GateDefinition> gates, IReadOnlyDictionary<int, NominationGateItem> state, List<NominationBlocker> openBlockers,
+        int? adoptionLevel)
     {
         static string StatusName(GateItemStatus s) => s switch
         {
@@ -160,6 +162,10 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         var gateDtos = new List<GateDto>();
         double weightedSum = 0, totalWeight = 0;
         string? currentGateKey = null;
+        var grp = new Dictionary<string, (int counted, int done)>
+        {
+            ["Readiness"] = (0, 0), ["Scope"] = (0, 0), ["Delivery"] = (0, 0), ["Signoff"] = (0, 0),
+        };
 
         foreach (var g in gates.OrderBy(g => g.Order))
         {
@@ -177,6 +183,10 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             var pct = counted.Count == 0 ? 0 : (int)Math.Round(100.0 * done / counted.Count);
             var status = counted.Count > 0 && done == counted.Count ? "Green" : done > 0 ? "InProgress" : "NotStarted";
 
+            var gk = MsiCalculator.GroupFor(g.Key);
+            var acc = grp[gk];
+            grp[gk] = (acc.counted + counted.Count, acc.done + done);
+
             if (currentGateKey is null && status != "Green") currentGateKey = g.Key;
             weightedSum += g.Weight * pct;
             totalWeight += g.Weight;
@@ -193,6 +203,11 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
 
         var compliance = totalWeight > 0 ? (int)Math.Round(weightedSum / totalWeight) : 0;
         currentGateKey ??= gateDtos.LastOrDefault()?.Key;
-        return new NominationGovernanceDto(nominationId, account, tpid, null, currentGateKey, compliance, gateDtos, blockerDtos);
+        int Pct((int counted, int done) x) => x.counted == 0 ? 0 : (int)Math.Round(100.0 * x.done / x.counted);
+        var msi = MsiCalculator.Compute(
+            Pct(grp["Readiness"]), Pct(grp["Scope"]), Pct(grp["Delivery"]),
+            MsiCalculator.RiskHealth(openBlockers.Count, openBlockers.Any(b => b.ClockStopped)),
+            MsiCalculator.GhcpScore(adoptionLevel), Pct(grp["Signoff"]));
+        return new NominationGovernanceDto(nominationId, account, tpid, null, currentGateKey, compliance, gateDtos, blockerDtos, msi.Score, msi.Band);
     }
 }

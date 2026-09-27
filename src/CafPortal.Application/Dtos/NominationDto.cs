@@ -32,6 +32,16 @@ public class NominationDto
     public int DaysInFlight { get; set; }
     /// <summary>"", "Green", "Amber", "Red" or "Exec" from days-in-flight against the 60/90/120 thresholds.</summary>
     public string StrategicTier { get; set; } = string.Empty;
+
+    // Migration Success Index (0–100) and its components.
+    public int MsiScore { get; set; }
+    public string MsiBand { get; set; } = "Red";
+    public int MsiReadiness { get; set; }
+    public int MsiScope { get; set; }
+    public int MsiDelivery { get; set; }
+    public int MsiRisk { get; set; }
+    public int MsiGhcp { get; set; }
+    public int MsiSignoff { get; set; }
     public string? BlockedReason { get; set; }
     public DateOnly? BlockedSince { get; set; }
     public DateOnly? FollowUpDate { get; set; }

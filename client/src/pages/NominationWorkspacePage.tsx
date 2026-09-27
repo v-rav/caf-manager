@@ -114,7 +114,10 @@ export function NominationWorkspacePage() {
           </div>
           <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>SA governance workspace · gated checklist</Text>
         </div>
-        <KpiCard label="Readiness compliance" value={`${gov.compliancePercent}%`} tone={gov.compliancePercent >= 80 ? 'success' : gov.compliancePercent >= 50 ? 'brand' : 'neutral'} />
+        <div style={{ display: 'flex', gap: 12 }}>
+          <KpiCard label="MSI health" value={gov.msiScore} tone={gov.msiBand === 'Green' ? 'success' : gov.msiBand === 'Amber' ? 'warning' : 'danger'} />
+          <KpiCard label="Readiness compliance" value={`${gov.compliancePercent}%`} tone={gov.compliancePercent >= 80 ? 'success' : gov.compliancePercent >= 50 ? 'brand' : 'neutral'} />
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

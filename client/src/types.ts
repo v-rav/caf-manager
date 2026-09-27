@@ -275,6 +275,14 @@ export interface Nomination {
   isStrategic: boolean
   daysInFlight: number
   strategicTier: string
+  msiScore: number
+  msiBand: string
+  msiReadiness: number
+  msiScope: number
+  msiDelivery: number
+  msiRisk: number
+  msiGhcp: number
+  msiSignoff: number
   staleTier: string
   dbLinked: boolean
   alzLinked: boolean
@@ -489,6 +497,8 @@ export interface Governance {
   compliancePercent: number
   gates: Gate[]
   blockers: Blocker[]
+  msiScore: number
+  msiBand: string
 }
 export interface Blocker {
   id: number

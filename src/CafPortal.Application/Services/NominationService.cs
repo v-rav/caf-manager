@@ -43,6 +43,38 @@ public class NominationService(IApplicationDbContext db) : INominationService
             .ToDictionaryAsync(x => x.NominationId, x => x.Count, ct);
         var stopsByNom = stops.GroupBy(b => b.NominationId).ToDictionary(g => g.Key, g => g.ToList());
 
+        // Gate state for MSI: which item-defs belong to each MSI group, and each nomination's item statuses.
+        var gateDefs = await _db.GateDefinitions.AsNoTracking()
+            .Where(g => g.Active)
+            .Include(g => g.Items.Where(i => i.Active))
+            .ToListAsync(ct);
+        var groupDefs = new Dictionary<string, HashSet<int>>
+        {
+            ["Readiness"] = new(), ["Scope"] = new(), ["Delivery"] = new(), ["Signoff"] = new(),
+        };
+        foreach (var g in gateDefs)
+            foreach (var i in g.Items)
+                groupDefs[MsiCalculator.GroupFor(g.Key)].Add(i.Id);
+        var gateState = await _db.NominationGateItems.AsNoTracking()
+            .Where(x => nomIds.Contains(x.NominationId))
+            .Select(x => new { x.NominationId, x.GateItemDefinitionId, x.Status })
+            .ToListAsync(ct);
+        var stateByNom = gateState.GroupBy(x => x.NominationId)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.GateItemDefinitionId, x => x.Status));
+
+        int GroupPct(IReadOnlyDictionary<int, Domain.Entities.Governance.GateItemStatus>? st, HashSet<int> defs)
+        {
+            int counted = 0, done = 0;
+            foreach (var id in defs)
+            {
+                var s = st != null && st.TryGetValue(id, out var v) ? v : Domain.Entities.Governance.GateItemStatus.Pending;
+                if (s == Domain.Entities.Governance.GateItemStatus.NotApplicable) continue;
+                counted++;
+                if (s == Domain.Entities.Governance.GateItemStatus.Done) done++;
+            }
+            return counted == 0 ? 0 : (int)Math.Round(100.0 * done / counted);
+        }
+
         return items.Select(n =>
         {
             var lastTouch = n.UpdatedUtc ?? n.CreatedUtc;
@@ -64,6 +96,13 @@ public class NominationService(IApplicationDbContext db) : INominationService
             var isStrategic = !classification.Equals("Standard Factory", StringComparison.OrdinalIgnoreCase);
             var inFlightDays = Math.Max(0, today.DayNumber - (n.NominatedDate ?? n.OpenedDate).DayNumber);
             var strategicTier = StrategicTier(isStrategic, n.Status, inFlightDays, green, amber, red);
+
+            var openBlk = openCounts.TryGetValue(n.Id, out var oc) ? oc : 0;
+            var st = stateByNom.TryGetValue(n.Id, out var s2) ? s2 : null;
+            var msi = MsiCalculator.Compute(
+                GroupPct(st, groupDefs["Readiness"]), GroupPct(st, groupDefs["Scope"]), GroupPct(st, groupDefs["Delivery"]),
+                MsiCalculator.RiskHealth(openBlk, clockStopped), MsiCalculator.GhcpScore(n.GhcpAdoptionLevel),
+                GroupPct(st, groupDefs["Signoff"]));
             // Wave links are informational (no required type); surface presence so empty records can be found.
             var waveTypes = n.WaveLinks.Select(w => w.WaveType).ToHashSet();
             var dbLinked = waveTypes.Contains(WaveType.Db);
@@ -114,7 +153,15 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 DaysSinceUpdate = days,
                 EffectiveAgeDays = effectiveDays,
                 ClockStopped = clockStopped,
-                OpenBlockerCount = openCounts.TryGetValue(n.Id, out var oc) ? oc : 0,
+                OpenBlockerCount = openBlk,
+                MsiScore = msi.Score,
+                MsiBand = msi.Band,
+                MsiReadiness = msi.Readiness,
+                MsiScope = msi.Scope,
+                MsiDelivery = msi.Delivery,
+                MsiRisk = msi.Risk,
+                MsiGhcp = msi.Ghcp,
+                MsiSignoff = msi.Signoff,
                 StaleTier = StaleTier(n.Status, StageIndex(n.MigrationStatus), effectiveDays, warn, escalate, defer),
                 DbLinked = dbLinked,
                 AlzLinked = alzLinked,
