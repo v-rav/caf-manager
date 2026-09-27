@@ -27,6 +27,10 @@ public class Nomination : AuditableEntity
     public string? CftlPrimary { get; set; }
     public string? ProjectCoordinator { get; set; }
 
+    // Portal-owned strategic governance (P3). Classification drives which KPI denominator applies.
+    public string? Classification { get; set; }
+    public string? VelocityImpact { get; set; }
+
     /// <summary>Reason the nomination is blocked (required when Status = Blocked).</summary>
     public BlockerReasonType? BlockedReason { get; set; }
     /// <summary>Date the nomination entered a blocked/waiting state.</summary>

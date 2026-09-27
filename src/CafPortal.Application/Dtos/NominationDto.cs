@@ -21,6 +21,13 @@ public class NominationDto
     public string? CftlPrimary { get; set; }
     public string? ProjectCoordinator { get; set; }
 
+    // Strategic governance (P3). Classification defaults to Standard Factory when unset.
+    public string Classification { get; set; } = "Standard Factory";
+    public string? VelocityImpact { get; set; }
+    /// <summary>True when classification is anything other than Standard Factory (strategic investment).</summary>
+    public bool IsStrategic { get; set; }
+    /// <summary>"", "Green", "Amber", "Red" or "Exec" from days-in-flight against the 60/90/120 thresholds.</summary>
+    public string StrategicTier { get; set; } = string.Empty;
     public string? BlockedReason { get; set; }
     public DateOnly? BlockedSince { get; set; }
     public DateOnly? FollowUpDate { get; set; }
@@ -91,6 +98,8 @@ public class NominationUpdateDto
     public string? ProjectCoordinator { get; set; }
     public string? CftlPrimary { get; set; }
     public string? SolutionArchitect { get; set; }
+    public string? Classification { get; set; }
+    public string? VelocityImpact { get; set; }
 }
 
 public class WaveLinkDto

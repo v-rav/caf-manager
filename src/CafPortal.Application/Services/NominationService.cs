@@ -14,6 +14,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
     public async Task<IReadOnlyList<NominationDto>> GetAsync(string? region, string? status, CancellationToken ct = default)
     {
         var (warn, escalate, defer) = await GetStaleTiersAsync(ct);
+        var (green, amber, red) = await GetStrategicThresholdsAsync(ct);
 
         var query = _db.Nominations.AsNoTracking()
             .Include(n => n.WaveLinks)
@@ -59,6 +60,10 @@ public class NominationService(IApplicationDbContext db) : INominationService
                     if (w.ResolvedUtc is null) clockStopped = true;
                 }
             var effectiveDays = Math.Max(0, days - Math.Min(days, clockStoppedDays));
+            var classification = string.IsNullOrWhiteSpace(n.Classification) ? "Standard Factory" : n.Classification!;
+            var isStrategic = !classification.Equals("Standard Factory", StringComparison.OrdinalIgnoreCase);
+            var inFlightDays = Math.Max(0, today.DayNumber - (n.NominatedDate ?? n.OpenedDate).DayNumber);
+            var strategicTier = StrategicTier(isStrategic, n.Status, inFlightDays, green, amber, red);
             // Wave links are informational (no required type); surface presence so empty records can be found.
             var waveTypes = n.WaveLinks.Select(w => w.WaveType).ToHashSet();
             var dbLinked = waveTypes.Contains(WaveType.Db);
@@ -82,6 +87,10 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 SolutionArchitect = n.SolutionArchitect,
                 CftlPrimary = n.CftlPrimary,
                 ProjectCoordinator = n.ProjectCoordinator,
+                Classification = classification,
+                VelocityImpact = n.VelocityImpact,
+                IsStrategic = isStrategic,
+                StrategicTier = strategicTier,
                 BlockedReason = n.BlockedReason?.ToDisplay(),
                 BlockedSince = n.BlockedSince,
                 FollowUpDate = n.FollowUpDate,
@@ -149,6 +158,12 @@ public class NominationService(IApplicationDbContext db) : INominationService
         // Solution Architect is managed via resource assignment (AssignResourceAsync), not here.
         n.ProjectCoordinator = string.IsNullOrWhiteSpace(input.ProjectCoordinator) ? null : input.ProjectCoordinator.Trim();
         n.CftlPrimary = string.IsNullOrWhiteSpace(input.CftlPrimary) ? null : input.CftlPrimary.Trim();
+
+        // Classification & velocity impact are portal-owned strategic governance.
+        if (input.Classification is not null)
+            n.Classification = string.IsNullOrWhiteSpace(input.Classification) ? null : input.Classification.Trim();
+        if (input.VelocityImpact is not null)
+            n.VelocityImpact = string.IsNullOrWhiteSpace(input.VelocityImpact) ? null : input.VelocityImpact.Trim();
 
         // Stamp a blocked-since date automatically when moving into a blocked/waiting state without one.
         if (IsBlockedState(n.Status) && n.BlockedSince is null)
@@ -254,6 +269,28 @@ public class NominationService(IApplicationDbContext db) : INominationService
             .ToDictionaryAsync(s => s.Key, s => s.Value, ct);
         int Get(string k, int d) => settings.TryGetValue(k, out var v) && int.TryParse(v, out var n) ? n : d;
         return (Get("StaleWarnDays", 3), Get("StaleEscalateDays", 5), Get("StaleDeferDays", 10));
+    }
+
+    // Strategic-pilot time thresholds (A.13): 0–60 Green, 61–90 Amber, 91–120 Red, >120 Exec.
+    private async Task<(int green, int amber, int red)> GetStrategicThresholdsAsync(CancellationToken ct)
+    {
+        var settings = await _db.ApplicationSettings.AsNoTracking()
+            .Where(s => s.Key == "StrategicGreenDays" || s.Key == "StrategicAmberDays" || s.Key == "StrategicRedDays")
+            .ToDictionaryAsync(s => s.Key, s => s.Value, ct);
+        int Get(string k, int d) => settings.TryGetValue(k, out var v) && int.TryParse(v, out var n) ? n : d;
+        return (Get("StrategicGreenDays", 60), Get("StrategicAmberDays", 90), Get("StrategicRedDays", 120));
+    }
+
+    private static string StrategicTier(bool isStrategic, NominationStatusType status, int inFlightDays, int green, int amber, int red)
+    {
+        if (!isStrategic) return string.Empty;
+        // Settled pilots are no longer actively governed against the running clock.
+        if (status is NominationStatusType.Completed or NominationStatusType.Closed or NominationStatusType.CustomerDeferred or NominationStatusType.Withdrawn)
+            return string.Empty;
+        if (inFlightDays > red) return "Exec";
+        if (inFlightDays > amber) return "Red";
+        if (inFlightDays > green) return "Amber";
+        return "Green";
     }
 
     // Migration Status text → numeric stage (1–4). The SLA cadence applies to execution stages 2–4.

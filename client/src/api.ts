@@ -141,6 +141,8 @@ export const api = {
 
   nominations: (region?: string, status?: string) =>
     http.get<Nomination[]>('/api/nominations', { params: { region, status } }).then((r) => r.data),
+  nominationVocab: () =>
+    http.get<{ classifications: string[]; velocityImpacts: string[] }>('/api/nominations/vocab').then((r) => r.data),
 
   updateNomination: (id: number, input: NominationUpdate) =>
     http.put<Nomination>(`/api/nominations/${id}`, input).then((r) => r.data),

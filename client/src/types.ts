@@ -269,6 +269,10 @@ export interface Nomination {
   effectiveAgeDays: number
   clockStopped: boolean
   openBlockerCount: number
+  classification: string
+  velocityImpact?: string
+  isStrategic: boolean
+  strategicTier: string
   staleTier: string
   dbLinked: boolean
   alzLinked: boolean
@@ -384,6 +388,8 @@ export interface NominationUpdate {
   projectCoordinator?: string
   cftlPrimary?: string
   solutionArchitect?: string
+  classification?: string
+  velocityImpact?: string
 }
 
 export interface WaveLinkUpsert {

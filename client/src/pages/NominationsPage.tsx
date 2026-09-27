@@ -269,6 +269,14 @@ function recommendedAction(staleTier: string, ageDays: number): string | null {
   }
 }
 
+// Strategic tier tone maps A.13 status to a Fluent badge colour; short labels keep the grid tight.
+function strategicTone(tier: string): 'success' | 'warning' | 'danger' | 'brand' {
+  return tier === 'Exec' || tier === 'Red' ? 'danger' : tier === 'Amber' ? 'warning' : tier === 'Green' ? 'success' : 'brand'
+}
+function shortClass(c: string): string {
+  return c === 'Strategic Pilot' ? 'Pilot' : c === 'Lighthouse Engagement' ? 'Lighthouse' : c === 'Innovation / POC' ? 'Innovation' : c === 'Recovery Engagement' ? 'Recovery' : c
+}
+
 export function NominationsPage() {
   const { region } = useRegion()
   const navigate = useNavigate()
@@ -277,9 +285,11 @@ export function NominationsPage() {
   const person = searchParams.get('person') ?? ''
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
   const { data: resourceList } = useAsync(() => api.resources({}), [])
+  const { data: vocab } = useAsync(() => api.nominationVocab(), [])
   const [currentStateFilter, setCurrentStateFilter] = useState('')
   const [migrationFilter, setMigrationFilter] = useState('')
   const [slaFilter, setSlaFilter] = useState('')
+  const [classFilter, setClassFilter] = useState('')
   const [linkFilter, setLinkFilter] = useState('')
   // Default the pipeline to Approved nominations; a person drill-through widens to all approvals.
   const [approvalFilter, setApprovalFilter] = useState(person ? '' : 'Approved')
@@ -351,6 +361,8 @@ export function NominationsPage() {
           (!currentStateFilter || n.currentState === currentStateFilter) &&
           (!migrationFilter || n.migrationStatus === migrationFilter) &&
           (!slaFilter || n.staleTier === slaFilter) &&
+          (!classFilter ||
+            (classFilter === 'Strategic (all)' ? n.isStrategic : n.classification === classFilter)) &&
           (!linkFilter ||
             (linkFilter === 'No waves' && n.noWavesLinked) ||
             (linkFilter === 'Has any waves' && !n.noWavesLinked) ||
@@ -359,7 +371,7 @@ export function NominationsPage() {
           (!person || matchesPerson(n, person)) &&
           (!debouncedSearch || (n.accountName ?? '').toLowerCase().includes(debouncedSearch.toLowerCase())),
       ),
-    [scoped, currentStateFilter, migrationFilter, slaFilter, linkFilter, person, debouncedSearch],
+    [scoped, currentStateFilter, migrationFilter, slaFilter, classFilter, linkFilter, person, debouncedSearch],
   )
 
   const openManage = (n: Nomination) => {
@@ -373,6 +385,8 @@ export function NominationsPage() {
       remarks: n.remarks ?? '',
       projectCoordinator: n.projectCoordinator ?? '',
       cftlPrimary: n.cftlPrimary ?? '',
+      classification: n.classification ?? 'Standard Factory',
+      velocityImpact: n.velocityImpact ?? '',
     })
     setWaveType('App')
     setWaveRef('')
@@ -527,6 +541,7 @@ export function NominationsPage() {
                 <FilterSelect label="Stage" value={migrationFilter} options={migrationOptions} onChange={setMigrationFilter} minWidth={200} />
                 <FilterSelect label="Status" value={currentStateFilter} options={currentStateOptions} onChange={setCurrentStateFilter} minWidth={200} />
                 <FilterSelect label="SLA breach" value={slaFilter} options={['Warn', 'Escalate', 'Defer']} onChange={setSlaFilter} minWidth={150} />
+                <FilterSelect label="Classification" value={classFilter} options={['Strategic (all)', ...(vocab?.classifications ?? [])]} onChange={setClassFilter} minWidth={170} />
                 <FilterSelect label="Links" value={linkFilter} options={LINK_FILTERS} onChange={setLinkFilter} minWidth={150} />
                 <input
                   ref={fileInput}
@@ -653,6 +668,21 @@ export function NominationsPage() {
                 { key: 'pm', header: 'PM', sortValue: (n) => n.projectCoordinator ?? '', render: (n) => n.projectCoordinator ?? '—' },
                 { key: 'cftl', header: 'CFTL', sortValue: (n) => n.cftlPrimary ?? '', render: (n) => n.cftlPrimary ?? '—' },
                 { key: 'sa', header: 'SA', sortValue: (n) => n.solutionArchitect ?? '', render: (n) => n.solutionArchitect ?? '—' },
+                {
+                  key: 'classification',
+                  header: 'Class',
+                  sortValue: (n) => n.classification,
+                  render: (n) =>
+                    n.isStrategic ? (
+                      <Tooltip relationship="description" content={`${n.classification}${n.velocityImpact ? ` · velocity ${n.velocityImpact}` : ''}${n.strategicTier ? ` · ${n.strategicTier}` : ''}`}>
+                        <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+                          <Badge appearance="tint" color={strategicTone(n.strategicTier)} size="small">{shortClass(n.classification)}</Badge>
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      <span style={{ color: 'var(--colorNeutralForeground4)' }}>Standard</span>
+                    ),
+                },
                 {
                   key: 'links',
                   header: 'Waves',
@@ -849,6 +879,31 @@ export function NominationsPage() {
           </Field>
           <Field label="CFTL">
             <Input style={{ width: '100%' }} value={form.cftlPrimary ?? ''} onChange={(_, d) => setForm((f) => ({ ...f, cftlPrimary: d.value }))} />
+          </Field>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Field label="Classification">
+            <Dropdown
+              style={{ width: '100%' }}
+              value={form.classification ?? 'Standard Factory'}
+              selectedOptions={[form.classification ?? 'Standard Factory']}
+              onOptionSelect={(_, d) => setForm((f) => ({ ...f, classification: d.optionValue ?? 'Standard Factory' }))}
+            >
+              {(vocab?.classifications ?? ['Standard Factory']).map((c) => <Option key={c} value={c}>{c}</Option>)}
+            </Dropdown>
+          </Field>
+          <Field label="Velocity impact">
+            <Dropdown
+              style={{ width: '100%' }}
+              placeholder="—"
+              value={form.velocityImpact ?? ''}
+              selectedOptions={form.velocityImpact ? [form.velocityImpact] : []}
+              onOptionSelect={(_, d) => setForm((f) => ({ ...f, velocityImpact: d.optionValue ?? '' }))}
+            >
+              <Option value="">—</Option>
+              {(vocab?.velocityImpacts ?? []).map((v) => <Option key={v} value={v}>{v}</Option>)}
+            </Dropdown>
           </Field>
         </div>
 

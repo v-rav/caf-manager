@@ -13,6 +13,13 @@ public class NominationsController(INominationService nominations) : ControllerB
     public async Task<IActionResult> Get([FromQuery] string? region, [FromQuery] string? status, CancellationToken ct)
         => Ok(await nominations.GetAsync(region, status, ct));
 
+    [HttpGet("vocab")]
+    public IActionResult Vocab() => Ok(new
+    {
+        classifications = new[] { "Standard Factory", "Strategic Pilot", "Lighthouse Engagement", "Innovation / POC", "Recovery Engagement" },
+        velocityImpacts = new[] { "Low", "Medium", "High", "Critical" },
+    });
+
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] NominationUpdateDto input, CancellationToken ct)
     {
