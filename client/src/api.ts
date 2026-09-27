@@ -10,6 +10,7 @@ import type {
   CapacityRow,
   ExecutiveDashboard,
   DataStatus,
+  Governance,
   ImportChange,
   ImportRun,
   LeaveClash,
@@ -204,6 +205,11 @@ export const api = {
     http.put<AppUser>(`/api/users/${id}`, input).then((r) => r.data),
   resetUserPassword: (id: number, newPassword: string) =>
     http.post(`/api/users/${id}/reset-password`, { newPassword }).then((r) => r.data),
+
+  governance: (nominationId: number) =>
+    http.get<Governance>(`/api/nominations/${nominationId}/governance`).then((r) => r.data),
+  updateGovernanceItem: (nominationId: number, itemDefId: number, body: { status: string; owner?: string | null; ref?: string | null; notes?: string | null }) =>
+    http.put<Governance>(`/api/nominations/${nominationId}/governance/items/${itemDefId}`, body).then((r) => r.data),
   performance: (region?: string) =>
     http.get<PerformanceReview[]>('/api/performance', { params: { region } }).then((r) => r.data),
   performanceHistory: (personName: string) =>

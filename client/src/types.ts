@@ -440,6 +440,43 @@ export interface AppUser {
   lastLoginUtc?: string
 }
 
+export interface GateItem {
+  itemDefId: number
+  key: string
+  label: string
+  kind: string
+  subStage?: string
+  responsibleRole: string
+  mandatory: boolean
+  order: number
+  status: 'Pending' | 'Done' | 'NA'
+  owner?: string
+  completedUtc?: string
+  ref?: string
+  notes?: string
+  updatedBy?: string
+  updatedUtc?: string
+}
+export interface Gate {
+  key: string
+  name: string
+  exitCriteria?: string
+  order: number
+  weight: number
+  status: 'NotStarted' | 'InProgress' | 'Green'
+  percentComplete: number
+  items: GateItem[]
+}
+export interface Governance {
+  nominationId: number
+  account?: string
+  tpid?: string
+  classification?: string
+  currentGateKey?: string
+  compliancePercent: number
+  gates: Gate[]
+}
+
 export interface AttainmentBucket {
   key: string
   label: string

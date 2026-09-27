@@ -11,6 +11,7 @@ import { HistoryPage } from './pages/HistoryPage'
 import { LeavePage } from './pages/LeavePage'
 import { LoginPage, ForcedPasswordChange } from './pages/LoginPage'
 import { NominationsPage } from './pages/NominationsPage'
+import { NominationWorkspacePage } from './pages/NominationWorkspacePage'
 import { PerformancePage } from './pages/PerformancePage'
 import { ReconciliationPage } from './pages/ReconciliationPage'
 import { ResourcesPage } from './pages/ResourcesPage'
@@ -31,6 +32,7 @@ const router = createBrowserRouter([
       { path: 'reconciliation', element: <ReconciliationPage /> },
       { path: 'leave', element: <LeavePage /> },
       { path: 'nominations', element: <NominationsPage /> },
+      { path: 'nominations/:id', element: <NominationWorkspacePage /> },
       { path: 'performance', element: <PerformancePage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'configuration', element: <ConfigurationPage /> },

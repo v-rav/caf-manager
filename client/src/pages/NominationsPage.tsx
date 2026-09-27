@@ -18,7 +18,7 @@ import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import { useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { Nomination, NominationUpdate } from '../types'
 
@@ -568,7 +568,7 @@ export function NominationsPage() {
               defaultSort={{ key: 'opened', dir: 'desc' }}
               emptyMessage="No nominations match your filters."
               columns={[
-                { key: 'account', header: 'Account', sortValue: (n) => n.accountName ?? '', render: (n) => n.accountName ?? '—' },
+                { key: 'account', header: 'Account', sortValue: (n) => n.accountName ?? '', render: (n) => <RouterLink to={`/nominations/${n.id}`}>{n.accountName ?? '\u2014'}</RouterLink> },
                 { key: 'tpid', header: 'TPID', sortValue: (n) => n.tpid ?? '', render: (n) => n.tpid ?? '—' },
                 { key: 'offering', header: 'Offering', sortValue: (n) => n.technology ?? '', render: (n) => n.technology ?? '—' },
                 { key: 'region', header: 'Region', sortValue: (n) => n.region },
