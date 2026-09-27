@@ -24,6 +24,8 @@ public class NominationDto
     // Strategic governance (P3). Classification defaults to Standard Factory when unset.
     public string Classification { get; set; } = "Standard Factory";
     public string? VelocityImpact { get; set; }
+    /// <summary>GHCP adoption maturity 0–7 (A.10); null means not yet assessed.</summary>
+    public int? GhcpAdoptionLevel { get; set; }
     /// <summary>True when classification is anything other than Standard Factory (strategic investment).</summary>
     public bool IsStrategic { get; set; }
     /// <summary>Days since nomination/open — the strategic-pilot running clock.</summary>
@@ -102,6 +104,7 @@ public class NominationUpdateDto
     public string? SolutionArchitect { get; set; }
     public string? Classification { get; set; }
     public string? VelocityImpact { get; set; }
+    public int? GhcpAdoptionLevel { get; set; }
 }
 
 public class WaveLinkDto

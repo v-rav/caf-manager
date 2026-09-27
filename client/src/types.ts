@@ -271,6 +271,7 @@ export interface Nomination {
   openBlockerCount: number
   classification: string
   velocityImpact?: string
+  ghcpAdoptionLevel?: number
   isStrategic: boolean
   daysInFlight: number
   strategicTier: string
@@ -391,6 +392,7 @@ export interface NominationUpdate {
   solutionArchitect?: string
   classification?: string
   velocityImpact?: string
+  ghcpAdoptionLevel?: number
 }
 
 export interface WaveLinkUpsert {

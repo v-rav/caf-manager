@@ -15,6 +15,7 @@ import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { Modal } from '../components/Modal'
 import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
+import { ADOPTION_LEVELS } from '../adoption'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import { useMemo, useRef, useState } from 'react'
@@ -387,6 +388,7 @@ export function NominationsPage() {
       cftlPrimary: n.cftlPrimary ?? '',
       classification: n.classification ?? 'Standard Factory',
       velocityImpact: n.velocityImpact ?? '',
+      ghcpAdoptionLevel: n.ghcpAdoptionLevel ?? 0,
     })
     setWaveType('App')
     setWaveRef('')
@@ -906,6 +908,17 @@ export function NominationsPage() {
             </Dropdown>
           </Field>
         </div>
+
+        <Field label="GHCP adoption level">
+          <Dropdown
+            style={{ width: '100%' }}
+            value={ADOPTION_LEVELS[form.ghcpAdoptionLevel ?? 0].label}
+            selectedOptions={[String(form.ghcpAdoptionLevel ?? 0)]}
+            onOptionSelect={(_, d) => setForm((f) => ({ ...f, ghcpAdoptionLevel: Number(d.optionValue ?? 0) }))}
+          >
+            {ADOPTION_LEVELS.map((a) => <Option key={a.level} value={String(a.level)}>{`${a.level} · ${a.label}`}</Option>)}
+          </Dropdown>
+        </Field>
 
         <div style={{ borderTop: '1px solid var(--colorNeutralStroke2)', paddingTop: 10 }}>
           <Text weight="semibold">Assigned resources</Text>

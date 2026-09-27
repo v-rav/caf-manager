@@ -89,6 +89,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 ProjectCoordinator = n.ProjectCoordinator,
                 Classification = classification,
                 VelocityImpact = n.VelocityImpact,
+                GhcpAdoptionLevel = n.GhcpAdoptionLevel,
                 IsStrategic = isStrategic,
                 DaysInFlight = inFlightDays,
                 StrategicTier = strategicTier,
@@ -165,6 +166,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
             n.Classification = string.IsNullOrWhiteSpace(input.Classification) ? null : input.Classification.Trim();
         if (input.VelocityImpact is not null)
             n.VelocityImpact = string.IsNullOrWhiteSpace(input.VelocityImpact) ? null : input.VelocityImpact.Trim();
+        if (input.GhcpAdoptionLevel is not null)
+            n.GhcpAdoptionLevel = input.GhcpAdoptionLevel is >= 0 and <= 7 ? input.GhcpAdoptionLevel : n.GhcpAdoptionLevel;
 
         // Stamp a blocked-since date automatically when moving into a blocked/waiting state without one.
         if (IsBlockedState(n.Status) && n.BlockedSince is null)

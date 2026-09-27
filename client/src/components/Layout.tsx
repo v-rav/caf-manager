@@ -35,6 +35,7 @@ import {
   ClipboardTaskListLtrRegular,
   ShieldTaskRegular,
   RocketRegular,
+  SparkleRegular,
   PersonStarRegular,
 } from '@fluentui/react-icons'
 import { useState, type ReactNode } from 'react'
@@ -55,6 +56,7 @@ const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
   { to: '/nominations', label: 'Nominations', icon: <ClipboardTaskListLtrRegular /> },
   { to: '/governance', label: 'Governance Board', icon: <ShieldTaskRegular /> },
   { to: '/strategic', label: 'Strategic Register', icon: <RocketRegular /> },
+  { to: '/adoption', label: 'GHCP Adoption', icon: <SparkleRegular /> },
   { to: '/workspace', label: 'SA Workspace (preview)', icon: <ClipboardTaskListLtrRegular /> },
   { to: '/performance', label: 'Performance', icon: <PersonStarRegular /> },
   { to: '/history', label: 'Import History', icon: <HistoryRegular /> },

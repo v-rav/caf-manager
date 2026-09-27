@@ -30,6 +30,8 @@ public class Nomination : AuditableEntity
     // Portal-owned strategic governance (P3). Classification drives which KPI denominator applies.
     public string? Classification { get; set; }
     public string? VelocityImpact { get; set; }
+    // GHCP adoption maturity 0–7 (A.10), portal-owned (P4).
+    public int? GhcpAdoptionLevel { get; set; }
 
     /// <summary>Reason the nomination is blocked (required when Status = Blocked).</summary>
     public BlockerReasonType? BlockedReason { get; set; }
