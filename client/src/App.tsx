@@ -12,6 +12,7 @@ import { NominationsPage } from './pages/NominationsPage'
 import { PerformancePage } from './pages/PerformancePage'
 import { ReconciliationPage } from './pages/ReconciliationPage'
 import { ResourcesPage } from './pages/ResourcesPage'
+import { WorkspaceMockPage } from './pages/WorkspaceMockPage'
 import { RegionProvider } from './region'
 
 const router = createBrowserRouter([
@@ -31,6 +32,7 @@ const router = createBrowserRouter([
       { path: 'history', element: <HistoryPage /> },
       { path: 'configuration', element: <ConfigurationPage /> },
       { path: 'backup', element: <BackupPage /> },
+      { path: 'workspace', element: <WorkspaceMockPage /> },
     ],
   },
 ])
