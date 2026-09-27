@@ -36,6 +36,7 @@ import {
   ShieldTaskRegular,
   RocketRegular,
   SparkleRegular,
+  DataFunnelRegular,
   PersonStarRegular,
 } from '@fluentui/react-icons'
 import { useState, type ReactNode } from 'react'
@@ -57,6 +58,7 @@ const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
   { to: '/governance', label: 'Governance Board', icon: <ShieldTaskRegular /> },
   { to: '/strategic', label: 'Strategic Register', icon: <RocketRegular /> },
   { to: '/adoption', label: 'GHCP Adoption', icon: <SparkleRegular /> },
+  { to: '/flow', label: 'Migration Flow', icon: <DataFunnelRegular /> },
   { to: '/workspace', label: 'SA Workspace (preview)', icon: <ClipboardTaskListLtrRegular /> },
   { to: '/performance', label: 'Performance', icon: <PersonStarRegular /> },
   { to: '/history', label: 'Import History', icon: <HistoryRegular /> },
