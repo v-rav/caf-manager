@@ -7,4 +7,8 @@ public interface IGovernanceService
 {
     Task<NominationGovernanceDto?> GetForNominationAsync(int nominationId, CancellationToken ct = default);
     Task<NominationGovernanceDto?> UpdateItemAsync(int nominationId, int itemDefId, UpdateGateItemRequest req, CancellationToken ct = default);
+    Task<NominationGovernanceDto?> RaiseBlockerAsync(int nominationId, RaiseBlockerRequest req, CancellationToken ct = default);
+    Task<NominationGovernanceDto?> ResolveBlockerAsync(int nominationId, int blockerId, CancellationToken ct = default);
+    Task<IReadOnlyList<BlockerDto>> GetOpenBlockersAsync(string? region, CancellationToken ct = default);
+    IReadOnlyList<string> GetBlockerCategories();
 }

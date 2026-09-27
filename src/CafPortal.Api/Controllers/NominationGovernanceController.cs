@@ -24,4 +24,18 @@ public class NominationGovernanceController(IGovernanceService governance) : Con
         var dto = await governance.UpdateItemAsync(nominationId, itemDefId, req, ct);
         return dto is null ? NotFound() : Ok(dto);
     }
+
+    [HttpPost("blockers")]
+    public async Task<IActionResult> RaiseBlocker(int nominationId, [FromBody] RaiseBlockerRequest req, CancellationToken ct)
+    {
+        var dto = await governance.RaiseBlockerAsync(nominationId, req, ct);
+        return dto is null ? NotFound() : Ok(dto);
+    }
+
+    [HttpPost("blockers/{blockerId:int}/resolve")]
+    public async Task<IActionResult> ResolveBlocker(int nominationId, int blockerId, CancellationToken ct)
+    {
+        var dto = await governance.ResolveBlockerAsync(nominationId, blockerId, ct);
+        return dto is null ? NotFound() : Ok(dto);
+    }
 }

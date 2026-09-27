@@ -28,7 +28,70 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             .Where(x => x.NominationId == nominationId)
             .ToDictionaryAsync(x => x.GateItemDefinitionId, ct);
 
-        return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state);
+        var openBlockers = await _db.NominationBlockers.AsNoTracking()
+            .Where(b => b.NominationId == nominationId && b.ResolvedUtc == null)
+            .OrderByDescending(b => b.BlockedSinceUtc)
+            .ToListAsync(ct);
+
+        return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers);
+    }
+
+    public static IReadOnlyList<string> BlockerCategories { get; } = new[]
+    {
+        "Awaiting GHCP License", "Awaiting Customer Approval", "Awaiting Repository Access",
+        "Awaiting Environment Access", "Awaiting Landing Zone", "Awaiting Security Review",
+        "Awaiting Customer Testing", "Awaiting PM", "Awaiting Partner", "Internal Factory Dependency",
+    };
+
+    public IReadOnlyList<string> GetBlockerCategories() => BlockerCategories;
+
+    public async Task<NominationGovernanceDto?> RaiseBlockerAsync(int nominationId, RaiseBlockerRequest req, CancellationToken ct = default)
+    {
+        if (!await _db.Nominations.AnyAsync(n => n.Id == nominationId, ct)) return null;
+        _db.NominationBlockers.Add(new NominationBlocker
+        {
+            NominationId = nominationId,
+            GateItemDefinitionId = req.GateItemDefId,
+            Category = string.IsNullOrWhiteSpace(req.Category) ? "Internal Factory Dependency" : req.Category,
+            ClockStopped = req.ClockStopped,
+            Owner = req.Owner,
+            ExpectedResolutionUtc = req.ExpectedResolutionUtc,
+            Notes = req.Notes,
+            BlockedSinceUtc = DateTime.UtcNow,
+            RaisedBy = _currentUser.Name,
+        });
+        await _db.SaveChangesAsync(ct);
+        return await GetForNominationAsync(nominationId, ct);
+    }
+
+    public async Task<NominationGovernanceDto?> ResolveBlockerAsync(int nominationId, int blockerId, CancellationToken ct = default)
+    {
+        var blocker = await _db.NominationBlockers.FirstOrDefaultAsync(b => b.Id == blockerId && b.NominationId == nominationId, ct);
+        if (blocker is null) return null;
+        if (blocker.ResolvedUtc is null)
+        {
+            blocker.ResolvedUtc = DateTime.UtcNow;
+            blocker.ResolvedBy = _currentUser.Name;
+            await _db.SaveChangesAsync(ct);
+        }
+        return await GetForNominationAsync(nominationId, ct);
+    }
+
+    public async Task<IReadOnlyList<BlockerDto>> GetOpenBlockersAsync(string? region, CancellationToken ct = default)
+    {
+        var rows = await (from b in _db.NominationBlockers.AsNoTracking()
+                          where b.ResolvedUtc == null
+                          join n in _db.Nominations.AsNoTracking() on b.NominationId equals n.Id into nj
+                          from n in nj.DefaultIfEmpty()
+                          where region == null || region == "" || (n != null && n.Region == region)
+                          select new { b, Account = n != null ? n.AccountName : null }).ToListAsync(ct);
+        var now = DateTime.UtcNow;
+        return rows
+            .Select(x => new BlockerDto(x.b.Id, x.b.NominationId, x.Account, x.b.GateItemDefinitionId, x.b.Category,
+                x.b.ClockStopped, x.b.Owner, x.b.BlockedSinceUtc, x.b.ExpectedResolutionUtc, x.b.ResolvedUtc, x.b.Notes,
+                (int)(now - x.b.BlockedSinceUtc).TotalDays, x.b.RaisedBy))
+            .OrderByDescending(x => x.DaysBlocked)
+            .ToList();
     }
 
     public async Task<NominationGovernanceDto?> UpdateItemAsync(int nominationId, int itemDefId, UpdateGateItemRequest req, CancellationToken ct = default)
@@ -61,7 +124,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
     }
 
     private static NominationGovernanceDto Build(int nominationId, string? account, string? tpid,
-        List<GateDefinition> gates, IReadOnlyDictionary<int, NominationGateItem> state)
+        List<GateDefinition> gates, IReadOnlyDictionary<int, NominationGateItem> state, List<NominationBlocker> openBlockers)
     {
         static string StatusName(GateItemStatus s) => s switch
         {
@@ -69,6 +132,9 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             GateItemStatus.NotApplicable => "NA",
             _ => "Pending",
         };
+
+        var blockedItemDefs = openBlockers.Where(b => b.GateItemDefinitionId != null)
+            .Select(b => b.GateItemDefinitionId!.Value).ToHashSet();
 
         var gateDtos = new List<GateDto>();
         double weightedSum = 0, totalWeight = 0;
@@ -82,7 +148,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
                 return new GateItemDto(
                     i.Id, i.Key, i.Label, i.Kind.ToString(), i.SubStage, i.ResponsibleRole, i.Mandatory, i.Order,
                     StatusName(s?.Status ?? GateItemStatus.Pending), s?.Owner, s?.CompletedUtc, s?.Ref, s?.Notes,
-                    s?.UpdatedBy, s?.UpdatedUtc);
+                    s?.UpdatedBy, s?.UpdatedUtc, blockedItemDefs.Contains(i.Id));
             }).ToList();
 
             var counted = items.Where(x => x.Status != "NA").ToList();
@@ -97,8 +163,15 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             gateDtos.Add(new GateDto(g.Key, g.Name, g.ExitCriteria, g.Order, g.Weight, status, pct, items));
         }
 
+        var now = DateTime.UtcNow;
+        var blockerDtos = openBlockers
+            .Select(b => new BlockerDto(b.Id, b.NominationId, account, b.GateItemDefinitionId, b.Category, b.ClockStopped,
+                b.Owner, b.BlockedSinceUtc, b.ExpectedResolutionUtc, b.ResolvedUtc, b.Notes,
+                (int)(now - b.BlockedSinceUtc).TotalDays, b.RaisedBy))
+            .ToList();
+
         var compliance = totalWeight > 0 ? (int)Math.Round(weightedSum / totalWeight) : 0;
         currentGateKey ??= gateDtos.LastOrDefault()?.Key;
-        return new NominationGovernanceDto(nominationId, account, tpid, null, currentGateKey, compliance, gateDtos);
+        return new NominationGovernanceDto(nominationId, account, tpid, null, currentGateKey, compliance, gateDtos, blockerDtos);
     }
 }

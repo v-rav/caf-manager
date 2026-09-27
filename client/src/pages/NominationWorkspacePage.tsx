@@ -1,16 +1,17 @@
-import { Badge, Text, Tooltip } from '@fluentui/react-components'
+import { Badge, Button, Checkbox, Dropdown, Input, Option, Text, Tooltip } from '@fluentui/react-components'
 import {
   CheckmarkCircleFilled,
   CircleHalfFillRegular,
   CircleRegular,
   DocumentLinkRegular,
+  WarningRegular,
 } from '@fluentui/react-icons'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useParams, Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
-import type { Gate, GateItem, Governance } from '../types'
+import type { Blocker, Gate, GateItem, Governance } from '../types'
 
 const KIND_TONE: Record<string, 'brand' | 'success' | 'warning' | 'informative' | 'subtle'> = {
   Task: 'informative', Prerequisite: 'warning', Deliverable: 'brand', Approval: 'success', Signoff: 'success',
@@ -30,6 +31,14 @@ export function NominationWorkspacePage() {
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [categories, setCategories] = useState<string[]>([])
+  const [rc, setRc] = useState<string>('')
+  const [rClock, setRClock] = useState(true)
+  const [rOwner, setROwner] = useState('')
+  const [rNotes, setRNotes] = useState('')
+  const [busyBlk, setBusyBlk] = useState(false)
+
+  useEffect(() => { api.blockerCategories().then((c) => { setCategories(c); setRc((v) => v || c[0] || '') }).catch(() => {}) }, [])
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -64,6 +73,23 @@ export function NominationWorkspacePage() {
   if (!gov || !current) return null
 
   const pending = current.items.filter((i) => i.status !== 'Done').length
+  const blockers = gov.blockers ?? []
+  const clockStopped = blockers.some((b) => b.clockStopped)
+
+  const raiseBlocker = async () => {
+    if (!rc || busyBlk) return
+    setBusyBlk(true)
+    try {
+      const updated = await api.raiseBlocker(nominationId, { category: rc, clockStopped: rClock, owner: rOwner || null, notes: rNotes || null })
+      setGov(updated)
+      setROwner(''); setRNotes('')
+    } finally { setBusyBlk(false) }
+  }
+  const resolveBlocker = async (b: Blocker) => {
+    if (busyBlk) return
+    setBusyBlk(true)
+    try { setGov(await api.resolveBlocker(nominationId, b.id)) } finally { setBusyBlk(false) }
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -77,6 +103,11 @@ export function NominationWorkspacePage() {
           <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>SA governance workspace · gated checklist</Text>
         </div>
         <KpiCard label="Readiness compliance" value={`${gov.compliancePercent}%`} tone={gov.compliancePercent >= 80 ? 'success' : gov.compliancePercent >= 50 ? 'brand' : 'neutral'} />
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {blockers.length > 0 && <Badge appearance="filled" color="danger" icon={<WarningRegular />}>{blockers.length} open blocker{blockers.length > 1 ? 's' : ''}</Badge>}
+        {clockStopped && <Badge appearance="tint" color="warning">Clock stopped</Badge>}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '270px 1fr', gap: 16, alignItems: 'start' }}>
@@ -132,6 +163,7 @@ export function NominationWorkspacePage() {
                       </Text>
                     </div>
                     <Badge appearance="tint" color={KIND_TONE[i.kind] ?? 'informative'}>{i.kind}</Badge>
+                    {i.blocked && <Badge appearance="filled" color="danger" icon={<WarningRegular />}>Blocked</Badge>}
                   </div>
                 </Fragment>
               )
@@ -139,6 +171,48 @@ export function NominationWorkspacePage() {
           </div>
         </Panel>
       </div>
+
+      <Panel title={`Blockers${blockers.length ? ` · ${blockers.length} open` : ''}`}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.9fr 1.7fr auto', gap: 8, alignItems: 'end', marginBottom: blockers.length ? 12 : 0 }}>
+          <div>
+            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Category</Text>
+            <Dropdown value={rc} selectedOptions={[rc]} onOptionSelect={(_, d) => setRc(d.optionValue ?? rc)} style={{ minWidth: 0 }}>
+              {categories.map((c) => <Option key={c} value={c}>{c}</Option>)}
+            </Dropdown>
+          </div>
+          <div>
+            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Owner</Text>
+            <Input value={rOwner} onChange={(_, d) => setROwner(d.value)} placeholder="who owns it" />
+          </div>
+          <div>
+            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Notes</Text>
+            <Input value={rNotes} onChange={(_, d) => setRNotes(d.value)} placeholder="context" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Checkbox checked={rClock} onChange={(_, d) => setRClock(!!d.checked)} label="Stops clock" />
+            <Button appearance="primary" disabled={busyBlk || !rc} onClick={() => void raiseBlocker()}>Raise</Button>
+          </div>
+        </div>
+        {blockers.length === 0 ? (
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No open blockers.</Text>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {blockers.map((b) => (
+              <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--colorNeutralStroke2)' }}>
+                <Badge appearance="tint" color={b.daysBlocked >= 10 ? 'danger' : b.daysBlocked >= 5 ? 'warning' : 'informative'}>{b.daysBlocked}d</Badge>
+                <div style={{ flex: 1 }}>
+                  <Text size={300} weight="semibold">{b.category}{b.clockStopped ? '' : ''}</Text>
+                  <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
+                    {b.owner ? `owner ${b.owner}` : 'no owner'}{b.raisedBy ? ` · by ${b.raisedBy}` : ''}{b.notes ? ` · ${b.notes}` : ''}
+                  </Text>
+                </div>
+                {b.clockStopped && <Badge appearance="tint" color="warning">clock stopped</Badge>}
+                <Button size="small" disabled={busyBlk} onClick={() => void resolveBlocker(b)}>Resolve</Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
       <Text size={100} style={{ color: 'var(--colorNeutralForeground4)' }}>
         <Tooltip relationship="label" content="Blockers, timeline and gate-advance land in P2"><span>P1 · gated checklist</span></Tooltip>
       </Text>

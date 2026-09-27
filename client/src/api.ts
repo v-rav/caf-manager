@@ -11,6 +11,7 @@ import type {
   ExecutiveDashboard,
   DataStatus,
   Governance,
+  Blocker,
   ImportChange,
   ImportRun,
   LeaveClash,
@@ -210,6 +211,14 @@ export const api = {
     http.get<Governance>(`/api/nominations/${nominationId}/governance`).then((r) => r.data),
   updateGovernanceItem: (nominationId: number, itemDefId: number, body: { status: string; owner?: string | null; ref?: string | null; notes?: string | null }) =>
     http.put<Governance>(`/api/nominations/${nominationId}/governance/items/${itemDefId}`, body).then((r) => r.data),
+  raiseBlocker: (nominationId: number, body: { category: string; clockStopped: boolean; owner?: string | null; expectedResolutionUtc?: string | null; notes?: string | null; gateItemDefId?: number | null }) =>
+    http.post<Governance>(`/api/nominations/${nominationId}/governance/blockers`, body).then((r) => r.data),
+  resolveBlocker: (nominationId: number, blockerId: number) =>
+    http.post<Governance>(`/api/nominations/${nominationId}/governance/blockers/${blockerId}/resolve`).then((r) => r.data),
+  openBlockers: (region?: string) =>
+    http.get<Blocker[]>('/api/governance/blockers', { params: { region } }).then((r) => r.data),
+  blockerCategories: () =>
+    http.get<string[]>('/api/governance/blocker-categories').then((r) => r.data),
   performance: (region?: string) =>
     http.get<PerformanceReview[]>('/api/performance', { params: { region } }).then((r) => r.data),
   performanceHistory: (personName: string) =>

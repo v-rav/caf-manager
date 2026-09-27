@@ -456,6 +456,7 @@ export interface GateItem {
   notes?: string
   updatedBy?: string
   updatedUtc?: string
+  blocked: boolean
 }
 export interface Gate {
   key: string
@@ -475,6 +476,22 @@ export interface Governance {
   currentGateKey?: string
   compliancePercent: number
   gates: Gate[]
+  blockers: Blocker[]
+}
+export interface Blocker {
+  id: number
+  nominationId: number
+  account?: string
+  gateItemDefId?: number
+  category: string
+  clockStopped: boolean
+  owner?: string
+  blockedSinceUtc: string
+  expectedResolutionUtc?: string
+  resolvedUtc?: string
+  notes?: string
+  daysBlocked: number
+  raisedBy?: string
 }
 
 export interface AttainmentBucket {

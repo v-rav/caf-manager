@@ -37,6 +37,7 @@ public interface IApplicationDbContext
     DbSet<GateDefinition> GateDefinitions { get; }
     DbSet<GateItemDefinition> GateItemDefinitions { get; }
     DbSet<NominationGateItem> NominationGateItems { get; }
+    DbSet<NominationBlocker> NominationBlockers { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

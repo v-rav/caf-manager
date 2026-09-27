@@ -46,3 +46,17 @@ public class NominationGateItemMap : IEntityTypeConfiguration<NominationGateItem
         builder.HasIndex(x => new { x.NominationId, x.GateItemDefinitionId }).IsUnique();
     }
 }
+
+public class NominationBlockerMap : IEntityTypeConfiguration<NominationBlocker>
+{
+    public void Configure(EntityTypeBuilder<NominationBlocker> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Category).HasMaxLength(80).IsRequired();
+        builder.Property(x => x.Owner).HasMaxLength(120);
+        builder.Property(x => x.Notes).HasMaxLength(1000);
+        builder.Property(x => x.RaisedBy).HasMaxLength(120);
+        builder.Property(x => x.ResolvedBy).HasMaxLength(120);
+        builder.HasIndex(x => new { x.NominationId, x.ResolvedUtc });
+    }
+}
