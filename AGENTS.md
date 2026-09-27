@@ -277,8 +277,9 @@ classification + strategic register · GHCP adoption · MSI · migration flow ·
 workspace-mock-aligned redesign, the editable **lookup master**, and **milestones & dates**.
 **Backlog:** `NominationOutcome` value-capture (hours saved · defects · CSAT → real Factory Productivity);
 config-editable strategic time-thresholds + PV-01 stale-basis decision; surface key milestone dates
-(kick-off → actual-start lag) on the grid/analytics; retire the `/workspace` P0 mock (kept as reference);
-`ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered leave;
+(kick-off → actual-start lag) on the grid/analytics; **ACR estimator on the Analytics page + a per-nomination
+"estimate ACR" action** (populate `TotalAcr` from a wave's app count); retire the `/workspace` P0 mock (kept as
+reference); `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered leave;
 Entra auth; in-app upload; API smoke tests.
 - **Capacity page cockpit**: Headroom column, Available-capacity + Bench KPIs, Bench filter,
   per-row leave-clash flag, Resource→Nominations drill-through (`?person=`), capacity export account list.

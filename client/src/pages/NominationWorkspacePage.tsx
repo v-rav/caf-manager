@@ -1,5 +1,6 @@
 import { Badge, Button, Checkbox, Dropdown, Input, Option, Text, Tooltip } from '@fluentui/react-components'
 import {
+  ArrowLeftRegular,
   CheckmarkCircleFilled,
   CircleHalfFillRegular,
   CircleRegular,
@@ -9,7 +10,7 @@ import {
   WarningRegular,
 } from '@fluentui/react-icons'
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { useParams, Link as RouterLink } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
@@ -35,6 +36,7 @@ function eventTone(t: string): 'brand' | 'danger' | 'success' | 'informative' {
 
 export function NominationWorkspacePage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const nominationId = Number(id)
   const [gov, setGov] = useState<Governance | null>(null)
   const [loading, setLoading] = useState(true)
@@ -156,7 +158,6 @@ export function NominationWorkspacePage() {
             {gov.classification && gov.classification !== 'Standard Factory' && <Badge appearance="tint" color="brand">{gov.classification}</Badge>}
             {gov.stage != null && <Badge appearance="outline">FDO Stage {gov.stage}</Badge>}
             {gov.tpid && <Badge appearance="outline">TPID {gov.tpid}</Badge>}
-            <RouterLink to="/nominations" style={{ fontSize: 12 }}>← Nominations</RouterLink>
           </div>
           <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginTop: 2 }}>
             PM: {gov.pm ?? '—'} · CFTL: {gov.cftl ?? '—'} · SA: {gov.sa ?? '—'}
@@ -164,7 +165,8 @@ export function NominationWorkspacePage() {
             {gov.clockStoppedDays > 0 ? ` · ${gov.clockStoppedDays}d clock-stopped` : ''}
           </Text>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <Button appearance="subtle" size="small" icon={<ArrowLeftRegular />} onClick={() => navigate('/nominations')} style={{ alignSelf: 'center' }}>Back to Nominations</Button>
           <KpiCard label="Readiness compliance" value={`${gov.compliancePercent}%`} tone={gov.compliancePercent >= 80 ? 'success' : gov.compliancePercent >= 50 ? 'brand' : 'neutral'} />
           <KpiCard label="Migration Success Index" value={gov.msiScore} tone={gov.msiBand === 'Green' ? 'success' : gov.msiBand === 'Amber' ? 'warning' : 'danger'} />
         </div>
