@@ -10,3 +10,7 @@ public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
 /// <summary>Create/update a user. Password is optional on update (blank = keep existing).</summary>
 public record UserUpsert(string Username, string DisplayName, UserRole Role, bool Active, string? Password);
+
+/// <summary>Result of bulk-provisioning SA logins from the Solution Architects present in the data.</summary>
+public record ProvisionResult(int Created, int Skipped, string TempPassword, IReadOnlyList<ProvisionedUser> Users);
+public record ProvisionedUser(string Username, string DisplayName);

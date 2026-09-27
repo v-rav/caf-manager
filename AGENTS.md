@@ -206,6 +206,12 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   Frontend `auth.tsx` gates the router (`LoginPage`, forced password change). **Admin login `admin` / `admin@1234`.**
   Default admin seeded idempotently in `DbInitializer`. `ACCESS.md` documents it. ⚠ Backup/restore still
   unauthenticated.
+  - **Bulk-provision SA logins** — Configuration → Users & access → *Provision SA logins* (`POST /api/users/provision-sa`,
+    Admin-only) creates an SA account for every distinct `Nomination.SolutionArchitect` (idempotent by display name;
+    username slug from the name; temp password `Sa@12345`, forced change). Display name = exact SA name so the SA view matches.
+  - **SA self-scoped view** — on `/nominations`, SA-role users default to a **My nominations** switch (their own book of
+    work, matched by display name via `matchesPerson`); they can toggle it off to see all. **Page-level (role-based)
+    route access is the next step** (not yet enforced — all signed-in users can reach every page).
 - **Gate engine (P1)** — 8-gate SA template (`GateDefinition` + `GateItemDefinition`, seeded idempotently by
   `GateTemplateSeed`: G1 Discovery w10 · G2 Prerequisites w15 · G3 Assessment w15 · G4 Scope w20 · G5 Architecture
   w10 · G6 Delivery Readiness w8 · G7 Delivery Governance w7 (17 items by SubStage) · G8 Closure w5). Per-nomination
@@ -280,6 +286,7 @@ config-editable strategic time-thresholds + PV-01 stale-basis decision; surface 
 (kick-off → actual-start lag) on the grid/analytics; **ACR estimator on the Analytics page + a per-nomination
 "estimate ACR" action** (populate `TotalAcr` from a wave's app count); retire the `/workspace` P0 mock (kept as
 reference); `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered leave;
+**page-level (role-based) route access** (SA/Lead/Admin — SA self-scoping shipped, route gating pending);
 Entra auth; in-app upload; API smoke tests.
 - **Capacity page cockpit**: Headroom column, Available-capacity + Bench KPIs, Bench filter,
   per-row leave-clash flag, Resource→Nominations drill-through (`?person=`), capacity export account list.

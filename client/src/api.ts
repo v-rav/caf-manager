@@ -212,6 +212,8 @@ export const api = {
     http.put<AppUser>(`/api/users/${id}`, input).then((r) => r.data),
   resetUserPassword: (id: number, newPassword: string) =>
     http.post(`/api/users/${id}/reset-password`, { newPassword }).then((r) => r.data),
+  provisionSaLogins: () =>
+    http.post<{ created: number; skipped: number; tempPassword: string; users: { username: string; displayName: string }[] }>('/api/users/provision-sa').then((r) => r.data),
 
   governance: (nominationId: number) =>
     http.get<Governance>(`/api/nominations/${nominationId}/governance`).then((r) => r.data),

@@ -14,6 +14,8 @@ public interface IUserService
     Task<UserDto?> CreateAsync(UserUpsert input, CancellationToken ct = default);
     /// <summary>Update a user. Returns null when not found or the username collides.</summary>
     Task<UserDto?> UpdateAsync(int id, UserUpsert input, CancellationToken ct = default);
+    /// <summary>Bulk-create SA logins for every Solution Architect found on nominations (idempotent by display name).</summary>
+    Task<ProvisionResult> ProvisionSolutionArchitectsAsync(CancellationToken ct = default);
 
     /// <summary>Change own password after verifying the current one. False when the current password is wrong.</summary>
     Task<bool> ChangePasswordAsync(int userId, string currentPassword, string newPassword, CancellationToken ct = default);

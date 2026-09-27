@@ -99,4 +99,51 @@ public class UserService(IApplicationDbContext db) : IUserService
         await _db.SaveChangesAsync(ct);
         return true;
     }
+
+    public async Task<ProvisionResult> ProvisionSolutionArchitectsAsync(CancellationToken ct = default)
+    {
+        var names = await _db.Nominations.AsNoTracking()
+            .Where(n => n.SolutionArchitect != null && n.SolutionArchitect != "")
+            .Select(n => n.SolutionArchitect!)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var existing = await _db.AppUsers.AsNoTracking().Select(u => new { u.Username, u.DisplayName }).ToListAsync(ct);
+        var existingDisplay = existing.Select(u => u.DisplayName.Trim().ToLowerInvariant()).ToHashSet();
+        var usernames = existing.Select(u => u.Username.ToLowerInvariant()).ToHashSet();
+
+        const string temp = "Sa@12345";
+        var hash = PasswordHashing.Hash(temp);
+        var created = new List<ProvisionedUser>();
+        var skipped = 0;
+
+        foreach (var name in names.Select(n => n.Trim()).Where(n => n.Length > 0).OrderBy(n => n))
+        {
+            if (existingDisplay.Contains(name.ToLowerInvariant())) { skipped++; continue; }
+            var baseSlug = Slug(name);
+            var slug = baseSlug;
+            var i = 2;
+            while (usernames.Contains(slug)) slug = $"{baseSlug}{i++}";
+            usernames.Add(slug);
+            existingDisplay.Add(name.ToLowerInvariant());
+            _db.AppUsers.Add(new AppUser
+            {
+                Username = slug, DisplayName = name, Role = UserRole.Sa, Active = true,
+                PasswordHash = hash, MustChangePassword = true,
+            });
+            created.Add(new ProvisionedUser(slug, name));
+        }
+        if (created.Count > 0) await _db.SaveChangesAsync(ct);
+        return new ProvisionResult(created.Count, skipped, temp, created);
+    }
+
+    // Turn a display name into a stable username slug (letters/digits, dot-separated).
+    private static string Slug(string name)
+    {
+        var chars = name.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '.').ToArray();
+        var s = new string(chars);
+        while (s.Contains("..")) s = s.Replace("..", ".");
+        s = s.Trim('.');
+        return string.IsNullOrEmpty(s) ? "sa" : s;
+    }
 }

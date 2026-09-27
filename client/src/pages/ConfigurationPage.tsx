@@ -1,5 +1,5 @@
 import { Badge, Button, Dropdown, Field, Input, Option, SpinButton, Text } from '@fluentui/react-components'
-import { AddRegular, CheckmarkCircleRegular, DeleteRegular, EditRegular, SaveRegular } from '@fluentui/react-icons'
+import { AddRegular, CheckmarkCircleRegular, DeleteRegular, EditRegular, PeopleTeamRegular, SaveRegular } from '@fluentui/react-icons'
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { useAuth } from '../auth'
@@ -585,6 +585,21 @@ function UsersPanel() {
   const [form, setForm] = useState<{ username: string; displayName: string; role: UserRole; password: string }>({ username: '', displayName: '', role: 'Sa', password: '' })
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [provisioning, setProvisioning] = useState(false)
+
+  const provisionSa = async () => {
+    if (!confirm('Create an SA login for every Solution Architect on nominations who does not already have one?')) return
+    setProvisioning(true); setMsg(null)
+    try {
+      const r = await api.provisionSaLogins()
+      setMsg(`Provisioned ${r.created} SA login${r.created === 1 ? '' : 's'} (skipped ${r.skipped} existing). Temp password: ${r.tempPassword} — each must change it at first login.`)
+      reload()
+    } catch {
+      setMsg('Could not provision SA logins.')
+    } finally {
+      setProvisioning(false)
+    }
+  }
 
   if (user?.role !== 'Admin') return null
 
@@ -614,11 +629,19 @@ function UsersPanel() {
   }
 
   return (
-    <Panel title="Users & access">
+    <Panel
+      title="Users & access"
+      action={
+        <Button appearance="secondary" icon={<PeopleTeamRegular />} disabled={provisioning} onClick={provisionSa}>
+          {provisioning ? 'Provisioning…' : 'Provision SA logins'}
+        </Button>
+      }
+    >
       {loading ? <Loading /> : error ? <ErrorText error={error} onRetry={reload} /> : (
         <>
           <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
             Custom portal logins. New users get a temporary password and must change it at first login.
+            <b> Provision SA logins</b> bulk-creates an SA account for every Solution Architect already on nominations.
           </Text>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10, marginBottom: 14 }}>
             {data?.map((u) => (

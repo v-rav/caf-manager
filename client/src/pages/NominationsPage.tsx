@@ -6,6 +6,7 @@ import {
   Input,
   Option,
   SearchBox,
+  Switch,
   Text,
   Textarea,
   Tooltip,
@@ -18,6 +19,7 @@ import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { ADOPTION_LEVELS } from '../adoption'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
+import { useAuth } from '../auth'
 import { useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -284,9 +286,14 @@ function msiTone(band: string): 'success' | 'warning' | 'danger' {
 export function NominationsPage() {
   const { region } = useRegion()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isSa = user?.role === 'Sa'
   const [searchParams] = useSearchParams()
   // Drill-through from Capacity: ?person=<name> filters to that person's nominations (any role).
   const person = searchParams.get('person') ?? ''
+  // SAs land on their own book of work by default so they focus on their pending actions.
+  const [mine, setMine] = useState(isSa)
+  const effectivePerson = person || (mine && isSa ? user?.displayName ?? '' : '')
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
   const { data: resourceList } = useAsync(() => api.resources({}), [])
   const { data: vocab } = useAsync(() => api.nominationVocab(), [])
@@ -372,10 +379,10 @@ export function NominationsPage() {
             (linkFilter === 'Has any waves' && !n.noWavesLinked) ||
             (linkFilter === 'Has DB' && n.dbLinked) ||
             (linkFilter === 'Has Security' && n.securityLinked)) &&
-          (!person || matchesPerson(n, person)) &&
+          (!effectivePerson || matchesPerson(n, effectivePerson)) &&
           (!debouncedSearch || (n.accountName ?? '').toLowerCase().includes(debouncedSearch.toLowerCase())),
       ),
-    [scoped, currentStateFilter, migrationFilter, slaFilter, classFilter, linkFilter, person, debouncedSearch],
+    [scoped, currentStateFilter, migrationFilter, slaFilter, classFilter, linkFilter, effectivePerson, debouncedSearch],
   )
 
   const openManage = (n: Nomination) => {
@@ -543,6 +550,9 @@ export function NominationsPage() {
                   onChange={(_, d) => setSearch(d.value)}
                   style={{ minWidth: 200 }}
                 />
+                {isSa && (
+                  <Switch checked={mine} onChange={(_, d) => setMine(d.checked)} label="My nominations" />
+                )}
                 <FilterSelect label="Approval" value={approvalFilter} options={approvalOptions} onChange={setApprovalFilter} minWidth={150} />
                 <FilterSelect label="Stage" value={migrationFilter} options={migrationOptions} onChange={setMigrationFilter} minWidth={200} />
                 <FilterSelect label="Status" value={currentStateFilter} options={currentStateOptions} onChange={setCurrentStateFilter} minWidth={200} />

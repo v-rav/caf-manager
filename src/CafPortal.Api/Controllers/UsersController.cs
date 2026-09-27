@@ -36,4 +36,7 @@ public class UsersController(IUserService users) : ControllerBase
         var ok = await users.ResetPasswordAsync(id, req.NewPassword ?? "", ct);
         return ok ? Ok(new { ok = true }) : NotFound();
     }
+
+    [HttpPost("provision-sa")]
+    public async Task<IActionResult> ProvisionSa(CancellationToken ct) => Ok(await users.ProvisionSolutionArchitectsAsync(ct));
 }
