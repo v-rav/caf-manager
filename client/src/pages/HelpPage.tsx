@@ -1,4 +1,4 @@
-import { Accordion, AccordionHeader, AccordionItem, AccordionPanel, Text } from '@fluentui/react-components'
+import { Accordion, AccordionHeader, AccordionItem, AccordionPanel, Link, Text } from '@fluentui/react-components'
 import type { CSSProperties } from 'react'
 import { api } from '../api'
 import { ErrorText, Loading, Panel } from '../components/common'
@@ -109,6 +109,13 @@ function AcrAnswer({ rates }: { rates: AcrRates }) {
 
       <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
         All rates are editable by an administrator in <b>Configuration → ACR calculation rates</b>, where a live estimator is also available.
+      </Text>
+
+      <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+        Source of the thumb-rules:{' '}
+        <Link href="https://microsoft.sharepoint.com/:x:/t/SMFTeamInternal/cQr-UQcfNWAqSqTwK5Jb9ie0EgUCFc3tPEve27xAUmSMNcs2kg" target="_blank" rel="noopener noreferrer">
+          Factory_Realized ADS_ACR Calculation.xlsx
+        </Link>.
       </Text>
     </div>
   )
