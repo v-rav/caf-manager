@@ -39,8 +39,10 @@ import {
   DataFunnelRegular,
   PeopleSettingsRegular,
   PersonStarRegular,
+  ChevronDownRegular,
+  ChevronRightRegular,
 } from '@fluentui/react-icons'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, useEffect, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
@@ -48,26 +50,51 @@ import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, currentFy, fyLabel } from '../fy'
 
-const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
-  { to: '/', label: 'Executive Dashboard', end: true, icon: <DataPieRegular /> },
-  { to: '/analytics', label: 'Migration Analytics', icon: <DataTrendingRegular /> },
-  { to: '/resources', label: 'Resource Hub', icon: <PeopleRegular /> },
-  { to: '/accounts', label: 'Account Hub', icon: <BuildingRegular /> },
-  { to: '/capacity', label: 'Capacity', icon: <GaugeRegular /> },
-  { to: '/reconciliation', label: 'Reconciliation', icon: <LinkMultipleRegular /> },
-  { to: '/leave', label: 'Leave', icon: <CalendarLtrRegular /> },
-  { to: '/nominations', label: 'Nominations', icon: <ClipboardTaskListLtrRegular /> },
-  { to: '/governance', label: 'Governance Board', icon: <ShieldTaskRegular /> },
-  { to: '/strategic', label: 'Strategic Register', icon: <RocketRegular /> },
-  { to: '/adoption', label: 'GHCP Adoption', icon: <SparkleRegular /> },
-  { to: '/flow', label: 'Migration Flow', icon: <DataFunnelRegular /> },
-  { to: '/workspace', label: 'SA Workspace (preview)', icon: <ClipboardTaskListLtrRegular /> },
-  { to: '/performance', label: 'Performance', icon: <PersonStarRegular /> },
-  { to: '/history', label: 'Import History', icon: <HistoryRegular /> },
-  { to: '/configuration', label: 'Configuration', icon: <SettingsRegular /> },
-  { to: '/access', label: 'User & Access', icon: <PeopleSettingsRegular /> },
-  { to: '/backup', label: 'Backup & Restore', icon: <DatabaseRegular /> },
+type NavItem = { to: string; label: string; end?: boolean; icon: ReactNode }
+
+// Grouped nav so the sidebar stays short: only the active group is expanded by default.
+const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
+  {
+    title: 'Overview',
+    items: [
+      { to: '/', label: 'Executive Dashboard', end: true, icon: <DataPieRegular /> },
+      { to: '/analytics', label: 'Migration Analytics', icon: <DataTrendingRegular /> },
+    ],
+  },
+  {
+    title: 'Delivery',
+    items: [
+      { to: '/nominations', label: 'Nominations', icon: <ClipboardTaskListLtrRegular /> },
+      { to: '/governance', label: 'Governance Board', icon: <ShieldTaskRegular /> },
+      { to: '/flow', label: 'Migration Flow', icon: <DataFunnelRegular /> },
+      { to: '/strategic', label: 'Strategic Register', icon: <RocketRegular /> },
+      { to: '/adoption', label: 'GHCP Adoption', icon: <SparkleRegular /> },
+      { to: '/workspace', label: 'SA Workspace (preview)', icon: <ClipboardTaskListLtrRegular /> },
+    ],
+  },
+  {
+    title: 'Resourcing',
+    items: [
+      { to: '/resources', label: 'Resource Hub', icon: <PeopleRegular /> },
+      { to: '/accounts', label: 'Account Hub', icon: <BuildingRegular /> },
+      { to: '/capacity', label: 'Capacity', icon: <GaugeRegular /> },
+      { to: '/leave', label: 'Leave', icon: <CalendarLtrRegular /> },
+      { to: '/reconciliation', label: 'Reconciliation', icon: <LinkMultipleRegular /> },
+      { to: '/performance', label: 'Performance', icon: <PersonStarRegular /> },
+    ],
+  },
+  {
+    title: 'Admin',
+    items: [
+      { to: '/history', label: 'Import History', icon: <HistoryRegular /> },
+      { to: '/configuration', label: 'Configuration', icon: <SettingsRegular /> },
+      { to: '/access', label: 'User & Access', icon: <PeopleSettingsRegular /> },
+      { to: '/backup', label: 'Backup & Restore', icon: <DatabaseRegular /> },
+    ],
+  },
 ]
+
+const NAV: NavItem[] = NAV_GROUPS.flatMap((g) => g.items)
 
 const EXPANDED = 240
 const COLLAPSED = 56
@@ -173,6 +200,51 @@ export function Layout() {
   const currentKey = location.pathname === '/' ? 'dashboard' : location.pathname.split('/')[1]
   const navItems = NAV.filter((item) => canAccess(keyOf(item.to)))
 
+  // Collapsible nav groups: keep only the active group expanded so the sidebar never scrolls.
+  const activeGroup = NAV_GROUPS.find((g) => g.items.some((i) => keyOf(i.to) === currentKey))?.title
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(activeGroup ? [activeGroup] : []))
+  useEffect(() => {
+    if (activeGroup) setOpenGroups((s) => (s.has(activeGroup) ? s : new Set(s).add(activeGroup)))
+  }, [activeGroup])
+  const toggleGroup = (title: string) =>
+    setOpenGroups((s) => {
+      const n = new Set(s)
+      if (n.has(title)) n.delete(title)
+      else n.add(title)
+      return n
+    })
+
+  const renderLink = (item: NavItem) => (
+    <Tooltip
+      key={item.to}
+      content={item.label}
+      relationship="label"
+      positioning="after"
+      visible={collapsed ? undefined : false}
+    >
+      <NavLink
+        to={item.to}
+        end={item.end}
+        style={({ isActive }) => ({
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          padding: collapsed ? '10px 0' : '7px 12px',
+          borderRadius: 6,
+          textDecoration: 'none',
+          fontSize: 14,
+          color: isActive ? 'var(--colorBrandForeground1)' : 'var(--colorNeutralForeground1)',
+          background: isActive ? 'var(--colorBrandBackground2)' : 'transparent',
+          fontWeight: isActive ? 600 : 400,
+        })}
+      >
+        <span style={{ fontSize: 20, display: 'flex' }}>{item.icon}</span>
+        {!collapsed && <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>}
+      </NavLink>
+    </Tooltip>
+  )
+
   const toggle = () => {
     setCollapsed((c) => {
       localStorage.setItem('nav-collapsed', c ? '0' : '1')
@@ -219,36 +291,39 @@ export function Layout() {
           </>
         )}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: collapsed ? 8 : 0, overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: 2 }}>
-          {navItems.map((item) => (
-            <Tooltip
-              key={item.to}
-              content={item.label}
-              relationship="label"
-              positioning="after"
-              visible={collapsed ? undefined : false}
-            >
-              <NavLink
-                to={item.to}
-                end={item.end}
-                style={({ isActive }) => ({
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  padding: collapsed ? '10px 0' : '8px 12px',
-                  borderRadius: 6,
-                  textDecoration: 'none',
-                  fontSize: 14,
-                  color: isActive ? 'var(--colorBrandForeground1)' : 'var(--colorNeutralForeground1)',
-                  background: isActive ? 'var(--colorBrandBackground2)' : 'transparent',
-                  fontWeight: isActive ? 600 : 400,
-                })}
-              >
-                <span style={{ fontSize: 20, display: 'flex' }}>{item.icon}</span>
-                {!collapsed && <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>}
-              </NavLink>
-            </Tooltip>
-          ))}
+          {collapsed
+            ? navItems.map((item) => renderLink(item))
+            : NAV_GROUPS.map((group) => {
+                const items = group.items.filter((item) => canAccess(keyOf(item.to)))
+                if (items.length === 0) return null
+                const open = openGroups.has(group.title)
+                return (
+                  <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <button
+                      onClick={() => toggleGroup(group.title)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '6px 12px',
+                        marginTop: 6,
+                        color: 'var(--colorNeutralForeground3)',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.6,
+                      }}
+                    >
+                      <span>{group.title}</span>
+                      <span style={{ display: 'flex', fontSize: 12 }}>{open ? <ChevronDownRegular /> : <ChevronRightRegular />}</span>
+                    </button>
+                    {open && items.map((item) => renderLink(item))}
+                  </div>
+                )
+              })}
         </nav>
       </aside>
 
