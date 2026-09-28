@@ -40,50 +40,50 @@ const CONTAINER_ACR_LINK = 'https://outlook.office.com/mail/MBX%3A7bb996a6-f854-
 function ProposalsSection() {
   const th: CSSProperties = { textAlign: 'left', padding: '6px 10px', borderBottom: '2px solid var(--colorNeutralStroke2)', fontSize: 12 }
   const td: CSSProperties = { padding: '6px 10px', borderBottom: '1px solid var(--colorNeutralStroke2)' }
-  const examples = [
-    ['1 application containerized into 1 container', 1, 1],
-    ['1 application split into 5 containers', 5, 5],
-    ['10 applications converted to 10 containers', 10, 10],
-    ['20 applications converted into 35 containers', 35, 35],
-  ] as const
+  const examples: [string, string][] = [
+    ['1 app → 1 container', '1 app'],
+    ['1 app → 5 independently deployable containers', '5 apps'],
+    ['10 apps → 10 containers', '10 apps'],
+    ['20 apps → 35 containers', '35 apps'],
+  ]
 
   return (
     <Panel title="Proposals">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 760 }}>
-        <Text size={500} weight="bold">ACR Proposal for Containerized Applications</Text>
+        <Text size={500} weight="bold">Counting containerized applications (for ACR)</Text>
 
         <div>
           <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Principle</Text>
           <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <li><Text size={300}><b>1 Container = 1 Application = 1 ACR Unit</b></Text></li>
-            <li><Text size={300}>FDO application count must reflect the actual number of <b>containers delivered</b>, not the original application count.</Text></li>
+            <li><Text size={300}><b>1 Containerized Application = 1 Application</b></Text></li>
+            <li><Text size={300}>If an application is split into multiple <b>independently deployable containers</b>, each container should be counted as a separate application.</Text></li>
+            <li><Text size={300}>FDO application count should be updated to reflect the actual number of <b>containerized applications delivered</b>.</Text></li>
           </ul>
         </div>
 
         <div>
           <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Examples</Text>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead><tr><th style={th}>Scenario</th><th style={th}>FDO App Count</th><th style={th}>ACR Count</th></tr></thead>
+            <thead><tr><th style={th}>Scenario</th><th style={th}>Application Count</th></tr></thead>
             <tbody>
-              {examples.map(([s, fdo, acr]) => (
-                <tr key={s}><td style={td}>{s}</td><td style={td}>{fdo}</td><td style={td}>{acr}</td></tr>
+              {examples.map(([s, c]) => (
+                <tr key={s}><td style={td}>{s}</td><td style={td}>{c}</td></tr>
               ))}
             </tbody>
           </table>
         </div>
 
         <div>
-          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Rationale</Text>
-          <Text size={300} style={{ display: 'block', marginBottom: 6 }}>As stated by Pradeep Kumar Mamidi (International Supplier):</Text>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Summary</Text>
           <div style={{ borderLeft: '3px solid var(--colorBrandStroke1)', paddingLeft: 12, color: 'var(--colorNeutralForeground2)' }}>
             <Text size={300}>
-              If one application has 5 projects which are converted into 5 containers, update FDO as <b>5 apps, not 1 app</b>, to
-              ensure correct ACR forecasting and variance tracking. Under-reporting container counts creates false variance
-              between FDO and actual delivery.
+              For containerization engagements, each independently deployable containerized application should be counted as
+              <b> 1 application</b>. If a monolithic application is broken into multiple deployable containers, the application
+              count should be updated accordingly.
             </Text>
           </div>
           <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginTop: 8 }}>
-            Source:{' '}
+            Aligns with the direction discussed with Pradeep Mamidi and Anuj. Source:{' '}
             <Link href={CONTAINER_ACR_LINK} target="_blank" rel="noopener noreferrer">ACR calculation for AKS (email thread)</Link>.
           </Text>
         </div>
