@@ -71,6 +71,10 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             ToolAttached = noms.Count(n => n.IsToolAttached == true),
             AutomationUsed = noms.Count(n => n.IsAutomationUsed == true),
             ToolFlagDenom = noms.Count(n => n.IsToolAttached != null || n.IsAutomationUsed != null),
+            WithKickoffLag = noms.Count(n => n.KickoffToStartLagDays != null),
+            AvgKickoffToStartLagDays = noms.Any(n => n.KickoffToStartLagDays != null)
+                ? Math.Round(noms.Where(n => n.KickoffToStartLagDays != null).Average(n => n.KickoffToStartLagDays!.Value), 1)
+                : 0,
 
             ByStage = Enumerable.Range(1, 4)
                 .Select(s => new NameValueDto(StageLabels[s - 1], noms.Count(n => StageIndex(n.MigrationStatus) == s)))

@@ -62,6 +62,18 @@ public class NominationService(IApplicationDbContext db) : INominationService
         var stateByNom = gateState.GroupBy(x => x.NominationId)
             .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.GateItemDefinitionId, x => x.Status));
 
+        // Key milestone dates for the kick-off -> actual-migration-start lag (portal-entered, may be sparse).
+        const string KickoffKey = "Kick-off Meeting";
+        const string StartKey = "Actual Migration Start";
+        var milestoneDates = await _db.NominationMilestones.AsNoTracking()
+            .Where(m => nomIds.Contains(m.NominationId) && (m.MilestoneKey == KickoffKey || m.MilestoneKey == StartKey))
+            .Select(m => new { m.NominationId, m.MilestoneKey, m.OccurredOn })
+            .ToListAsync(ct);
+        var kickoffByNom = milestoneDates.Where(m => m.MilestoneKey == KickoffKey)
+            .GroupBy(m => m.NominationId).ToDictionary(g => g.Key, g => g.Min(m => m.OccurredOn));
+        var startByNom = milestoneDates.Where(m => m.MilestoneKey == StartKey)
+            .GroupBy(m => m.NominationId).ToDictionary(g => g.Key, g => g.Min(m => m.OccurredOn));
+
         int GroupPct(IReadOnlyDictionary<int, Domain.Entities.Governance.GateItemStatus>? st, HashSet<int> defs)
         {
             int counted = 0, done = 0;
@@ -181,7 +193,12 @@ public class NominationService(IApplicationDbContext db) : INominationService
                         ra.Resource != null ? ra.Resource.Region : string.Empty,
                         ra.Role))
                     .ToList(),
-                AssignedResourceCount = n.ResourceAssignments.Count
+                AssignedResourceCount = n.ResourceAssignments.Count,
+                KickoffDate = kickoffByNom.TryGetValue(n.Id, out var koDate) ? koDate : null,
+                ActualMigrationStartDate = startByNom.TryGetValue(n.Id, out var msDate) ? msDate : null,
+                KickoffToStartLagDays = kickoffByNom.TryGetValue(n.Id, out var koLag) && startByNom.TryGetValue(n.Id, out var msLag)
+                    ? Math.Max(0, msLag.DayNumber - koLag.DayNumber)
+                    : null,
             };
         }).ToList();
     }

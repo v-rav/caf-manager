@@ -743,6 +743,23 @@ export function NominationsPage() {
                   ),
                 },
                 {
+                  key: 'lag',
+                  header: 'K→S',
+                  align: 'end',
+                  sortValue: (n) => n.kickoffToStartLagDays ?? -1,
+                  render: (n) =>
+                    n.kickoffToStartLagDays == null ? (
+                      <span style={{ color: 'var(--colorNeutralForeground4)' }}>—</span>
+                    ) : (
+                      <Tooltip
+                        relationship="description"
+                        content={`Kick-off ${n.kickoffDate ?? '?'} → actual migration start ${n.actualMigrationStartDate ?? '?'} · ${n.kickoffToStartLagDays}d lag`}
+                      >
+                        <Badge appearance="tint" color={n.kickoffToStartLagDays > 30 ? 'warning' : 'informative'} size="small">{n.kickoffToStartLagDays}d</Badge>
+                      </Tooltip>
+                    ),
+                },
+                {
                   key: 'team',
                   header: 'Team',
                   sortValue: (n) => n.assignedResourceCount,

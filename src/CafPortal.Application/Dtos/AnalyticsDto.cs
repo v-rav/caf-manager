@@ -18,6 +18,11 @@ public class AnalyticsDto
     /// <summary>Nominations that carry a Yes/No tool-or-automation flag (the % denominator).</summary>
     public int ToolFlagDenom { get; set; }
 
+    /// <summary>Average kick-off -> actual-migration-start lag (days) over nominations that recorded both milestones.</summary>
+    public double AvgKickoffToStartLagDays { get; set; }
+    /// <summary>How many nominations have both milestone dates (the lag denominator).</summary>
+    public int WithKickoffLag { get; set; }
+
     // Count distributions.
     public IReadOnlyList<NameValueDto> ByStage { get; set; } = [];
     public IReadOnlyList<NameValueDto> ByHealth { get; set; } = [];

@@ -89,6 +89,13 @@ public class NominationDto
     /// <summary>Resources assigned to this nomination (operational staffing, separate from account capacity).</summary>
     public IReadOnlyList<NominationResourceDto> AssignedResources { get; set; } = Array.Empty<NominationResourceDto>();
     public int AssignedResourceCount { get; set; }
+
+    // Key milestone dates + lag (portal-entered). Surfaces the lift-n-shift exception where kick-off
+    // and actual migration start are separate events. Null when the milestone hasn't been recorded.
+    public DateOnly? KickoffDate { get; set; }
+    public DateOnly? ActualMigrationStartDate { get; set; }
+    /// <summary>Days between kick-off and actual migration start; null unless both milestones exist.</summary>
+    public int? KickoffToStartLagDays { get; set; }
 }
 
 /// <summary>A resource assigned to a nomination with a delivery role.</summary>

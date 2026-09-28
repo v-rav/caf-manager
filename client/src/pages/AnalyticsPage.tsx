@@ -249,6 +249,9 @@ export function AnalyticsPage() {
         <KpiCard label="Total Cores" value={num(data.totalCores)} tone="neutral" />
         <KpiCard label="Tool attached" value={`${data.toolAttached} · ${pct(data.toolAttached, data.toolFlagDenom)}`} tone="brand" />
         <KpiCard label="Automation used" value={`${data.automationUsed} · ${pct(data.automationUsed, data.toolFlagDenom)}`} tone="brand" />
+        {data.withKickoffLag > 0 && (
+          <KpiCard label="Avg kick-off → start lag" value={`${data.avgKickoffToStartLagDays}d · ${data.withKickoffLag} rec`} tone="warning" />
+        )}
       </div>
 
       <AttainmentSection region={region} />

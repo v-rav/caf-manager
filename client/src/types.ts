@@ -35,6 +35,8 @@ export interface Analytics {
   toolAttached: number
   automationUsed: number
   toolFlagDenom: number
+  avgKickoffToStartLagDays: number
+  withKickoffLag: number
   byStage: NameValue[]
   byHealth: NameValue[]
   bySla: NameValue[]
@@ -293,6 +295,9 @@ export interface Nomination {
   waves: WaveLink[]
   assignedResources: NominationResource[]
   assignedResourceCount: number
+  kickoffDate?: string
+  actualMigrationStartDate?: string
+  kickoffToStartLagDays?: number
 }
 
 export interface NominationResource {
