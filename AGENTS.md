@@ -272,8 +272,11 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   ACA = $/core/hr × cores × utilization × hours/mo · ×12 annualization). `IAcrService` reads/writes them and estimates
   ACR from apps or cores: `GET/PUT /api/acr/rates`, `POST /api/acr/estimate`. Edited in **Configuration → ACR
   calculation rates** (rate fields + a live estimator). Example: 10 App Service apps × 2 cores × $98 × 12 = $23,520/yr.
-- **Help & FAQ** page (`/help`, Overview nav, all roles): FAQ accordion; first entry explains ACR calculation, rendered
-  from the **live** ACR rate master (thumb-rules · per-core rates · formula · worked example) so it never goes stale.
+- **Help & FAQ** page (`/help`, Overview nav, all roles): a **System usage guide** (what the portal is · pages-by-area
+  for all four nav groups · key concepts — Stage vs Status, MSI, SLA clock, Waves, ACR, capability usage · common
+  workflows · Region/FY scope, as collapsible accordions); an **FAQ** accordion whose first entry explains ACR
+  calculation, rendered from the **live** ACR rate master (thumb-rules · per-core rates · formula · worked example) so it
+  never goes stale.
   A **Proposals** section documents the **containerized-app counting** convention for ACR — *1 containerized application
   = 1 application*; an app split into N independently deployable containers counts as N applications; FDO app count
   should reflect the actual containerized apps delivered (examples: 1→1, 1 split→5, 20→35). App-count framing (no "ACR
