@@ -22,12 +22,14 @@ export function fyLabel(fy: number): string {
 
 const SETTLED = ['Completed', 'Closed', 'Customer Deferred', 'Withdrawn']
 
-/** Current-FY scope: active/in-flight work always shows; settled items only if they closed in the selected FY. */
+/** Every nomination belongs to one FY: settled items by their close date, active/in-flight by when they entered
+ *  the pipeline. So a FY view shows work completed-this-FY plus work nominated-this-FY (still in flight). */
 export function nominationInFy(n: Nomination, fy: Fy): boolean {
   if (fy === 'all') return true
-  if (!SETTLED.includes(n.status)) return true
-  const closeFy = fiscalYearOf(n.actualEndDate) ?? fiscalYearOf(n.nominatedDate) ?? fiscalYearOf(n.openedDate)
-  return closeFy === fy
+  const anchor = SETTLED.includes(n.status)
+    ? (n.actualEndDate ?? n.nominatedDate ?? n.openedDate)
+    : (n.nominatedDate ?? n.openedDate)
+  return fiscalYearOf(anchor) === fy
 }
 
 interface FyState {

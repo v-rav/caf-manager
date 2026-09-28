@@ -128,9 +128,10 @@ import the **web app is the system of record**.
 - **Regions**: Global Lead → EMEA (Ravinder Rana) / ASIA. Region scope flows from `region.tsx`.
 - **Fiscal-year scope** (`fy.tsx`, header selector next to Region, default **current FY**; FY starts Jul 1, labelled
   by end year). Nomination-centric pages (Nominations, Dashboard, Strategic Register, GHCP Adoption, Migration Flow)
-  honor it via `nominationInFy(n, fy)`: **active/in-flight work always shows** (it's current), settled items
-  (Completed/Closed/Customer Deferred/Withdrawn) show only if their close date (`ActualEndDate ?? NominatedDate ??
-  OpenedDate`) is in the selected FY — so the default view is this-FY work, "All FY" shows everything. Analytics keeps
+  honor it via `nominationInFy(n, fy)`: **every nomination belongs to one FY** — settled items by their close date
+  (`ActualEndDate ?? NominatedDate ?? OpenedDate`), active/in-flight by when they entered (`NominatedDate ??
+  OpenedDate`). So a FY view = work completed-this-FY + work nominated-this-FY (still in flight); "All FY" shows
+  everything. The FY genuinely filters every section (SA workload, stage bottleneck, funnel, KPIs). Analytics keeps
   its own dedicated FY/Trends controls; Governance Board (open blockers) is inherently current, so neither uses the
   global FY.
 
