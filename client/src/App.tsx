@@ -4,6 +4,7 @@ import { Layout } from './components/Layout'
 import { AccountsPage } from './pages/AccountsPage'
 import { AccessPage } from './pages/AccessPage'
 import { CapabilityMasterPage } from './pages/CapabilityMasterPage'
+import { GateTemplatePage } from './pages/GateTemplatePage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { BackupPage } from './pages/BackupPage'
 import { CapacityPage } from './pages/CapacityPage'
@@ -48,6 +49,7 @@ const router = createBrowserRouter([
       { path: 'history', element: <HistoryPage /> },
       { path: 'configuration', element: <ConfigurationPage /> },
       { path: 'capability', element: <CapabilityMasterPage /> },
+      { path: 'gates', element: <GateTemplatePage /> },
       { path: 'access', element: <AccessPage /> },
       { path: 'backup', element: <BackupPage /> },
       { path: 'workspace', element: <WorkspaceMockPage /> },

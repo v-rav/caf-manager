@@ -560,6 +560,30 @@ export interface CapabilityUtilization {
   byActivity: NameValue[]
   mostUsedToolPerActivity: { activity: string; tool: string; nominations: number }[]
 }
+export interface GateTemplateItem {
+  id: number
+  key: string
+  label: string
+  kind: string
+  subStage?: string
+  responsibleRole: string
+  mandatory: boolean
+  order: number
+  active: boolean
+  inUse: boolean
+}
+export interface GateTemplateGate {
+  id: number
+  key: string
+  name: string
+  exitCriteria?: string
+  order: number
+  weight: number
+  ownerRole: string
+  active: boolean
+  inUse: boolean
+  items: GateTemplateItem[]
+}
 export interface Milestone {
   id: number
   milestoneKey: string

@@ -16,6 +16,7 @@ import type {
   MigrationTool,
   MigrationActivity,
   CapabilityUtilization,
+  GateTemplateGate,
   NominationEvent,
   LookupValue,
   AcrRates,
@@ -272,6 +273,21 @@ export const api = {
     http.put(`/api/capability-master/activities/${id}`, body).then((r) => r.data),
   deleteCapActivity: (id: number) =>
     http.delete(`/api/capability-master/activities/${id}`).then((r) => r.data),
+  // Governance gate template (Admin CRUD).
+  gateTemplate: () =>
+    http.get<GateTemplateGate[]>('/api/gate-template/gates').then((r) => r.data),
+  createGate: (body: { key: string; name: string; exitCriteria?: string | null; weight?: number; ownerRole?: string }) =>
+    http.post('/api/gate-template/gates', body).then((r) => r.data),
+  updateGate: (id: number, body: { key: string; name: string; exitCriteria?: string | null; weight?: number; ownerRole?: string; order?: number; active?: boolean }) =>
+    http.put(`/api/gate-template/gates/${id}`, body).then((r) => r.data),
+  deleteGate: (id: number) =>
+    http.delete(`/api/gate-template/gates/${id}`).then((r) => r.data),
+  createGateItem: (gateId: number, body: { key?: string; label: string; kind?: string; subStage?: string | null; responsibleRole?: string; mandatory?: boolean }) =>
+    http.post(`/api/gate-template/gates/${gateId}/items`, body).then((r) => r.data),
+  updateGateItem: (id: number, body: { key?: string; label: string; kind?: string; subStage?: string | null; responsibleRole?: string; mandatory?: boolean; order?: number; active?: boolean }) =>
+    http.put(`/api/gate-template/items/${id}`, body).then((r) => r.data),
+  deleteGateItem: (id: number) =>
+    http.delete(`/api/gate-template/items/${id}`).then((r) => r.data),
   lookups: (category?: string) =>
     http.get<LookupValue[]>('/api/configuration/lookups', { params: { category } }).then((r) => r.data),
   addLookup: (category: string, value: string) =>

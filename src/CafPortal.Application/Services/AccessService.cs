@@ -31,6 +31,7 @@ public class AccessService(IApplicationDbContext db) : IAccessService
         ("performance", "Performance", AdminLead),
         ("history", "Import History", AdminLead),
         ("configuration", "Configuration", AdminOnly),
+        ("gates", "Gate Template", AdminOnly),
         ("capability", "Capability Masters", AdminOnly),
         ("backup", "Backup & Restore", AdminOnly),
         ("access", "User & Access", AdminOnly),
