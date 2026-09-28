@@ -30,6 +30,7 @@ public class AccessService(IApplicationDbContext db) : IAccessService
         ("flow", "Migration Flow", AdminLead),
         ("performance", "Performance", AdminLead),
         ("history", "Import History", AdminLead),
+        ("help", "Help & FAQ", All),
         ("configuration", "Configuration", AdminOnly),
         ("gates", "Gate Template", AdminOnly),
         ("capability", "Capability Masters", AdminOnly),
