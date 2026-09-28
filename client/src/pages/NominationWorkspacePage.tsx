@@ -114,11 +114,6 @@ export function NominationWorkspacePage() {
   const blockers = gov.blockers ?? []
   const milestones = gov.milestones ?? []
   const toolUsages = gov.toolUsages ?? []
-  // Show only the activities the selected tool can accelerate (empty list = all relevant).
-  const selCapTool = capTools.find((t) => t.id === cuTool)
-  const capActsForTool = selCapTool && selCapTool.applicableActivityIds.length
-    ? capActs.filter((a) => selCapTool.applicableActivityIds.includes(a.id))
-    : capActs
 
   const raiseBlocker = async () => {
     if (!rc || busyBlk) return
@@ -409,7 +404,7 @@ export function NominationWorkspacePage() {
             <Dropdown
               value={capTools.find((t) => t.id === cuTool)?.name ?? ''}
               selectedOptions={cuTool ? [String(cuTool)] : []}
-              onOptionSelect={(_, d) => { setCuTool(d.optionValue ? Number(d.optionValue) : ''); setCuAct('') }}
+              onOptionSelect={(_, d) => setCuTool(d.optionValue ? Number(d.optionValue) : '')}
               style={{ width: '100%' }}
             >
               {capTools.map((t) => <Option key={t.id} value={String(t.id)}>{`${t.name} · ${t.category}`}</Option>)}
@@ -425,7 +420,7 @@ export function NominationWorkspacePage() {
               style={{ width: '100%' }}
             >
               <Option value="">—</Option>
-              {capActsForTool.map((a) => <Option key={a.id} value={String(a.id)}>{`${a.name}${a.stage ? ` · ${a.stage}` : ''}`}</Option>)}
+              {capActs.map((a) => <Option key={a.id} value={String(a.id)}>{`${a.name}${a.stage ? ` · ${a.stage}` : ''}`}</Option>)}
             </Dropdown>
           </div>
           <div style={{ width: 160 }}>

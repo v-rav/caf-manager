@@ -164,31 +164,10 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
     }
 
     public async Task<IReadOnlyList<MigrationToolDto>> GetMigrationToolsAsync(CancellationToken ct = default)
-    {
-        var tools = await _db.MigrationTools.AsNoTracking().Where(t => t.ActiveFlag)
+        => await _db.MigrationTools.AsNoTracking().Where(t => t.ActiveFlag)
             .OrderBy(t => t.Category).ThenBy(t => t.SortOrder).ThenBy(t => t.Name)
+            .Select(t => new MigrationToolDto(t.Id, t.Name, t.Category, t.Vendor, t.SortOrder, t.ActiveFlag))
             .ToListAsync(ct);
-        var activities = await _db.MigrationActivities.AsNoTracking().Where(a => a.ActiveFlag)
-            .Select(a => new { a.Id, a.Name }).ToListAsync(ct);
-
-        // Which activities a tool category can accelerate; empty = all activities are relevant.
-        IReadOnlyList<int> Applicable(string category)
-        {
-            string[] names = category switch
-            {
-                "Assessment" => new[] { "Portfolio Assessment", "Application Assessment", "Dependency Analysis" },
-                "AppMod" => new[] { "Modernization", "Version Upgrade", "Code Remediation", "Containerization" },
-                "Accelerator" => new[] { "IaC Generation", "Terraform Generation", "Bicep Generation" }, // IaC only
-                "IaC" => new[] { "Target Architecture", "IaC Generation", "Terraform Generation", "Bicep Generation" },
-                "GHCP" => activities.Select(a => a.Name).Where(n => n != "Portfolio Assessment").ToArray(),
-                _ => Array.Empty<string>(),
-            };
-            return activities.Where(a => names.Contains(a.Name)).Select(a => a.Id).ToArray();
-        }
-
-        return tools.Select(t => new MigrationToolDto(
-            t.Id, t.Name, t.Category, t.Vendor, t.SortOrder, t.ActiveFlag, Applicable(t.Category))).ToList();
-    }
 
     public async Task<IReadOnlyList<MigrationActivityDto>> GetMigrationActivitiesAsync(CancellationToken ct = default)
         => await _db.MigrationActivities.AsNoTracking().Where(a => a.ActiveFlag)
