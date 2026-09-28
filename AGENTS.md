@@ -290,13 +290,27 @@ Operating System P1–P5** (custom auth · 8-gate engine + SA Workspace · block
 classification + strategic register · GHCP adoption · MSI · migration flow · 4-view exec dashboard), the
 workspace-mock-aligned redesign, the editable **lookup master**, **milestones & dates**, **role-based page access +
 User & Access page**, **CSV exports + light filters on Adoption/Strategic/Flow**, **Admin-gated Backup/Restore
-(+ prune)**, the **kick-off → actual-start milestone lag** on the grid + analytics, and the **grouped collapsible
-left nav** (Overview / Delivery / Resourcing / Admin — only the active group expanded, so the sidebar never scrolls).
+(+ prune)**, the **kick-off → actual-start milestone lag** on the grid + analytics, the **grouped collapsible
+left nav** (Overview / Delivery / Resourcing / Admin — only the active group expanded, so the sidebar never scrolls),
+and **Migration Capability Utilization** (Tool × Activity masters + per-nomination usage + leadership rollups).
 **Backlog:** `NominationOutcome` value-capture (hours saved · defects · CSAT → real Factory Productivity);
 config-editable strategic time-thresholds + PV-01 stale-basis decision; **ACR estimator on the Analytics page + a
-per-nomination "estimate ACR" action** (populate `TotalAcr` from a wave's app count); retire the `/workspace` P0 mock
-(kept as reference); `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered
-leave; Entra auth; in-app upload; API smoke tests.
+per-nomination "estimate ACR" action** (populate `TotalAcr` from a wave's app count); in-app CRUD for the Migration
+Capability masters (seeded + read-only today); retire the `/workspace` P0 mock (kept as reference);
+`ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered leave; Entra auth;
+in-app upload; API smoke tests.
+- **Migration Capability Utilization** (the GHCP/AppMod/accelerator value story): two portal-owned masters —
+  **`MigrationTool`** (Name · Category · Vendor; seeded 13-tool taxonomy: Assessment, GHCP, AppMod, Accelerator, IaC,
+  Other) and **`MigrationActivity`** (Name · Stage; 20 activities across Assess/Modernize/Architect/Deploy/Migrate/
+  Operate) — plus the **`NominationToolUsage`** junction (Tool × Activity × optional Stage/date/notes) capturing *which
+  capability was accelerated by which tool*. Seeded idempotently by `MigrationCapabilitySeed` (also prunes retired
+  tools — GitHub Copilot Enterprise, GHCP Agent Mode — when unused). Each tool category carries **`ApplicableActivityIds`**
+  (a code-level capability map: Accelerators are **IaC-only**; AppMod = Modernize activities; Assessment = Assess;
+  GHCP = broad) so the SA Workspace **Activity picker only shows activities the selected tool can accelerate**. Captured
+  in the SA Workspace panel (add/list/delete, logged to the audit timeline); rolled up on the **GHCP Adoption** page
+  (`GET /api/governance/capability?region=`): **tool adoption · by activity · most-used tool per activity** (distinct
+  nominations) + CSV export. Endpoints: `GET governance/migration-tools|migration-activities|capability`,
+  `POST/DELETE nominations/{id}/governance/tool-usages`.
 - **Role-based page access** (`/access` **User & Access** page, Admin-only): a `PageAccess` matrix (17 pages × roles,
   stored as `ApplicationSettings` `PageAccess:<key>` = csv roles via `AccessService`/`AccessController`). `Layout`
   filters the nav and **gates the route** by the signed-in role; **Admin bypasses everything**. The Users panel (create/
