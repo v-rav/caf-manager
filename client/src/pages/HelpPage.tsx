@@ -29,7 +29,66 @@ export function HelpPage() {
           </AccordionItem>
         </Accordion>
       </Panel>
+
+      <ProposalsSection />
     </div>
+  )
+}
+
+const CONTAINER_ACR_LINK = 'https://outlook.office.com/mail/MBX%3A7bb996a6-f854-4e67-a63b-0007862f5fc6%4072f988bf-86f1-41af-91ab-2d7cd011db47/applink/read/AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0A2hw4T10NJ06u6N-1HxGV3AABpsuOugAA/'
+
+function ProposalsSection() {
+  const th: CSSProperties = { textAlign: 'left', padding: '6px 10px', borderBottom: '2px solid var(--colorNeutralStroke2)', fontSize: 12 }
+  const td: CSSProperties = { padding: '6px 10px', borderBottom: '1px solid var(--colorNeutralStroke2)' }
+  const examples = [
+    ['1 application containerized into 1 container', 1, 1],
+    ['1 application split into 5 containers', 5, 5],
+    ['10 applications converted to 10 containers', 10, 10],
+    ['20 applications converted into 35 containers', 35, 35],
+  ] as const
+
+  return (
+    <Panel title="Proposals">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 760 }}>
+        <Text size={500} weight="bold">ACR Proposal for Containerized Applications</Text>
+
+        <div>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Principle</Text>
+          <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <li><Text size={300}><b>1 Container = 1 Application = 1 ACR Unit</b></Text></li>
+            <li><Text size={300}>FDO application count must reflect the actual number of <b>containers delivered</b>, not the original application count.</Text></li>
+          </ul>
+        </div>
+
+        <div>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Examples</Text>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead><tr><th style={th}>Scenario</th><th style={th}>FDO App Count</th><th style={th}>ACR Count</th></tr></thead>
+            <tbody>
+              {examples.map(([s, fdo, acr]) => (
+                <tr key={s}><td style={td}>{s}</td><td style={td}>{fdo}</td><td style={td}>{acr}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Rationale</Text>
+          <Text size={300} style={{ display: 'block', marginBottom: 6 }}>As stated by Pradeep Kumar Mamidi (International Supplier):</Text>
+          <div style={{ borderLeft: '3px solid var(--colorBrandStroke1)', paddingLeft: 12, color: 'var(--colorNeutralForeground2)' }}>
+            <Text size={300}>
+              If one application has 5 projects which are converted into 5 containers, update FDO as <b>5 apps, not 1 app</b>, to
+              ensure correct ACR forecasting and variance tracking. Under-reporting container counts creates false variance
+              between FDO and actual delivery.
+            </Text>
+          </div>
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginTop: 8 }}>
+            Source:{' '}
+            <Link href={CONTAINER_ACR_LINK} target="_blank" rel="noopener noreferrer">ACR calculation for AKS (email thread)</Link>.
+          </Text>
+        </div>
+      </div>
+    </Panel>
   )
 }
 
