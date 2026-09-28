@@ -9,7 +9,7 @@ public static class GateTemplateSeed
     // (gate items): Key, Label, Kind, SubStage, ResponsibleRole, Mandatory
     private static readonly (string Key, string Name, int Weight, string? Exit, (string Key, string Label, GateItemKind Kind, string? Sub, string Role, bool Mandatory)[] Items)[] Template =
     {
-        ("G1", "Discovery & Readiness", 10, "Discovery complete · Dependency map · Risks captured · Readiness updated", new (string, string, GateItemKind, string?, string, bool)[]
+        ("G1", "Discovery & Readiness", 5, "Discovery complete · Dependency map · Risks captured · Readiness updated", new (string, string, GateItemKind, string?, string, bool)[]
         {
             ("discovery", "Customer discovery sessions", GateItemKind.Task, null, "SA", false),
             ("inventory", "App inventory validated", GateItemKind.Task, null, "SA", false),
@@ -17,7 +17,7 @@ public static class GateTemplateSeed
             ("arch", "Hosting architecture understood", GateItemKind.Task, null, "SA", false),
             ("risks", "Risks & assumptions documented", GateItemKind.Deliverable, null, "SA", false),
         }),
-        ("G2", "Prerequisites", 15, "Prereq tracker complete · Owners identified · Open blockers visible", new (string, string, GateItemKind, string?, string, bool)[]
+        ("G2", "Prerequisites", 5, "Prereq tracker complete · Owners identified · Open blockers visible", new (string, string, GateItemKind, string?, string, bool)[]
         {
             ("license", "GHCP Enterprise License", GateItemKind.Prerequisite, null, "Customer", false),
             ("repo", "Repository access", GateItemKind.Prerequisite, null, "Customer", false),
@@ -26,7 +26,7 @@ public static class GateTemplateSeed
             ("security", "Security review scheduled", GateItemKind.Prerequisite, null, "SA", false),
             ("cicd", "CI/CD readiness", GateItemKind.Prerequisite, null, "SA", false),
         }),
-        ("G3", "Assessment", 15, "Assessment report · Migration strategy approved · Risk register", new (string, string, GateItemKind, string?, string, bool)[]
+        ("G3", "Assessment", 5, "Assessment report · Migration strategy approved · Risk register", new (string, string, GateItemKind, string?, string, bool)[]
         {
             ("appcat", "AppCAT / Azure Migrate assessment", GateItemKind.Task, null, "SA", false),
             ("approach", "Migration approach finalized", GateItemKind.Task, null, "SA", false),
@@ -34,7 +34,7 @@ public static class GateTemplateSeed
             ("risks", "Technical risks documented", GateItemKind.Deliverable, null, "SA", false),
             ("report", "Assessment report", GateItemKind.Deliverable, null, "SA", false),
         }),
-        ("G4", "Scope Governance", 20, "Signed scope document · No ownership ambiguity · FDO updated", new (string, string, GateItemKind, string?, string, bool)[]
+        ("G4", "Scope Governance", 10, "Signed scope document · No ownership ambiguity · FDO updated", new (string, string, GateItemKind, string?, string, bool)[]
         {
             ("doc", "Scope document created", GateItemKind.Deliverable, null, "SA", false),
             ("in", "In-scope defined", GateItemKind.Task, null, "SA", false),
@@ -51,7 +51,7 @@ public static class GateTemplateSeed
             ("security", "Security review completed", GateItemKind.Approval, null, "SA", false),
             ("signoff", "Customer signoff", GateItemKind.Signoff, null, "Customer", true),
         }),
-        ("G6", "Delivery Readiness", 8, "Engineering-ready status", new (string, string, GateItemKind, string?, string, bool)[]
+        ("G6", "Delivery Readiness", 10, "Engineering-ready status", new (string, string, GateItemKind, string?, string, bool)[]
         {
             ("frozen", "Scope frozen", GateItemKind.Task, null, "SA", false),
             ("access", "Access available", GateItemKind.Prerequisite, null, "Customer", false),
@@ -59,7 +59,7 @@ public static class GateTemplateSeed
             ("rollback", "Rollback strategy defined", GateItemKind.Task, null, "SA", false),
             ("target", "Target platform selected", GateItemKind.Task, null, "SA", false),
         }),
-        ("G7", "Delivery Governance", 7, "Progress reflected in systems · Issues escalated in time", new (string, string, GateItemKind, string?, string, bool)[]
+        ("G7", "Delivery Governance", 50, "Progress reflected in systems · Issues escalated in time", new (string, string, GateItemKind, string?, string, bool)[]
         {
             ("mod.upgrade", "Version upgrade", GateItemKind.Task, "Modernization", "Engineer", false),
             ("mod.remediate", "Code remediation", GateItemKind.Task, "Modernization", "Engineer", false),
