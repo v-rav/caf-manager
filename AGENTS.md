@@ -222,7 +222,10 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
     route access is the next step** (not yet enforced — all signed-in users can reach every page).
 - **Gate engine (P1)** — 8-gate SA template (`GateDefinition` + `GateItemDefinition`, seeded idempotently by
   `GateTemplateSeed`: G1 Discovery w10 · G2 Prerequisites w15 · G3 Assessment w15 · G4 Scope w20 · G5 Architecture
-  w10 · G6 Delivery Readiness w8 · G7 Delivery Governance w7 (17 items by SubStage) · G8 Closure w5). Per-nomination
+  w10 · G6 Delivery Readiness w8 · G7 Delivery Governance w7 (17 items by SubStage) · G8 Closure w5). The template is
+  **editable in the Admin-only Gate Template page** (`/gates`, `GateTemplateController` at `api/gate-template`):
+  add/rename/reweight/reorder/activate-deactivate/delete gates and items; delete is blocked (409) once a nomination has
+  captured progress on it (deactivate instead — deactivating hides it from new work). Per-nomination
   state = `NominationGateItem` (Pending/Done/NotApplicable). **Readiness compliance %** = weight-weighted gate
   completion. **Real SA Workspace** at `/nominations/:id` (`NominationWorkspacePage`): 3-column — gate stepper
   (red "!" on current gate) │ current-gate checklist (checkbox + **N/A toggle**, kind chips, doc-ref link, mandatory
