@@ -39,6 +39,7 @@ import {
   DataFunnelRegular,
   PeopleSettingsRegular,
   PersonStarRegular,
+  WrenchRegular,
   ChevronDownRegular,
   ChevronRightRegular,
 } from '@fluentui/react-icons'
@@ -88,6 +89,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { to: '/history', label: 'Import History', icon: <HistoryRegular /> },
       { to: '/configuration', label: 'Configuration', icon: <SettingsRegular /> },
+      { to: '/capability', label: 'Capability Masters', icon: <WrenchRegular /> },
       { to: '/access', label: 'User & Access', icon: <PeopleSettingsRegular /> },
       { to: '/backup', label: 'Backup & Restore', icon: <DatabaseRegular /> },
     ],

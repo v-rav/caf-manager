@@ -9,7 +9,7 @@ import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
 import { ADOPTION_LEVELS } from '../adoption'
 import { downloadCsv } from '../export'
-import type { Nomination } from '../types'
+import type { CapabilityUtilization, Nomination } from '../types'
 
 const SETTLED = ['Withdrawn']
 
@@ -30,6 +30,7 @@ export function AdoptionPage() {
   const { region } = useRegion()
   const { fy } = useFy()
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
+  const cap = useAsync(() => api.capability(region), [region])
   const [tool, setTool] = useState('')
 
   const base = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !SETTLED.includes(n.status)), [data, fy])
@@ -77,6 +78,10 @@ export function AdoptionPage() {
     return { counts, max }
   }, [rows])
 
+  // Real GHCP usage (from captured Tool × Activity), vs the coarse FDO tool-attached flag above.
+  const ghcpAccelerated = cap.data?.byCategory.find((c) => c.name === 'GHCP')?.value ?? 0
+  const ghcpPct = rows.length ? Math.round((ghcpAccelerated / rows.length) * 100) : 0
+
   const byRegion = useMemo(() => {
     const m = new Map<string, { total: number; used: number }>()
     for (const n of rows) {
@@ -114,7 +119,8 @@ export function AdoptionPage() {
         <KpiCard label="Licensed (L4+)" value={kpis.licensed} tone="success" />
         <KpiCard label="Awaiting license (L1–3)" value={kpis.awaiting} tone={kpis.awaiting ? 'warning' : 'neutral'} />
         <KpiCard label="GHCP-used %" value={`${kpis.usedPct}%`} tone={kpis.usedPct >= 50 ? 'success' : 'brand'} />
-        <KpiCard label="Tool-attached %" value={`${kpis.toolPct}%`} tone="brand" />
+        <KpiCard label="Tool-attached % (FDO)" value={`${kpis.toolPct}%`} tone="brand" />
+        <KpiCard label="GHCP-accelerated (usage)" value={`${ghcpAccelerated} · ${ghcpPct}%`} tone={ghcpAccelerated ? 'success' : 'neutral'} />
       </div>
 
       <Panel title="Adoption-level distribution (0–7)">
@@ -135,14 +141,14 @@ export function AdoptionPage() {
         </div>
       </Panel>
 
-      <CapabilitySection region={region} />
+      <CapabilitySection cap={cap} />
     </div>
   )
 }
 
 // Leadership rollup: which capabilities were accelerated by which tools (distinct nominations).
-function CapabilitySection({ region }: { region?: string }) {
-  const { data, loading, error, reload } = useAsync(() => api.capability(region), [region])
+function CapabilitySection({ cap }: { cap: ReturnType<typeof useAsync<CapabilityUtilization>> }) {
+  const { data, loading, error, reload } = cap
   if (loading && !data) return <Panel title="Migration Capability Utilization"><Loading /></Panel>
   if (error) return <Panel title="Migration Capability Utilization"><ErrorText error={error} onRetry={reload} /></Panel>
   if (!data) return null
