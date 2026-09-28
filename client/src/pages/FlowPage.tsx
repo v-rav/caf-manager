@@ -5,6 +5,7 @@ import { KpiCard } from '../components/KpiCard'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
+import { useFy, nominationInFy } from '../fy'
 import type { Blocker, Nomination } from '../types'
 
 function stageIdx(n: Nomination): number {
@@ -35,10 +36,11 @@ function FunnelBar({ label, count, top, prev }: { label: string; count: number; 
 
 export function FlowPage() {
   const { region } = useRegion()
+  const { fy } = useFy()
   const noms = useAsync(() => api.nominations(region), [region])
   const blk = useAsync(() => api.openBlockers(region), [region])
 
-  const base = useMemo(() => (noms.data ?? []).filter((n) => n.status !== 'Withdrawn'), [noms.data])
+  const base = useMemo(() => (noms.data ?? []).filter((n) => n.status !== 'Withdrawn' && nominationInFy(n, fy)), [noms.data, fy])
   const approved = useMemo(() => base.filter((n) => (n.approvalStatus ?? '') === 'Approved'), [base])
   const completed = (n: Nomination) => n.status === 'Completed'
 

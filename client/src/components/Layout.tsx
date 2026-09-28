@@ -45,6 +45,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
+import { useFy, currentFy, fyLabel } from '../fy'
 
 const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
   { to: '/', label: 'Executive Dashboard', end: true, icon: <DataPieRegular /> },
@@ -68,6 +69,9 @@ const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
 
 const EXPANDED = 240
 const COLLAPSED = 56
+
+// FY scope options: current fiscal year and the previous three.
+const FY_OPTIONS = [0, 1, 2, 3].map((n) => currentFy() - n)
 
 function timeAgo(iso?: string): string {
   if (!iso) return 'never'
@@ -144,6 +148,7 @@ function UserMenu() {
 
 export function Layout() {
   const { region, setRegion } = useRegion()
+  const { fy, setFy } = useFy()
   const { data: regions } = useAsync(() => api.regions(), [])
   const { data: status } = useAsync(() => api.adminStatus(), [])
   const [refreshing, setRefreshing] = useState(false)
@@ -273,6 +278,17 @@ export function Layout() {
                 <Option key={r.code} value={r.code}>
                   {r.code}
                 </Option>
+              ))}
+            </Dropdown>
+            <Dropdown
+              value={fy === 'all' ? 'All FY' : fyLabel(fy)}
+              selectedOptions={[String(fy)]}
+              onOptionSelect={(_, d) => setFy(d.optionValue === 'all' ? 'all' : Number(d.optionValue))}
+              style={{ minWidth: 110 }}
+            >
+              <Option value="all">All FY</Option>
+              {FY_OPTIONS.map((y) => (
+                <Option key={y} value={String(y)}>{fyLabel(y)}</Option>
               ))}
             </Dropdown>
             <Button appearance="secondary" icon={<ArrowClockwiseRegular />} disabled={refreshing} onClick={runRefresh}>

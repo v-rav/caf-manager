@@ -8,6 +8,7 @@ import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
+import { useFy, nominationInFy } from '../fy'
 import { ADOPTION_LEVELS } from '../adoption'
 import type { ExecutiveDashboard, Nomination } from '../types'
 
@@ -55,6 +56,7 @@ function msiBands(xs: Nomination[]) {
 
 export function DashboardPage() {
   const { region } = useRegion()
+  const { fy } = useFy()
   const navigate = useNavigate()
   const [view, setView] = useState('leadership')
   const dash = useAsync(() => api.dashboard(region), [region])
@@ -62,14 +64,14 @@ export function DashboardPage() {
   const blk = useAsync(() => api.openBlockers(region), [region])
 
   const m: M = useMemo(() => {
-    const all = noms.data ?? []
+    const all = (noms.data ?? []).filter((n) => nominationInFy(n, fy))
     const approved = all.filter((n) => (n.approvalStatus ?? '') === 'Approved')
     const active = approved.filter((n) => !SETTLED.includes(n.status))
     const completed = approved.filter((n) => n.status === 'Completed')
     const blocked = active.filter((n) => n.openBlockerCount > 0)
     const sum = (xs: Nomination[], f: (n: Nomination) => number | undefined) => xs.reduce((s, n) => s + (f(n) ?? 0), 0)
     return { all, approved, active, completed, blocked, sum }
-  }, [noms.data])
+  }, [noms.data, fy])
 
   if ((dash.loading && !dash.data) || (noms.loading && !noms.data)) return <Loading label="Loading executive dashboard…" />
   if (dash.error) return <ErrorText error={dash.error} onRetry={dash.reload} />

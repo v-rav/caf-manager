@@ -7,6 +7,7 @@ import { KpiCard } from '../components/KpiCard'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
+import { useFy, nominationInFy } from '../fy'
 import type { Nomination } from '../types'
 
 const SETTLED = ['Completed', 'Closed', 'Customer Deferred', 'Withdrawn']
@@ -20,11 +21,12 @@ function velocityTone(v?: string): 'informative' | 'warning' | 'danger' {
 
 export function StrategicRegisterPage() {
   const { region } = useRegion()
+  const { fy } = useFy()
   const navigate = useNavigate()
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
 
-  const rows = useMemo(() => (data ?? []).filter((n) => n.isStrategic), [data])
-  const activeAll = useMemo(() => (data ?? []).filter((n) => !SETTLED.includes(n.status)), [data])
+  const rows = useMemo(() => (data ?? []).filter((n) => n.isStrategic && nominationInFy(n, fy)), [data, fy])
+  const activeAll = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !SETTLED.includes(n.status)), [data, fy])
 
   const kpis = useMemo(() => {
     const active = rows.filter((n) => !SETTLED.includes(n.status))

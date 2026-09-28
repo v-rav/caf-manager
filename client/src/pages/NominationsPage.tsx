@@ -19,6 +19,7 @@ import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { ADOPTION_LEVELS } from '../adoption'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
+import { useFy, nominationInFy } from '../fy'
 import { useAuth } from '../auth'
 import { useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
@@ -285,6 +286,7 @@ function msiTone(band: string): 'success' | 'warning' | 'danger' {
 
 export function NominationsPage() {
   const { region } = useRegion()
+  const { fy } = useFy()
   const navigate = useNavigate()
   const { user } = useAuth()
   const isSa = user?.role === 'Sa'
@@ -336,10 +338,10 @@ export function NominationsPage() {
     }
   }
 
-  // Approval scope drives both the KPIs and the grid so counts match what's shown.
+  // Approval + fiscal-year scope drive both the KPIs and the grid so counts match what's shown.
   const scoped = useMemo(
-    () => (data ?? []).filter((n) => !approvalFilter || (n.approvalStatus ?? '') === approvalFilter),
-    [data, approvalFilter],
+    () => (data ?? []).filter((n) => nominationInFy(n, fy) && (!approvalFilter || (n.approvalStatus ?? '') === approvalFilter)),
+    [data, approvalFilter, fy],
   )
 
   const stageCount = (match: string) =>

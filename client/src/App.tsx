@@ -22,6 +22,7 @@ import { ResourcesPage } from './pages/ResourcesPage'
 import { WorkspaceMockPage } from './pages/WorkspaceMockPage'
 import { AuthProvider, useAuth } from './auth'
 import { RegionProvider } from './region'
+import { FyProvider } from './fy'
 
 const router = createBrowserRouter([
   {
@@ -62,7 +63,9 @@ export default function App() {
   return (
     <AuthProvider>
       <RegionProvider>
-        <AuthGate />
+        <FyProvider>
+          <AuthGate />
+        </FyProvider>
       </RegionProvider>
     </AuthProvider>
   )
