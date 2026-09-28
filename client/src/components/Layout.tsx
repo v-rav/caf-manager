@@ -180,6 +180,8 @@ export function Layout() {
           height: '100vh',
           overflow: 'hidden',
           flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         {!collapsed && (
@@ -192,7 +194,7 @@ export function Layout() {
             </Text>
           </>
         )}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: collapsed ? 8 : 0 }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: collapsed ? 8 : 0, overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: 2 }}>
           {NAV.map((item) => (
             <Tooltip
               key={item.to}
