@@ -27,4 +27,8 @@ public class AnalyticsController(IAnalyticsService analytics) : ControllerBase
     [HttpGet("attainment")]
     public async Task<IActionResult> Attainment([FromQuery] string? region, [FromQuery] int? fy = null, CancellationToken ct = default)
         => Ok(await analytics.GetAttainmentAsync(region, fy, ct));
+
+    [HttpGet("acr-capture")]
+    public async Task<IActionResult> AcrCapture([FromQuery] string? region, CancellationToken ct = default)
+        => Ok(await analytics.GetAcrCaptureAsync(region, ct));
 }

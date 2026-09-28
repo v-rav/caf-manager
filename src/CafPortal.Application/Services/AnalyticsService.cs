@@ -9,10 +9,19 @@ namespace CafPortal.Application.Services;
 /// Migration analytics over Approved nominations (region-scoped). Reuses INominationService so it inherits
 /// the same stage/stale/wave derivations and the Offerings-enriched fields; joins Segment by AccountId.
 /// </summary>
-public class AnalyticsService(INominationService nominations, IApplicationDbContext db) : IAnalyticsService
+public class AnalyticsService(INominationService nominations, IApplicationDbContext db, IAcrService acr) : IAnalyticsService
 {
     private readonly INominationService _nominations = nominations;
     private readonly IApplicationDbContext _db = db;
+    private readonly IAcrService _acr = acr;
+
+    private const int DefaultContainerCoreFloor = 20;
+
+    private static bool IsContainerPath(string? p)
+    {
+        var s = (p ?? string.Empty).ToLowerInvariant();
+        return s.Contains("container") || s.Contains("aks") || s.Contains("aca") || s.Contains("eks") || s.Contains("ecs");
+    }
 
     private static readonly string[] StageLabels =
         { "1 · Validating", "2 · Pre-Requisites", "3 · Finalize Scope", "4 · Executing Migration" };
@@ -120,6 +129,65 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
                 .Where(x => x.Value > 0).OrderByDescending(x => x.Value).ToList(),
         };
         return dto;
+    }
+
+    public async Task<AcrCaptureDto> GetAcrCaptureAsync(string? region, CancellationToken ct = default)
+    {
+        var all = await _nominations.GetAsync(region, status: null, ct);
+        var noms = all.Where(n => string.Equals(n.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)).ToList();
+        var container = noms.Where(n => IsContainerPath(n.PrimaryMigrationPath)).ToList();
+
+        var rates = await _acr.GetRatesAsync(ct);
+        var months = rates.AnnualizationMonths <= 0 ? 12 : rates.AnnualizationMonths;
+
+        // Core floor a containerized workload is assumed not to fall below (config-overridable).
+        var floorSetting = await _db.ApplicationSettings.AsNoTracking()
+            .Where(s => s.Key == "AcrContainerCoreFloor").Select(s => s.Value).FirstOrDefaultAsync(ct);
+        var floor = int.TryParse(floorSetting, out var f) && f > 0 ? f : DefaultContainerCoreFloor;
+
+        double RatePerCoreYear(string? path)
+        {
+            var win = (path ?? string.Empty).ToLowerInvariant().Contains("windows");
+            return (double)((win ? rates.AksWindowsArpuPerCoreMonth : rates.AksLinuxArpuPerCoreMonth) * months);
+        }
+
+        var rows = new List<AcrCaptureRow>();
+        foreach (var n in container)
+        {
+            var cores = n.TotalCores ?? 0;
+            var acr = (double)(n.TotalAcr ?? 0m);
+            string? gap = cores <= 0 ? "Missing cores"
+                : (n.TotalAcr is null || n.TotalAcr == 0m) ? "Missing ACR"
+                : cores <= 16 ? "Low cores"
+                : null;
+            if (gap is null) continue;
+
+            var ratePerCoreYr = RatePerCoreYear(n.PrimaryMigrationPath);
+            var estCores = gap == "Missing ACR" ? cores : Math.Max(cores, floor);
+            var estAcr = estCores * ratePerCoreYr;
+            var gapAcr = Math.Max(0, estAcr - acr);
+            rows.Add(new AcrCaptureRow(n.Id, n.AccountName ?? "—", n.Tpid, n.Region, n.PrimaryMigrationPath ?? "—",
+                cores, Math.Round(acr), gap, Math.Round(ratePerCoreYr), estCores, Math.Round(estAcr), Math.Round(gapAcr)));
+        }
+        rows = rows.OrderByDescending(r => r.GapAcr).ToList();
+
+        var containerAcr = container.Sum(n => (double)(n.TotalAcr ?? 0m));
+        var totalAcr = noms.Sum(n => (double)(n.TotalAcr ?? 0m));
+
+        return new AcrCaptureDto
+        {
+            ContainerNoms = container.Count,
+            ContainerAcr = Math.Round(containerAcr),
+            ContainerAcrShare = totalAcr > 0 ? Math.Round(containerAcr / totalAcr * 100, 1) : 0,
+            FlaggedCount = rows.Count,
+            MissingCoresCount = rows.Count(r => r.GapType == "Missing cores"),
+            MissingAcrCount = rows.Count(r => r.GapType == "Missing ACR"),
+            LowCoresCount = rows.Count(r => r.GapType == "Low cores"),
+            AcrAtRisk = Math.Round(container.Where(n => (n.TotalCores ?? 0) <= 0).Sum(n => (double)(n.TotalAcr ?? 0m))),
+            EstimatedUpside = Math.Round(rows.Sum(r => r.GapAcr)),
+            CoreFloor = floor,
+            Rows = rows,
+        };
     }
 
     public async Task<TimeSeriesDto> GetTimeSeriesAsync(string? region, string basis, string granularity, string measure,

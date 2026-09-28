@@ -21,6 +21,7 @@ import type {
   LookupValue,
   AcrRates,
   AcrEstimate,
+  AcrCapture,
   ImportChange,
   ImportRun,
   LeaveClash,
@@ -60,6 +61,8 @@ export const api = {
     http.get<Analytics>('/api/analytics', { params: { region } }).then((r) => r.data),
   attainment: (region?: string, fy?: number) =>
     http.get<Attainment>('/api/analytics/attainment', { params: { region, fy } }).then((r) => r.data),
+  acrCapture: (region?: string) =>
+    http.get<AcrCapture>('/api/analytics/acr-capture', { params: { region } }).then((r) => r.data),
 
   timeseries: (params: Record<string, string | undefined>) =>
     http.get<TimeSeries>('/api/analytics/timeseries', { params }).then((r) => r.data),

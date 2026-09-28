@@ -317,8 +317,7 @@ User & Access page**, **CSV exports + light filters on Adoption/Strategic/Flow**
 left nav** (Overview / Delivery / Resourcing / Admin — only the active group expanded, so the sidebar never scrolls),
 and **Migration Capability Utilization** (Tool × Activity masters + per-nomination usage + leadership rollups).
 **Backlog:** `NominationOutcome` value-capture (hours saved · defects · CSAT → real Factory Productivity);
-config-editable strategic time-thresholds + PV-01 stale-basis decision; **ACR estimator on the Analytics page + a
-per-nomination "estimate ACR" action** (populate `TotalAcr` from a wave's app count); retire the `/workspace` P0 mock
+config-editable strategic time-thresholds + PV-01 stale-basis decision; retire the `/workspace` P0 mock
 (kept as reference); `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered
 leave; Entra auth; in-app upload; API smoke tests.
 - **Migration Capability Utilization** (the GHCP/AppMod/accelerator value story): two portal-owned masters —
@@ -376,6 +375,16 @@ leave; Entra auth; in-app upload; API smoke tests.
   chronological sort key + stable key + display label (e.g. `FY27 Q1`, `Sep 2026`, `2026-W38`).
 - **Nomination enrichment**: offering fields + dates via `import-offerings` (Summary, single source; also
   creates Completed nominations from Actual End Date); FDO withdraw guard protects settled states.
+- **Containerized ACR core-capture** (`/analytics`, `GET /api/analytics/acr-capture?region=`): since ACR is linear in
+  cores (cores × per-core rate × 12) and containerized paths drive ~66% of ACR, this flags Approved containerized
+  nominations (path contains container/aks/aca/eks/ecs) whose value data looks under-captured — **Missing cores**
+  (0 cores), **Missing ACR** (cores but no ACR), or **Low cores** (≤16, likely app-level not container-level) — and
+  estimates recoverable ACR per row at a conservative core floor (`AcrContainerCoreFloor`, default 20; setting-overridable)
+  using the live AKS Linux/Windows rates. Surfaced as KPIs (flagged · est. recoverable ACR/yr · ACR-with-no-core-basis ·
+  the three gap counts), a **worklist** `DataTable` (biggest upside first, account → workspace link, gap badge, est.
+  cores/ACR) with **CSV export**, and an inline **per-nomination ACR estimator** (target service + apps/containers or
+  cores → annual ACR via `POST /api/acr/estimate`, feeds a defensible number back into FDO). `AnalyticsService`
+  reuses `INominationService` + `IAcrService`. Read-only — it does not write back `TotalAcr`/`TotalCores` (FDO-owned).
 Backlog: cycle-time measure (avg days / nominated→completed), bucket→Nominations date-range drill, trend CSV
   export, weekly view is sparse; Leave intake data source, my-view, global search, Entra auth, in-app upload,
   API smoke tests.

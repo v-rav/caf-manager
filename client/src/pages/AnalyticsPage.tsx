@@ -1,4 +1,4 @@
-import { Button, Dropdown, Link, Option, Text } from '@fluentui/react-components'
+import { Badge, Button, Dropdown, Input, Link, Option, Text } from '@fluentui/react-components'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
@@ -8,7 +8,8 @@ import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
-import type { AttainmentBucket, Nomination, TimeBucket } from '../types'
+import { downloadCsv } from '../export'
+import type { AcrCaptureRow, AttainmentBucket, Nomination, TimeBucket } from '../types'
 
 // Heat-band colours reused for the health doughnut (On Track → Blocked → Other).
 const HEALTH_COLORS = ['#107c10', '#eaa300', '#c50f1f', '#8a8886']
@@ -279,6 +280,8 @@ export function AnalyticsPage() {
         <Panel title="ACR by approval status"><BarChart data={data.acrByApproval} label="ACR ($)" /></Panel>
       </Section>
 
+      <AcrCaptureSection region={region} />
+
       <Section title="Adoption & coverage">
         <Panel title="Migration path mix"><DoughnutChart data={data.byMigrationPath} /></Panel>
         <Panel title="Mode of access"><DoughnutChart data={data.byModeOfAccess} /></Panel>
@@ -293,3 +296,130 @@ export function AnalyticsPage() {
     </div>
   )
 }
+
+const GAP_TONE: Record<string, 'danger' | 'warning' | 'informative'> = {
+  'Missing cores': 'danger',
+  'Missing ACR': 'danger',
+  'Low cores': 'warning',
+}
+
+// Containerized ACR core-capture worklist + an inline per-nomination ACR estimator.
+// ACR is linear in cores, so under-captured cores = under-reported ACR — this surfaces the records to fix.
+function AcrCaptureSection({ region }: { region?: string }) {
+  const { data, loading, error, reload } = useAsync(() => api.acrCapture(region), [region])
+  if (loading) return <Loading label="Scanning containerized ACR capture…" />
+  if (error) return <ErrorText error={error} onRetry={reload} />
+  if (!data) return null
+
+  const exportCsv = () => downloadCsv('acr-core-capture', [
+    { header: 'Account', value: (r: AcrCaptureRow) => r.account },
+    { header: 'TPID', value: (r: AcrCaptureRow) => r.tpid ?? '' },
+    { header: 'Region', value: (r: AcrCaptureRow) => r.region ?? '' },
+    { header: 'Migration path', value: (r: AcrCaptureRow) => r.path },
+    { header: 'Cores', value: (r: AcrCaptureRow) => r.cores },
+    { header: 'ACR', value: (r: AcrCaptureRow) => Math.round(r.acr) },
+    { header: 'Gap', value: (r: AcrCaptureRow) => r.gapType },
+    { header: 'Est. cores', value: (r: AcrCaptureRow) => r.estimatedCores },
+    { header: 'Est. ACR', value: (r: AcrCaptureRow) => Math.round(r.estimatedAcr) },
+    { header: 'Upside ACR/yr', value: (r: AcrCaptureRow) => Math.round(r.gapAcr) },
+  ], data.rows)
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <Text size={400} weight="semibold">Containerized ACR core-capture</Text>
+        <Button appearance="secondary" size="small" onClick={exportCsv} disabled={!data.rows.length}>Export CSV</Button>
+      </div>
+      <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+        Containers drive {data.containerAcrShare}% of Approved ACR ({money(data.containerAcr)} across {data.containerNoms} nominations),
+        and ACR is linear in cores. These {data.flaggedCount} records look under-captured; estimates assume a conservative
+        floor of {data.coreFloor} cores for a containerized workload and the live AKS Linux/Windows core rates.
+      </Text>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+        <KpiCard label="Flagged records" value={num(data.flaggedCount)} tone="warning" />
+        <KpiCard label="Est. recoverable ACR/yr" value={money(data.estimatedUpside)} tone="success" />
+        <KpiCard label="ACR with no core basis" value={money(data.acrAtRisk)} tone="danger" />
+        <KpiCard label="Missing cores" value={num(data.missingCoresCount)} tone="neutral" />
+        <KpiCard label="Missing ACR" value={num(data.missingAcrCount)} tone="neutral" />
+        <KpiCard label="Low cores (≤16)" value={num(data.lowCoresCount)} tone="neutral" />
+      </div>
+
+      <Panel title="Worklist — biggest ACR upside first">
+        <DataTable
+          ariaLabel="ACR core-capture worklist"
+          rows={data.rows}
+          rowKey={(r) => r.id}
+          defaultSort={{ key: 'gapAcr', dir: 'desc' }}
+          columns={[
+            { key: 'account', header: 'Account', sortValue: (r) => r.account, render: (r) => <RouterLink to={`/nominations/${r.id}`}>{r.account}</RouterLink> },
+            { key: 'tpid', header: 'TPID', sortValue: (r) => r.tpid ?? '', render: (r) => r.tpid ?? '—' },
+            { key: 'region', header: 'Region', sortValue: (r) => r.region ?? '' },
+            { key: 'path', header: 'Path', sortValue: (r) => r.path, render: (r) => <span style={{ fontSize: 12 }}>{r.path}</span> },
+            { key: 'cores', header: 'Cores', align: 'end', sortValue: (r) => r.cores },
+            { key: 'acr', header: 'ACR', align: 'end', sortValue: (r) => r.acr, render: (r) => money(r.acr) },
+            { key: 'gapType', header: 'Gap', sortValue: (r) => r.gapType, render: (r) => <Badge appearance="tint" color={GAP_TONE[r.gapType] ?? 'informative'}>{r.gapType}</Badge> },
+            { key: 'estimatedCores', header: 'Est. cores', align: 'end', sortValue: (r) => r.estimatedCores },
+            { key: 'estimatedAcr', header: 'Est. ACR', align: 'end', sortValue: (r) => r.estimatedAcr, render: (r) => money(r.estimatedAcr) },
+            { key: 'gapAcr', header: 'Upside/yr', align: 'end', sortValue: (r) => r.gapAcr, render: (r) => <b>{money(r.gapAcr)}</b> },
+          ]}
+        />
+      </Panel>
+
+      <AcrEstimator />
+    </div>
+  )
+}
+
+// Inline per-nomination ACR estimator (container count / cores → annual ACR) using the live rate master.
+function AcrEstimator() {
+  const [svc, setSvc] = useState('AksLinux')
+  const [apps, setApps] = useState('')
+  const [cores, setCores] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<{ cores: number; annualAcr: number; formula: string } | null>(null)
+
+  const run = async () => {
+    setBusy(true)
+    try {
+      const r = await api.acrEstimate({ targetService: svc, apps: apps ? Number(apps) : null, cores: cores ? Number(cores) : null })
+      setResult({ cores: r.cores, annualAcr: r.annualAcr, formula: r.formula })
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <Panel title="Estimate ACR for a nomination">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+          Target service
+          <Dropdown value={svc} selectedOptions={[svc]} onOptionSelect={(_, d) => setSvc(d.optionValue || 'AksLinux')} style={{ minWidth: 150 }}>
+            <Option value="AksLinux">AKS (Linux)</Option>
+            <Option value="AksWindows">AKS (Windows)</Option>
+            <Option value="Aca">Azure Container Apps</Option>
+            <Option value="AppService">App Service</Option>
+          </Dropdown>
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+          Apps / containers
+          <Input type="number" value={apps} onChange={(_, d) => setApps(d.value)} placeholder="e.g. 5" style={{ width: 120 }} />
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+          or Cores
+          <Input type="number" value={cores} onChange={(_, d) => setCores(d.value)} placeholder="e.g. 40" style={{ width: 120 }} />
+        </label>
+        <Button appearance="primary" onClick={run} disabled={busy || (!apps && !cores)}>Estimate</Button>
+        {result && (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <Text size={500} weight="bold" style={{ color: 'var(--colorPaletteGreenForeground2)' }}>{money(result.annualAcr)}/yr</Text>
+            <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>{result.cores} cores · {result.formula}</Text>
+          </div>
+        )}
+      </div>
+      <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginTop: 8 }}>
+        Apps convert to cores via the rate master (App Service 2, containerized 4 cores/app); or enter cores directly.
+        Use this to feed a defensible ACR back into FDO — count each independently deployable container as an app.
+      </Text>
+    </Panel>
+  )
+}
+

@@ -18,6 +18,8 @@ public interface IAnalyticsService
         string bucketKey, string? splitBy, string? series, CancellationToken ct = default);
 
     Task<AttainmentDto> GetAttainmentAsync(string? region, int? fy, CancellationToken ct = default);
+
+    Task<AcrCaptureDto> GetAcrCaptureAsync(string? region, CancellationToken ct = default);
 }
 
 public interface IResourceService

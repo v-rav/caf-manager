@@ -42,3 +42,33 @@ public class AnalyticsDto
     /// <summary>ACR summed by approval step across ALL statuses (Concierge / Provisional / Approved / Declined …).</summary>
     public IReadOnlyList<NameValueDto> AcrByApproval { get; set; } = [];
 }
+
+/// <summary>
+/// Containerized ACR core-capture worklist: flags Approved containerized nominations whose core/ACR
+/// data looks under-captured (missing cores, missing ACR, or implausibly low cores), with a per-row
+/// estimate of the recoverable ACR. ACR is linear in cores, so cores are the whole lever.
+/// </summary>
+public class AcrCaptureDto
+{
+    public int ContainerNoms { get; set; }
+    public double ContainerAcr { get; set; }
+    /// <summary>Containerized ACR as a share of total Approved ACR (%).</summary>
+    public double ContainerAcrShare { get; set; }
+
+    public int FlaggedCount { get; set; }
+    public int MissingCoresCount { get; set; }
+    public int MissingAcrCount { get; set; }
+    public int LowCoresCount { get; set; }
+
+    /// <summary>ACR already booked on nominations that carry no core basis (unverifiable).</summary>
+    public double AcrAtRisk { get; set; }
+    /// <summary>Sum of per-row recoverable ACR at the assumed core floor.</summary>
+    public double EstimatedUpside { get; set; }
+    /// <summary>Conservative core floor a containerized workload is assumed not to fall below.</summary>
+    public int CoreFloor { get; set; }
+
+    public IReadOnlyList<AcrCaptureRow> Rows { get; set; } = [];
+}
+
+public record AcrCaptureRow(int Id, string Account, string? Tpid, string? Region, string Path,
+    int Cores, double Acr, string GapType, double RatePerCoreYear, int EstimatedCores, double EstimatedAcr, double GapAcr);

@@ -643,6 +643,34 @@ export interface AcrEstimate {
   formula: string
 }
 
+export interface AcrCaptureRow {
+  id: number
+  account: string
+  tpid?: string | null
+  region?: string | null
+  path: string
+  cores: number
+  acr: number
+  gapType: string
+  ratePerCoreYear: number
+  estimatedCores: number
+  estimatedAcr: number
+  gapAcr: number
+}
+export interface AcrCapture {
+  containerNoms: number
+  containerAcr: number
+  containerAcrShare: number
+  flaggedCount: number
+  missingCoresCount: number
+  missingAcrCount: number
+  lowCoresCount: number
+  acrAtRisk: number
+  estimatedUpside: number
+  coreFloor: number
+  rows: AcrCaptureRow[]
+}
+
 export interface AttainmentBucket {
   key: string
   label: string
