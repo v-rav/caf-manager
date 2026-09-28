@@ -290,7 +290,8 @@ Operating System P1–P5** (custom auth · 8-gate engine + SA Workspace · block
 classification + strategic register · GHCP adoption · MSI · migration flow · 4-view exec dashboard), the
 workspace-mock-aligned redesign, the editable **lookup master**, **milestones & dates**, **role-based page access +
 User & Access page**, **CSV exports + light filters on Adoption/Strategic/Flow**, **Admin-gated Backup/Restore
-(+ prune)**, and the **kick-off → actual-start milestone lag** on the grid + analytics.
+(+ prune)**, the **kick-off → actual-start milestone lag** on the grid + analytics, and the **grouped collapsible
+left nav** (Overview / Delivery / Resourcing / Admin — only the active group expanded, so the sidebar never scrolls).
 **Backlog:** `NominationOutcome` value-capture (hours saved · defects · CSAT → real Factory Productivity);
 config-editable strategic time-thresholds + PV-01 stale-basis decision; **ACR estimator on the Analytics page + a
 per-nomination "estimate ACR" action** (populate `TotalAcr` from a wave's app count); retire the `/workspace` P0 mock
