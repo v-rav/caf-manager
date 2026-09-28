@@ -281,10 +281,6 @@ function recommendedAction(staleTier: string, ageDays: number): string | null {
   }
 }
 
-function msiTone(band: string): 'success' | 'warning' | 'danger' {
-  return band === 'Green' ? 'success' : band === 'Amber' ? 'warning' : 'danger'
-}
-
 export function NominationsPage() {
   const { region } = useRegion()
   const { fy } = useFy()
@@ -687,26 +683,6 @@ export function NominationsPage() {
                 { key: 'pm', header: 'PM', sortValue: (n) => n.projectCoordinator ?? '', render: (n) => n.projectCoordinator ?? '—' },
                 { key: 'cftl', header: 'CFTL', sortValue: (n) => n.cftlPrimary ?? '', render: (n) => n.cftlPrimary ?? '—' },
                 { key: 'sa', header: 'SA', sortValue: (n) => n.solutionArchitect ?? '', render: (n) => n.solutionArchitect ?? '—' },
-                {
-                  key: 'msi',
-                  header: 'MSI',
-                  align: 'end',
-                  sortValue: (n) => n.msiScore,
-                  render: (n) => (
-                    <Tooltip
-                      relationship="description"
-                      content={
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, maxWidth: 260 }}>
-                          <div><b>MSI {n.msiScore}</b> · {n.msiBand}</div>
-                          <div>Readiness {n.msiReadiness} · Scope {n.msiScope} · Delivery {n.msiDelivery}</div>
-                          <div>Risk {n.msiRisk} · GHCP {n.msiGhcp} · Sign-off {n.msiSignoff}</div>
-                        </div>
-                      }
-                    >
-                      <Badge appearance="filled" color={msiTone(n.msiBand)}>{n.msiScore}</Badge>
-                    </Tooltip>
-                  ),
-                },
                 {
                   key: 'links',
                   header: 'Waves',
