@@ -1,12 +1,14 @@
-import { Badge } from '@fluentui/react-components'
-import { useMemo } from 'react'
+import { Badge, Button } from '@fluentui/react-components'
+import { ArrowDownloadRegular } from '@fluentui/react-icons'
+import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
-import { ErrorText, Loading, Panel } from '../components/common'
+import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
 import { ADOPTION_LEVELS } from '../adoption'
+import { downloadCsv } from '../export'
 import type { Nomination } from '../types'
 
 const SETTLED = ['Withdrawn']
@@ -28,8 +30,28 @@ export function AdoptionPage() {
   const { region } = useRegion()
   const { fy } = useFy()
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
+  const [tool, setTool] = useState('')
 
-  const rows = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !SETTLED.includes(n.status)), [data, fy])
+  const base = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !SETTLED.includes(n.status)), [data, fy])
+  const rows = useMemo(
+    () => base.filter((n) => (tool === 'Tool attached' ? n.isToolAttached === true : tool === 'No tool' ? n.isToolAttached === false : true)),
+    [base, tool],
+  )
+
+  const exportRows = () =>
+    downloadCsv<Nomination>(
+      `ghcp-adoption-${new Date().toISOString().slice(0, 10)}`,
+      [
+        { header: 'Account', value: (n) => n.accountName ?? '' },
+        { header: 'TPID', value: (n) => n.tpid ?? '' },
+        { header: 'Region', value: (n) => n.region },
+        { header: 'Adoption level', value: (n) => n.ghcpAdoptionLevel ?? 0 },
+        { header: 'Tool attached', value: (n) => (n.isToolAttached == null ? '' : n.isToolAttached ? 'Yes' : 'No') },
+        { header: 'Automation used', value: (n) => (n.isAutomationUsed == null ? '' : n.isAutomationUsed ? 'Yes' : 'No') },
+        { header: 'Status', value: (n) => n.status },
+      ],
+      rows,
+    )
 
   const kpis = useMemo(() => {
     const total = rows.length
@@ -72,9 +94,20 @@ export function AdoptionPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div>
-        <div style={{ fontSize: 22, fontWeight: 700 }}>GHCP Adoption</div>
-        <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>License readiness · adoption maturity 0–7 · tool usage — across active nominations</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>GHCP Adoption</div>
+          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>License readiness · adoption maturity 0–7 · tool usage — across active nominations</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+          <FilterSelect
+            label="Tooling"
+            value={tool}
+            onChange={setTool}
+            options={['Tool attached', 'No tool']}
+          />
+          <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!rows.length}>Export</Button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>

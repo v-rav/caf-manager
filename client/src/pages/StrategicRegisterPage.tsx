@@ -1,13 +1,15 @@
-import { Badge, Link } from '@fluentui/react-components'
-import { useMemo } from 'react'
+import { Badge, Button, Link } from '@fluentui/react-components'
+import { ArrowDownloadRegular } from '@fluentui/react-icons'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
-import { ErrorText, Loading, Panel } from '../components/common'
+import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
+import { downloadCsv } from '../export'
 import type { Nomination } from '../types'
 
 const SETTLED = ['Completed', 'Closed', 'Customer Deferred', 'Withdrawn']
@@ -24,31 +26,56 @@ export function StrategicRegisterPage() {
   const { fy } = useFy()
   const navigate = useNavigate()
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
+  const [tier, setTier] = useState('')
 
-  const rows = useMemo(() => (data ?? []).filter((n) => n.isStrategic && nominationInFy(n, fy)), [data, fy])
+  const strategic = useMemo(() => (data ?? []).filter((n) => n.isStrategic && nominationInFy(n, fy)), [data, fy])
+  const rows = useMemo(() => (tier ? strategic.filter((n) => n.strategicTier === tier) : strategic), [strategic, tier])
   const activeAll = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !SETTLED.includes(n.status)), [data, fy])
 
+  const exportRows = () =>
+    downloadCsv<Nomination>(
+      `strategic-register-${new Date().toISOString().slice(0, 10)}`,
+      [
+        { header: 'Account', value: (n) => n.accountName ?? '' },
+        { header: 'TPID', value: (n) => n.tpid ?? '' },
+        { header: 'Classification', value: (n) => n.classification },
+        { header: 'Velocity', value: (n) => n.velocityImpact ?? '' },
+        { header: 'SA', value: (n) => n.solutionArchitect ?? '' },
+        { header: 'Status', value: (n) => n.status },
+        { header: 'Days in flight', value: (n) => n.daysInFlight },
+        { header: 'Threshold', value: (n) => n.strategicTier },
+        { header: 'Region', value: (n) => n.region },
+      ],
+      rows,
+    )
+
   const kpis = useMemo(() => {
-    const active = rows.filter((n) => !SETTLED.includes(n.status))
+    const active = strategic.filter((n) => !SETTLED.includes(n.status))
     const tier = (t: string) => active.filter((n) => n.strategicTier === t).length
     const pct = activeAll.length ? Math.round((active.length / activeAll.length) * 100) : 0
-    return { total: rows.length, active: active.length, pct, green: tier('Green'), amber: tier('Amber'), red: tier('Red'), exec: tier('Exec') }
-  }, [rows, activeAll])
+    return { total: strategic.length, active: active.length, pct, green: tier('Green'), amber: tier('Amber'), red: tier('Red'), exec: tier('Exec') }
+  }, [strategic, activeAll])
 
   const byClass = useMemo(() => {
     const m = new Map<string, number>()
-    for (const n of rows) m.set(n.classification, (m.get(n.classification) ?? 0) + 1)
+    for (const n of strategic) m.set(n.classification, (m.get(n.classification) ?? 0) + 1)
     return [...m.entries()].sort((a, b) => b[1] - a[1])
-  }, [rows])
+  }, [strategic])
 
   if (loading && !data) return <Loading label="Loading strategic register…" />
   if (error) return <ErrorText error={error} onRetry={reload} />
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div>
-        <div style={{ fontSize: 22, fontWeight: 700 }}>Strategic Investment Register</div>
-        <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>Pilots &amp; strategic engagements · time-threshold governance (60/90/120) · excluded from Standard velocity</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>Strategic Investment Register</div>
+          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>Pilots &amp; strategic engagements · time-threshold governance (60/90/120) · excluded from Standard velocity</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+          <FilterSelect label="Threshold" value={tier} onChange={setTier} options={['Green', 'Amber', 'Red', 'Exec']} />
+          <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!rows.length}>Export</Button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>

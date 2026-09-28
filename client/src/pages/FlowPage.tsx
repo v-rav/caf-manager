@@ -1,11 +1,13 @@
-import { Badge } from '@fluentui/react-components'
-import { useMemo } from 'react'
+import { Badge, Button } from '@fluentui/react-components'
+import { ArrowDownloadRegular } from '@fluentui/react-icons'
+import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
-import { ErrorText, Loading, Panel } from '../components/common'
+import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
+import { downloadCsv } from '../export'
 import type { Blocker, Nomination } from '../types'
 
 function stageIdx(n: Nomination): number {
@@ -39,10 +41,34 @@ export function FlowPage() {
   const { fy } = useFy()
   const noms = useAsync(() => api.nominations(region), [region])
   const blk = useAsync(() => api.openBlockers(region), [region])
+  const [path, setPath] = useState('')
 
-  const base = useMemo(() => (noms.data ?? []).filter((n) => n.status !== 'Withdrawn' && nominationInFy(n, fy)), [noms.data, fy])
+  const scoped = useMemo(() => (noms.data ?? []).filter((n) => n.status !== 'Withdrawn' && nominationInFy(n, fy)), [noms.data, fy])
+  const pathOptions = useMemo(
+    () => [...new Set(scoped.map((n) => n.primaryMigrationPath?.trim()).filter((p): p is string => !!p))].sort(),
+    [scoped],
+  )
+  const base = useMemo(() => (path ? scoped.filter((n) => (n.primaryMigrationPath?.trim() || '') === path) : scoped), [scoped, path])
   const approved = useMemo(() => base.filter((n) => (n.approvalStatus ?? '') === 'Approved'), [base])
   const completed = (n: Nomination) => n.status === 'Completed'
+
+  const exportRows = () =>
+    downloadCsv<Nomination>(
+      `migration-flow-${new Date().toISOString().slice(0, 10)}`,
+      [
+        { header: 'Account', value: (n) => n.accountName ?? '' },
+        { header: 'TPID', value: (n) => n.tpid ?? '' },
+        { header: 'Stage', value: (n) => stageIdx(n) || '' },
+        { header: 'Migration status', value: (n) => n.migrationStatus ?? '' },
+        { header: 'Current state', value: (n) => n.currentState ?? '' },
+        { header: 'Migration path', value: (n) => n.primaryMigrationPath ?? '' },
+        { header: 'SA', value: (n) => n.solutionArchitect ?? '' },
+        { header: 'Age (stage days)', value: (n) => n.stageAgeDays ?? n.daysSinceUpdate },
+        { header: 'Status', value: (n) => n.status },
+        { header: 'Region', value: (n) => n.region },
+      ],
+      approved,
+    )
 
   const funnel = useMemo(() => {
     const reached = (k: number) => approved.filter((n) => completed(n) || stageIdx(n) >= k).length
@@ -104,9 +130,15 @@ export function FlowPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div>
-        <div style={{ fontSize: 22, fontWeight: 700 }}>Migration Flow</div>
-        <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>Funnel conversion &amp; drop-off · bottleneck analytics across the migration journey</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>Migration Flow</div>
+          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>Funnel conversion &amp; drop-off · bottleneck analytics across the migration journey</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+          <FilterSelect label="Path" value={path} onChange={setPath} options={pathOptions} minWidth={200} />
+          <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!approved.length}>Export</Button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
