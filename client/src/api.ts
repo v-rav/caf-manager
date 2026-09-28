@@ -7,6 +7,7 @@ import type {
   Analytics,
   Attainment,
   AppUser,
+  PageAccess,
   CapacityRow,
   ExecutiveDashboard,
   DataStatus,
@@ -214,6 +215,10 @@ export const api = {
     http.post(`/api/users/${id}/reset-password`, { newPassword }).then((r) => r.data),
   provisionSaLogins: () =>
     http.post<{ created: number; skipped: number; tempPassword: string; users: { username: string; displayName: string }[] }>('/api/users/provision-sa').then((r) => r.data),
+  pageAccess: () =>
+    http.get<PageAccess[]>('/api/access/pages').then((r) => r.data),
+  savePageAccess: (updates: { key: string; allowedRoles: string[] }[]) =>
+    http.put<PageAccess[]>('/api/access/pages', updates).then((r) => r.data),
 
   governance: (nominationId: number) =>
     http.get<Governance>(`/api/nominations/${nominationId}/governance`).then((r) => r.data),

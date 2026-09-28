@@ -1,11 +1,10 @@
-import { Badge, Button, Dropdown, Field, Input, Option, SpinButton, Text } from '@fluentui/react-components'
-import { AddRegular, CheckmarkCircleRegular, DeleteRegular, EditRegular, PeopleTeamRegular, SaveRegular } from '@fluentui/react-icons'
+import { Badge, Button, Dropdown, Input, Option, SpinButton, Text } from '@fluentui/react-components'
+import { AddRegular, CheckmarkCircleRegular, DeleteRegular, EditRegular, SaveRegular } from '@fluentui/react-icons'
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
-import { useAuth } from '../auth'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
-import type { AppUser, RoleCapacity, UserRole, AcrRates, AcrEstimate } from '../types'
+import type { RoleCapacity, AcrRates, AcrEstimate } from '../types'
 
 export function ConfigurationPage() {
   const { data, loading, error, reload } = useAsync(() => api.roleCapacity(), [])
@@ -59,8 +58,6 @@ export function ConfigurationPage() {
           Tune the governance rules that drive capacity and utilization across the portal.
         </Text>
       </div>
-
-      <UsersPanel />
 
       <Panel
         title="Optimal accounts per role"
@@ -569,112 +566,6 @@ function FiscalTargetsPanel() {
             </div>
             <Button appearance="secondary" icon={<AddRegular />} onClick={addFy} disabled={edits[newFy] != null}>Add {label(newFy)}</Button>
           </div>
-        </>
-      )}
-    </Panel>
-  )
-}
-
-const ROLES: UserRole[] = ['Admin', 'Lead', 'Sa']
-const ROLE_LABEL: Record<UserRole, string> = { Admin: 'Admin', Lead: 'Lead', Sa: 'SA' }
-
-// Admin-only: create/manage portal logins (custom auth).
-function UsersPanel() {
-  const { user } = useAuth()
-  const { data, loading, error, reload } = useAsync(() => api.users(), [])
-  const [form, setForm] = useState<{ username: string; displayName: string; role: UserRole; password: string }>({ username: '', displayName: '', role: 'Sa', password: '' })
-  const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
-  const [provisioning, setProvisioning] = useState(false)
-
-  const provisionSa = async () => {
-    if (!confirm('Create an SA login for every Solution Architect on nominations who does not already have one?')) return
-    setProvisioning(true); setMsg(null)
-    try {
-      const r = await api.provisionSaLogins()
-      setMsg(`Provisioned ${r.created} SA login${r.created === 1 ? '' : 's'} (skipped ${r.skipped} existing). Temp password: ${r.tempPassword} — each must change it at first login.`)
-      reload()
-    } catch {
-      setMsg('Could not provision SA logins.')
-    } finally {
-      setProvisioning(false)
-    }
-  }
-
-  if (user?.role !== 'Admin') return null
-
-  const add = async () => {
-    setBusy(true); setMsg(null)
-    try {
-      await api.createUser({ username: form.username.trim(), displayName: form.displayName.trim() || form.username.trim(), role: form.role, active: true, password: form.password })
-      setForm({ username: '', displayName: '', role: 'Sa', password: '' })
-      reload()
-    } catch {
-      setMsg('Could not create user (username may be taken).')
-    } finally {
-      setBusy(false)
-    }
-  }
-  const toggleActive = async (u: AppUser) => {
-    await api.updateUser(u.id, { username: u.username, displayName: u.displayName, role: u.role, active: !u.active })
-    reload()
-  }
-  const setRole = async (u: AppUser, role: UserRole) => {
-    await api.updateUser(u.id, { username: u.username, displayName: u.displayName, role, active: u.active })
-    reload()
-  }
-  const reset = async (u: AppUser) => {
-    const p = window.prompt(`New temporary password for ${u.username} (they must change it at next login):`)
-    if (p) { await api.resetUserPassword(u.id, p); reload() }
-  }
-
-  return (
-    <Panel
-      title="Users & access"
-      action={
-        <Button appearance="secondary" icon={<PeopleTeamRegular />} disabled={provisioning} onClick={provisionSa}>
-          {provisioning ? 'Provisioning…' : 'Provision SA logins'}
-        </Button>
-      }
-    >
-      {loading ? <Loading /> : error ? <ErrorText error={error} onRetry={reload} /> : (
-        <>
-          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
-            Custom portal logins. New users get a temporary password and must change it at first login.
-            <b> Provision SA logins</b> bulk-creates an SA account for every Solution Architect already on nominations.
-          </Text>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10, marginBottom: 14 }}>
-            {data?.map((u) => (
-              <div key={u.id} style={{ border: '1px solid var(--colorNeutralStroke2)', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <Text weight="semibold">{u.displayName}</Text>
-                    <Text size={200} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>{u.username}{u.mustChangePassword ? ' · must reset' : ''}</Text>
-                  </div>
-                  <Badge appearance="tint" color={u.active ? 'success' : 'danger'}>{u.active ? 'active' : 'disabled'}</Badge>
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Dropdown size="small" value={ROLE_LABEL[u.role]} selectedOptions={[u.role]} onOptionSelect={(_, d) => setRole(u, (d.optionValue as UserRole) ?? u.role)} style={{ minWidth: 90 }}>
-                    {ROLES.map((r) => <Option key={r} value={r}>{ROLE_LABEL[r]}</Option>)}
-                  </Dropdown>
-                  <Button size="small" appearance="secondary" onClick={() => toggleActive(u)} disabled={u.id === user.id}>{u.active ? 'Disable' : 'Enable'}</Button>
-                  <Button size="small" appearance="subtle" onClick={() => reset(u)}>Reset password</Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', borderTop: '1px solid var(--colorNeutralStroke2)', paddingTop: 12 }}>
-            <Field label="Username"><Input size="small" value={form.username} onChange={(_, d) => setForm((f) => ({ ...f, username: d.value }))} /></Field>
-            <Field label="Display name"><Input size="small" value={form.displayName} onChange={(_, d) => setForm((f) => ({ ...f, displayName: d.value }))} /></Field>
-            <Field label="Role">
-              <Dropdown size="small" value={ROLE_LABEL[form.role]} selectedOptions={[form.role]} onOptionSelect={(_, d) => setForm((f) => ({ ...f, role: (d.optionValue as UserRole) ?? 'Sa' }))} style={{ minWidth: 90 }}>
-                {ROLES.map((r) => <Option key={r} value={r}>{ROLE_LABEL[r]}</Option>)}
-              </Dropdown>
-            </Field>
-            <Field label="Temp password"><Input size="small" type="password" value={form.password} onChange={(_, d) => setForm((f) => ({ ...f, password: d.value }))} /></Field>
-            <Button appearance="primary" icon={<AddRegular />} disabled={busy || !form.username || form.password.length < 6} onClick={add}>Add user</Button>
-          </div>
-          {msg && <Text size={200} style={{ color: 'var(--colorPaletteRedForeground1)', display: 'block', marginTop: 8 }}>{msg}</Text>}
         </>
       )}
     </Panel>

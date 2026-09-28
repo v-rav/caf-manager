@@ -452,6 +452,11 @@ export interface AcrTarget {
 }
 
 export type UserRole = 'Admin' | 'Lead' | 'Sa'
+export interface PageAccess {
+  key: string
+  label: string
+  allowedRoles: string[]
+}
 export interface AppUser {
   id: number
   username: string

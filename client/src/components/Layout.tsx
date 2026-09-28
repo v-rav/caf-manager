@@ -37,10 +37,11 @@ import {
   RocketRegular,
   SparkleRegular,
   DataFunnelRegular,
+  PeopleSettingsRegular,
   PersonStarRegular,
 } from '@fluentui/react-icons'
-import { useState, type ReactNode } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { useMemo, useState, type ReactNode } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import { useAsync } from '../hooks'
@@ -64,6 +65,7 @@ const NAV: { to: string; label: string; end?: boolean; icon: ReactNode }[] = [
   { to: '/performance', label: 'Performance', icon: <PersonStarRegular /> },
   { to: '/history', label: 'Import History', icon: <HistoryRegular /> },
   { to: '/configuration', label: 'Configuration', icon: <SettingsRegular /> },
+  { to: '/access', label: 'User & Access', icon: <PeopleSettingsRegular /> },
   { to: '/backup', label: 'Backup & Restore', icon: <DatabaseRegular /> },
 ]
 
@@ -149,10 +151,27 @@ function UserMenu() {
 export function Layout() {
   const { region, setRegion } = useRegion()
   const { fy, setFy } = useFy()
+  const { user } = useAuth()
+  const location = useLocation()
   const { data: regions } = useAsync(() => api.regions(), [])
+  const { data: access } = useAsync(() => api.pageAccess(), [])
   const { data: status } = useAsync(() => api.adminStatus(), [])
   const [refreshing, setRefreshing] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('nav-collapsed') === '1')
+
+  // Admin sees everything; others only pages their role is granted (default-allow while the matrix loads).
+  const canAccess = useMemo(() => {
+    const isAdmin = user?.role === 'Admin'
+    return (key: string) => {
+      if (isAdmin) return true
+      if (!access) return true
+      const p = access.find((a) => a.key === key)
+      return p ? p.allowedRoles.includes(user?.role ?? '') : false
+    }
+  }, [access, user])
+  const keyOf = (to: string) => (to === '/' ? 'dashboard' : to.replace(/^\//, ''))
+  const currentKey = location.pathname === '/' ? 'dashboard' : location.pathname.split('/')[1]
+  const navItems = NAV.filter((item) => canAccess(keyOf(item.to)))
 
   const toggle = () => {
     setCollapsed((c) => {
@@ -200,7 +219,7 @@ export function Layout() {
           </>
         )}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: collapsed ? 8 : 0, overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: 2 }}>
-          {NAV.map((item) => (
+          {navItems.map((item) => (
             <Tooltip
               key={item.to}
               content={item.label}
@@ -297,7 +316,16 @@ export function Layout() {
         </header>
 
         <main style={{ padding: 24, flex: 1, minWidth: 0 }}>
-          <Outlet />
+          {canAccess(currentKey) ? (
+            <Outlet />
+          ) : (
+            <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh', textAlign: 'center' }}>
+              <div>
+                <Text size={500} weight="bold" style={{ display: 'block' }}>No access</Text>
+                <Text size={300} style={{ color: 'var(--colorNeutralForeground3)' }}>Your role does not have access to this page. Contact an administrator.</Text>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>

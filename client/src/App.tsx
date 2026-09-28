@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { Spinner } from '@fluentui/react-components'
 import { Layout } from './components/Layout'
 import { AccountsPage } from './pages/AccountsPage'
+import { AccessPage } from './pages/AccessPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { BackupPage } from './pages/BackupPage'
 import { CapacityPage } from './pages/CapacityPage'
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
       { path: 'performance', element: <PerformancePage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'configuration', element: <ConfigurationPage /> },
+      { path: 'access', element: <AccessPage /> },
       { path: 'backup', element: <BackupPage /> },
       { path: 'workspace', element: <WorkspaceMockPage /> },
     ],
