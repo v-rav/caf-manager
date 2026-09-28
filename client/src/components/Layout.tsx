@@ -16,6 +16,9 @@ import {
   MenuPopover,
   MenuTrigger,
   Option,
+  Popover,
+  PopoverSurface,
+  PopoverTrigger,
   Text,
   Tooltip,
 } from '@fluentui/react-components'
@@ -45,12 +48,14 @@ import {
   ChevronRightRegular,
 } from '@fluentui/react-icons'
 import { useMemo, useState, useEffect, type ReactNode } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, currentFy, fyLabel } from '../fy'
+import { guideForKey } from '../pageGuide'
+import { GuidedTour, TOUR_SEEN_KEY } from './GuidedTour'
 
 type NavItem = { to: string; label: string; end?: boolean; icon: ReactNode }
 
@@ -119,8 +124,8 @@ function timeAgo(iso?: string): string {
   return `${Math.round(hrs / 24)}d ago`
 }
 
-// Header account menu: identity, change password, sign out.
-function UserMenu() {
+// Header account menu: identity, replay tour, change password, sign out.
+function UserMenu({ onStartTour }: { onStartTour: () => void }) {
   const { user, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const [current, setCurrent] = useState('')
@@ -152,6 +157,7 @@ function UserMenu() {
         <MenuPopover>
           <MenuList>
             <MenuItem disabled>{user.username} · {user.role}</MenuItem>
+            <MenuItem onClick={onStartTour}>Take a tour</MenuItem>
             <MenuItem onClick={() => { setMsg(null); setOpen(true) }}>Change password</MenuItem>
             <MenuItem onClick={() => void logout()}>Sign out</MenuItem>
           </MenuList>
@@ -185,6 +191,8 @@ export function Layout() {
   const { fy, setFy } = useFy()
   const { user } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
+  const [tourOpen, setTourOpen] = useState(false)
   const { data: regions } = useAsync(() => api.regions(), [])
   const { data: access } = useAsync(() => api.pageAccess(), [])
   const { data: status } = useAsync(() => api.adminStatus(), [])
@@ -204,6 +212,15 @@ export function Layout() {
   const keyOf = (to: string) => (to === '/' ? 'dashboard' : to.replace(/^\//, ''))
   const currentKey = location.pathname === '/' ? 'dashboard' : location.pathname.split('/')[1]
   const navItems = NAV.filter((item) => canAccess(keyOf(item.to)))
+
+  // Contextual help for the page you're on (nomination detail maps to the SA Workspace guide).
+  const helpKey = /^\/nominations\/[^/]+$/.test(location.pathname) ? 'saworkspace' : currentKey
+  const pageGuide = guideForKey(helpKey)
+
+  // Show the guided tour once on first login; re-launchable from the account menu.
+  useEffect(() => {
+    if (user && localStorage.getItem(TOUR_SEEN_KEY) !== '1') setTourOpen(true)
+  }, [user])
 
   // Collapsible nav groups: keep only the active group expanded so the sidebar never scrolls.
   const activeGroup = NAV_GROUPS.find((g) => g.items.some((i) => keyOf(i.to) === currentKey))?.title
@@ -392,7 +409,25 @@ export function Layout() {
             </Dropdown>
             <Button appearance="secondary" icon={<ArrowClockwiseRegular />} disabled={refreshing} onClick={runRefresh}>
               {refreshing ? 'Refreshing…' : 'Refresh Data'}
-            </Button>            <UserMenu />          </div>
+            </Button>
+            {pageGuide && (
+              <Popover withArrow>
+                <PopoverTrigger disableButtonEnhancement>
+                  <Tooltip content="Help for this page" relationship="label">
+                    <Button appearance="subtle" icon={<QuestionCircleRegular />} aria-label="Help for this page" />
+                  </Tooltip>
+                </PopoverTrigger>
+                <PopoverSurface>
+                  <div style={{ maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <Text weight="bold" size={400}>{pageGuide.name}</Text>
+                    <Text size={300} style={{ color: 'var(--colorNeutralForeground2)' }}>{pageGuide.body}</Text>
+                    <Button appearance="secondary" size="small" onClick={() => navigate('/help')} style={{ alignSelf: 'flex-start' }}>Open full guide</Button>
+                  </div>
+                </PopoverSurface>
+              </Popover>
+            )}
+            <UserMenu onStartTour={() => setTourOpen(true)} />
+          </div>
         </header>
 
         <main style={{ padding: 24, flex: 1, minWidth: 0 }}>
@@ -408,6 +443,7 @@ export function Layout() {
           )}
         </main>
       </div>
+      <GuidedTour open={tourOpen} onClose={() => setTourOpen(false)} />
     </div>
   )
 }

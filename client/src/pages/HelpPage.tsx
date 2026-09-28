@@ -4,6 +4,7 @@ import { api } from '../api'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import type { AcrRates } from '../types'
+import { GUIDE_GROUP_INTRO, GUIDE_GROUP_ORDER, pagesInGroup } from '../pageGuide'
 
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`
 
@@ -40,57 +41,6 @@ export function HelpPage() {
 }
 
 const CONTAINER_ACR_LINK = 'https://outlook.office.com/mail/MBX%3A7bb996a6-f854-4e67-a63b-0007862f5fc6%4072f988bf-86f1-41af-91ab-2d7cd011db47/applink/read/AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0A2hw4T10NJ06u6N-1HxGV3AABpsuOugAA/'
-
-type GuidePage = { name: string; body: string }
-type GuideGroup = { group: string; intro: string; pages: GuidePage[] }
-
-const GUIDE_GROUPS: GuideGroup[] = [
-  {
-    group: 'Overview',
-    intro: 'Leadership-level rollups and this help.',
-    pages: [
-      { name: 'Executive Dashboard', body: 'Four tabbed views: Leadership (totals, ACR influenced, average MSI + band rollup, adoption rate), Operational (by-stage counts, clock-aware SLA on Standard work, open blockers, average effective age, SA load), GHCP Adoption (embedded), and Factory Productivity (completed migrations, ACR realized, cores, tool/automation adoption). KPI cards drill through to the underlying grid. Honors the Region and Fiscal-Year selectors in the header.' },
-      { name: 'Migration Analytics', body: 'Headline KPIs plus distribution and value cuts (ACR, cores, adoption) over the Approved pipeline, and a fiscal-year-aware Trends time-series (configurable basis / granularity / measure / split-by). One page-level Excel export (top-right) writes a 4-sheet workbook matching the on-screen filters.' },
-      { name: 'Help & FAQ', body: 'This page — system usage guide, how ACR is calculated (from the live rate master), and the containerized-app counting proposal.' },
-    ],
-  },
-  {
-    group: 'Delivery',
-    intro: 'The migration pipeline — track, govern, and drive nominations to completion.',
-    pages: [
-      { name: 'Nominations', body: 'The pipeline grid: Account, TPID, Offering, Region, Stage (1–4), Status (on track / blocked), Summary (SLA tier + blocker + days-in-stage), PM / CFTL / SA owners, Waves, Team. Defaults to Approved nominations; filter by Approval, Stage, State, SLA breach, Wave links, or search. Click an account to open its SA Workspace. Export is filter-aware.' },
-      { name: 'SA Workspace', body: 'Per-nomination cockpit at /nominations/{id}: an 8-gate stepper, the current gate checklist (tick items, mark N/A, advance only when the gate is green), the Migration Capability panel (capture which tool accelerated which activity), and a rail of Blockers, Milestones, and an audit Timeline. Header shows Readiness % and MSI.' },
-      { name: 'Governance Board', body: 'All open blockers across the pipeline: KPIs, by-category breakdown, an aging table, and resolve actions. Blockers can be clock-stopping — a live clock-stop freezes that nomination’s SLA.' },
-      { name: 'Migration Flow', body: 'Funnel conversion and drop-off across the journey, plus bottleneck analytics: in-flight by stage × age, blockers by category, SA workload, and volume by migration type.' },
-      { name: 'Strategic Register', body: 'Strategic-classified nominations: time-threshold tier KPIs (Green/Amber/Red/Exec), share of active pipeline, breakdown by classification, and an aging table.' },
-      { name: 'GHCP Adoption', body: 'Copilot adoption: licensed vs awaiting, used %, tool-attached %, the 0–7 adoption-level distribution, and the Migration Capability rollup (tool adoption, by activity, most-used tool per activity, GHCP-accelerated KPI). CSV export.' },
-    ],
-  },
-  {
-    group: 'Resourcing',
-    intro: 'People, accounts, and capacity.',
-    pages: [
-      { name: 'Resource Hub', body: 'Roster of delivery resources with skills, region, and their nomination-derived account load.' },
-      { name: 'Account Hub', body: 'The account master (TPID-keyed customers) with ownership, segment, status, and TPID filters. Master import (Nominations In-Flight.xlsx), de-duplication, and reversible parking of no-TPID rows live here.' },
-      { name: 'Capacity', body: 'The capacity cockpit: 1 resource = 5 active accounts, utilization heat-bands, a Headroom column, Available-capacity and Bench KPIs, a per-row leave-clash flag, and drill-through from a resource to their nominations. Account count is nomination-derived. Export includes the assigned-account list.' },
-      { name: 'Leave', body: 'Leave calendar feeding the capacity leave-clash signal.' },
-      { name: 'Reconciliation', body: 'Cross-check imported data against portal state to surface mismatches.' },
-      { name: 'Performance', body: 'Performance-review visibility per resource.' },
-    ],
-  },
-  {
-    group: 'Admin',
-    intro: 'Data management, configuration, and platform controls (Admin-only unless noted).',
-    pages: [
-      { name: 'Import History', body: 'Every upload/refresh is recorded as an ImportRun with field-level change deltas (Added / Updated from→to / Withdrawn). Rows are pruned after the retention window.' },
-      { name: 'Configuration', body: 'Editable lookup master (blocker categories/owners, classification, velocity, milestone types, tool/skill/segment), ACR calculation rates + live estimator, and operations settings (stale cadence, per-stage targets).' },
-      { name: 'Gate Template', body: 'Add / rename / reweight / reorder / activate / delete the 8 governance gates and their checklist items. Delete is blocked once a nomination has captured progress — deactivate instead.' },
-      { name: 'Capability Masters', body: 'Manage the Migration Tool and Activity masters and the per-tool supported-activity mapping (which activities a tool can accelerate). Delete is blocked once usage exists — deactivate instead.' },
-      { name: 'User & Access', body: 'Create / disable / reset users, provision SA logins in bulk, and set the role-based page-access matrix. Admin bypasses all page gates.' },
-      { name: 'Backup & Restore', body: 'Download a consistent zipped SQLite snapshot anytime, or restore one (replaces the live DB, keeps a safety copy). Admin-only.' },
-    ],
-  },
-]
 
 type GuideConcept = { term: string; body: string }
 const GUIDE_CONCEPTS: GuideConcept[] = [
@@ -139,18 +89,32 @@ function UsageGuide() {
             <AccordionHeader>Pages by area — what each one is for</AccordionHeader>
             <AccordionPanel>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {GUIDE_GROUPS.map((g) => (
-                  <div key={g.group}>
-                    <Text size={400} weight="semibold" style={{ display: 'block' }}>{g.group}</Text>
-                    <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 6 }}>{g.intro}</Text>
+                {GUIDE_GROUP_ORDER.map((group) => (
+                  <div key={group}>
+                    <Text size={400} weight="semibold" style={{ display: 'block' }}>{group}</Text>
+                    <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 6 }}>{GUIDE_GROUP_INTRO[group]}</Text>
                     <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {g.pages.map((p) => (
+                      {pagesInGroup(group).map((p) => (
                         <li key={p.name}><Text size={300}><b>{p.name}</b> — {p.body}</Text></li>
                       ))}
                     </ul>
                   </div>
                 ))}
               </div>
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="stagegate">
+            <AccordionHeader>Stage &amp; gate map (FDO Stage ↔ 8 gates ↔ MSI)</AccordionHeader>
+            <AccordionPanel>
+              <StageGateMap />
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="ownership">
+            <AccordionHeader>Field ownership — FDO-owned vs portal-owned</AccordionHeader>
+            <AccordionPanel>
+              <FieldOwnership />
             </AccordionPanel>
           </AccordionItem>
 
@@ -207,6 +171,106 @@ function UsageGuide() {
         </Accordion>
       </div>
     </Panel>
+  )
+}
+
+const cellHead: CSSProperties = { textAlign: 'left', padding: '6px 10px', borderBottom: '2px solid var(--colorNeutralStroke2)', fontSize: 12, whiteSpace: 'nowrap' }
+const cellBody: CSSProperties = { padding: '6px 10px', borderBottom: '1px solid var(--colorNeutralStroke2)', verticalAlign: 'top' }
+
+type StageRow = { stage: string; phase: string; gates: string }
+const STAGE_MAP: StageRow[] = [
+  { stage: '1', phase: 'Validating & Initial Scope', gates: 'G1 Discovery' },
+  { stage: '2', phase: 'Executing Pre-Requisites', gates: 'G2 Prerequisites · G3 Assessment' },
+  { stage: '3', phase: 'Finalize Scope', gates: 'G4 Scope · G5 Architecture' },
+  { stage: '4', phase: 'Executing Migration', gates: 'G6 Delivery Readiness · G7 Delivery Governance · G8 Closure' },
+]
+
+type GateRow = { gate: string; weight: string; msi: string }
+const GATE_MAP: GateRow[] = [
+  { gate: 'G1 Discovery', weight: '5', msi: 'Readiness (30%)' },
+  { gate: 'G2 Prerequisites', weight: '5', msi: 'Readiness (30%)' },
+  { gate: 'G3 Assessment', weight: '5', msi: 'Readiness (30%)' },
+  { gate: 'G4 Scope', weight: '10', msi: 'Scope (20%)' },
+  { gate: 'G5 Architecture', weight: '10', msi: 'Scope (20%)' },
+  { gate: 'G6 Delivery Readiness', weight: '10', msi: 'Delivery (20%)' },
+  { gate: 'G7 Delivery Governance', weight: '50', msi: 'Delivery (20%)' },
+  { gate: 'G8 Closure', weight: '5', msi: 'Sign-off (10%)' },
+]
+
+function StageGateMap() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 760 }}>
+      <Text size={300}>
+        The FDO <b>Stage</b> (the 1–4 phase FDO reports) and the portal’s <b>8 governance gates</b> track the same journey
+        at different granularity. Gates roll up into the <b>MSI</b> (Migration Success Index). Gate weights below are the
+        current template defaults and are admin-editable on the Gate Template page.
+      </Text>
+
+      <div>
+        <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>FDO Stage → gates in that phase</Text>
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead><tr><th style={cellHead}>Stage</th><th style={cellHead}>FDO phase</th><th style={cellHead}>Gates</th></tr></thead>
+          <tbody>
+            {STAGE_MAP.map((r) => (
+              <tr key={r.stage}><td style={cellBody}><b>{r.stage}</b></td><td style={cellBody}>{r.phase}</td><td style={cellBody}>{r.gates}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Gate → weight → MSI component</Text>
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead><tr><th style={cellHead}>Gate</th><th style={cellHead}>Weight</th><th style={cellHead}>MSI component</th></tr></thead>
+          <tbody>
+            {GATE_MAP.map((r) => (
+              <tr key={r.gate}><td style={cellBody}>{r.gate}</td><td style={cellBody}>{r.weight}</td><td style={cellBody}>{r.msi}</td></tr>
+            ))}
+          </tbody>
+        </table>
+        <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginTop: 6 }}>
+          Readiness % is the weight-weighted completion of a nomination’s gates. MSI adds two non-gate components — Risk
+          (10%, open blockers) and GHCP adoption (10%) — to the gate-derived Readiness / Scope / Delivery / Sign-off above.
+          Bands: Green &gt; 80 · Amber 60–80 · Red &lt; 60.
+        </Text>
+      </div>
+    </div>
+  )
+}
+
+type OwnerRow = { field: string; owner: 'FDO' | 'Portal'; behavior: string }
+const OWNER_ROWS: OwnerRow[] = [
+  { field: 'Task Id, Stage (MigrationStatus), Current State, Approval Status', owner: 'FDO', behavior: 'Refreshed every FDO drop — the FDO export is authoritative.' },
+  { field: 'Offering fields, dates, cores/ACR, TPID & account identity', owner: 'FDO', behavior: 'Refreshed from the offering/FDO import; portal does not edit these.' },
+  { field: 'Wave links (Source = FDO)', owner: 'FDO', behavior: 'Refreshed each drop from the Linked-to columns.' },
+  { field: 'PM / CFTL / SA short names', owner: 'Portal', behavior: 'FDO seeds them only when empty; a portal edit is never overwritten.' },
+  { field: 'Status (workflow), Blocked reason / since, Follow-up date, edited Remarks', owner: 'Portal', behavior: 'Preserved across drops — never clobbered by an import.' },
+  { field: 'Wave links (Source = Portal)', owner: 'Portal', behavior: 'Portal-added links are preserved when FDO links refresh.' },
+  { field: 'Gates, blockers, milestones, timeline', owner: 'Portal', behavior: 'Factory Operating System data — portal-owned, never touched by FDO/offering imports.' },
+  { field: 'Classification, velocity, GHCP adoption level, tool usage', owner: 'Portal', behavior: 'Governance/adoption data captured in the portal only.' },
+]
+
+function FieldOwnership() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 760 }}>
+      <Text size={300}>
+        FDO ingestion is an <b>upsert-merge, not a wipe-and-reload</b>. <b>FDO-owned</b> fields refresh every drop;
+        <b> portal-owned</b> fields are preserved so your governance and edits are never lost. Rows missing from a drop are
+        soft-withdrawn (kept for history), never hard-deleted.
+      </Text>
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead><tr><th style={cellHead}>Field / group</th><th style={cellHead}>Owner</th><th style={cellHead}>Behavior on an FDO drop</th></tr></thead>
+        <tbody>
+          {OWNER_ROWS.map((r) => (
+            <tr key={r.field}>
+              <td style={cellBody}>{r.field}</td>
+              <td style={{ ...cellBody, whiteSpace: 'nowrap', color: r.owner === 'FDO' ? 'var(--colorPaletteBerryForeground2)' : 'var(--colorPaletteGreenForeground2)', fontWeight: 600 }}>{r.owner}</td>
+              <td style={cellBody}>{r.behavior}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
