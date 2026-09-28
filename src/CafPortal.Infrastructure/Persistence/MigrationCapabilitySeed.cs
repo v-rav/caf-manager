@@ -52,6 +52,38 @@ public static class MigrationCapabilitySeed
         ("Hypercare Support", "Operations"),
     };
 
+    // Capability mapping: which activities each tool CAN support (not actual usage). Tools omitted here support ANY
+    // activity (Partner / Customer / Internal tooling).
+    private static readonly (string Tool, string[] Activities)[] Supported =
+    {
+        ("Azure Migrate", new[] { "Portfolio Assessment", "Application Assessment", "Dependency Analysis", "Migration Strategy" }),
+        ("AppCAT", new[] { "Application Assessment", "Dependency Analysis", "Migration Strategy", "Target Architecture" }),
+        ("GHCP-CI", new[]
+        {
+            "Application Assessment", "Dependency Analysis", "Migration Strategy", "Target Architecture", "Modernization",
+            "Version Upgrade", "Code Remediation", "Containerization", "IaC Generation", "CI Pipeline", "CD Pipeline",
+            "Deployment Automation", "AKS Migration", "ACA Migration", "App Service Migration", "ARO Migration",
+            "Documentation Generation", "Hypercare Support",
+        }),
+        ("GHCP Agent Mode", new[]
+        {
+            "Code Remediation", "Modernization", "Version Upgrade", "Containerization", "IaC Generation",
+            "CI Pipeline", "CD Pipeline", "Documentation Generation",
+        }),
+        ("GHCP Custom Prompts", new[]
+        {
+            "Application Assessment", "Dependency Analysis", "Modernization", "Code Remediation",
+            "Documentation Generation", "Target Architecture",
+        }),
+        ("AppMod .NET", new[] { "Modernization", "Version Upgrade", "Code Remediation", "Containerization" }),
+        ("AppMod Java", new[] { "Modernization", "Version Upgrade", "Code Remediation", "Containerization" }),
+        ("AppMod CLI", new[] { "Modernization", "Version Upgrade", "Code Remediation", "Containerization" }),
+        ("Upgrade Assistant", new[] { "Version Upgrade", "Modernization", "Code Remediation" }),
+        ("AKS Accelerator", new[] { "Target Architecture", "IaC Generation", "AKS Migration", "CI Pipeline", "CD Pipeline", "Deployment Automation" }),
+        ("ACA Accelerator", new[] { "Target Architecture", "IaC Generation", "ACA Migration", "CI Pipeline", "CD Pipeline", "Deployment Automation" }),
+        ("App Service Accelerator", new[] { "Target Architecture", "IaC Generation", "App Service Migration", "CI Pipeline", "CD Pipeline", "Deployment Automation" }),
+    };
+
     public static async Task SeedAsync(AppDbContext db, CancellationToken ct = default)
     {
         // Only reconcile (replace) the masters while nothing references them; afterwards, seed empty tables only.
@@ -89,6 +121,22 @@ public static class MigrationCapabilitySeed
                 });
 
         await db.SaveChangesAsync(ct);
+
+        // Reconcile the capability mapping to the canonical set while no usage exists.
+        if (!hasUsage)
+        {
+            db.MigrationToolActivities.RemoveRange(await db.MigrationToolActivities.ToListAsync(ct));
+            await db.SaveChangesAsync(ct);
+
+            var toolByName = await db.MigrationTools.ToDictionaryAsync(t => t.Name, t => t.Id, ct);
+            var actByName = await db.MigrationActivities.ToDictionaryAsync(a => a.Name, a => a.Id, ct);
+            foreach (var (toolName, supportedNames) in Supported)
+                if (toolByName.TryGetValue(toolName, out var toolId))
+                    foreach (var actName in supportedNames)
+                        if (actByName.TryGetValue(actName, out var actId))
+                            db.MigrationToolActivities.Add(new MigrationToolActivity { ToolId = toolId, ActivityId = actId });
+            await db.SaveChangesAsync(ct);
+        }
     }
 
     private static bool SameSet(IEnumerable<string> a, IEnumerable<string> b)

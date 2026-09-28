@@ -93,6 +93,16 @@ public class MigrationActivityMap : IEntityTypeConfiguration<MigrationActivity>
     }
 }
 
+public class MigrationToolActivityMap : IEntityTypeConfiguration<MigrationToolActivity>
+{
+    public void Configure(EntityTypeBuilder<MigrationToolActivity> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => new { x.ToolId, x.ActivityId }).IsUnique();
+        builder.HasIndex(x => x.ToolId);
+    }
+}
+
 public class RolePermissionMap : IEntityTypeConfiguration<RolePermission>
 {
     public void Configure(EntityTypeBuilder<RolePermission> builder)

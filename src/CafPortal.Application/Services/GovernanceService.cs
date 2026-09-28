@@ -164,10 +164,18 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
     }
 
     public async Task<IReadOnlyList<MigrationToolDto>> GetMigrationToolsAsync(CancellationToken ct = default)
-        => await _db.MigrationTools.AsNoTracking().Where(t => t.ActiveFlag)
+    {
+        var tools = await _db.MigrationTools.AsNoTracking().Where(t => t.ActiveFlag)
             .OrderBy(t => t.Category).ThenBy(t => t.SortOrder).ThenBy(t => t.Name)
-            .Select(t => new MigrationToolDto(t.Id, t.Name, t.Category, t.Vendor, t.SortOrder, t.ActiveFlag))
             .ToListAsync(ct);
+        var map = await _db.MigrationToolActivities.AsNoTracking()
+            .Select(m => new { m.ToolId, m.ActivityId }).ToListAsync(ct);
+        var byTool = map.GroupBy(m => m.ToolId).ToDictionary(g => g.Key, g => (IReadOnlyList<int>)g.Select(x => x.ActivityId).ToList());
+        // Empty list = supports any activity (no capability rows defined for the tool).
+        return tools.Select(t => new MigrationToolDto(
+            t.Id, t.Name, t.Category, t.Vendor, t.SortOrder, t.ActiveFlag,
+            byTool.TryGetValue(t.Id, out var ids) ? ids : Array.Empty<int>())).ToList();
+    }
 
     public async Task<IReadOnlyList<MigrationActivityDto>> GetMigrationActivitiesAsync(CancellationToken ct = default)
         => await _db.MigrationActivities.AsNoTracking().Where(a => a.ActiveFlag)

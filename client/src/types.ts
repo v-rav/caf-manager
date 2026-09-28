@@ -528,6 +528,7 @@ export interface MigrationTool {
   vendor?: string
   sortOrder: number
   active: boolean
+  supportedActivityIds: number[]
 }
 export interface MigrationActivity {
   id: number

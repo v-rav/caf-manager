@@ -43,6 +43,7 @@ public interface IApplicationDbContext
     DbSet<NominationMilestone> NominationMilestones { get; }
     DbSet<MigrationTool> MigrationTools { get; }
     DbSet<MigrationActivity> MigrationActivities { get; }
+    DbSet<MigrationToolActivity> MigrationToolActivities { get; }
     DbSet<NominationToolUsage> NominationToolUsages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

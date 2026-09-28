@@ -22,7 +22,8 @@ public record MilestoneDto(int Id, string MilestoneKey, DateOnly OccurredOn, str
 public record MilestoneUpsert(string MilestoneKey, DateOnly OccurredOn, string? ToolUsed, string? Notes);
 
 // Migration Capability Utilization: masters + the per-nomination Tool × Activity fact.
-public record MigrationToolDto(int Id, string Name, string Category, string? Vendor, int SortOrder, bool Active);
+public record MigrationToolDto(int Id, string Name, string Category, string? Vendor, int SortOrder, bool Active,
+    IReadOnlyList<int> SupportedActivityIds);
 
 public record MigrationActivityDto(int Id, string Name, string? Stage, int SortOrder, bool Active);
 
