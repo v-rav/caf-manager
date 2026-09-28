@@ -288,14 +288,19 @@ Excel exports (+ Analysis sheet), dashboard drill-through, capacity heat-band, N
 default-Approved, DB backup/restore, Migration Analytics + Trends + FY filter, Attainment, and the full **Factory
 Operating System P1–P5** (custom auth · 8-gate engine + SA Workspace · blockers + clock-aware SLA · audit timeline ·
 classification + strategic register · GHCP adoption · MSI · migration flow · 4-view exec dashboard), the
-workspace-mock-aligned redesign, the editable **lookup master**, and **milestones & dates**.
+workspace-mock-aligned redesign, the editable **lookup master**, **milestones & dates**, **role-based page access +
+User & Access page**, **CSV exports + light filters on Adoption/Strategic/Flow**, **Admin-gated Backup/Restore
+(+ prune)**, and the **kick-off → actual-start milestone lag** on the grid + analytics.
 **Backlog:** `NominationOutcome` value-capture (hours saved · defects · CSAT → real Factory Productivity);
-config-editable strategic time-thresholds + PV-01 stale-basis decision; surface key milestone dates
-(kick-off → actual-start lag) on the grid/analytics; **ACR estimator on the Analytics page + a per-nomination
-"estimate ACR" action** (populate `TotalAcr` from a wave's app count); retire the `/workspace` P0 mock (kept as
-reference); `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered leave;
-**page-level (role-based) route access** (SA/Lead/Admin — SA self-scoping shipped, route gating pending);
-Entra auth; in-app upload; API smoke tests.
+config-editable strategic time-thresholds + PV-01 stale-basis decision; **ACR estimator on the Analytics page + a
+per-nomination "estimate ACR" action** (populate `TotalAcr` from a wave's app count); retire the `/workspace` P0 mock
+(kept as reference); `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered
+leave; Entra auth; in-app upload; API smoke tests.
+- **Role-based page access** (`/access` **User & Access** page, Admin-only): a `PageAccess` matrix (17 pages × roles,
+  stored as `ApplicationSettings` `PageAccess:<key>` = csv roles via `AccessService`/`AccessController`). `Layout`
+  filters the nav and **gates the route** by the signed-in role; **Admin bypasses everything**. The Users panel (create/
+  disable/reset · **Provision SA logins**) moved out of Configuration onto this page. Backup/Restore is now
+  `[Authorize(Roles=Admin)]` and restore keeps only the newest 5 `prerestore_*` safety copies.
 - **Capacity page cockpit**: Headroom column, Available-capacity + Bench KPIs, Bench filter,
   per-row leave-clash flag, Resource→Nominations drill-through (`?person=`), capacity export account list.
 - **Dashboard data-source alignment**: `CapacityFact` is nomination-derived (matches the Capacity page);
