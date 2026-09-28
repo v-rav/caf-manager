@@ -164,16 +164,78 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
     }
 
     public async Task<IReadOnlyList<MigrationToolDto>> GetMigrationToolsAsync(CancellationToken ct = default)
-        => await _db.MigrationTools.AsNoTracking().Where(t => t.ActiveFlag)
+    {
+        var tools = await _db.MigrationTools.AsNoTracking().Where(t => t.ActiveFlag)
             .OrderBy(t => t.Category).ThenBy(t => t.SortOrder).ThenBy(t => t.Name)
-            .Select(t => new MigrationToolDto(t.Id, t.Name, t.Category, t.Vendor, t.SortOrder, t.ActiveFlag))
             .ToListAsync(ct);
+        var activities = await _db.MigrationActivities.AsNoTracking().Where(a => a.ActiveFlag)
+            .Select(a => new { a.Id, a.Name }).ToListAsync(ct);
+
+        // Which activities a tool category can accelerate; empty = all activities are relevant.
+        IReadOnlyList<int> Applicable(string category)
+        {
+            string[] names = category switch
+            {
+                "Assessment" => new[] { "Portfolio Assessment", "Application Assessment", "Dependency Analysis" },
+                "AppMod" => new[] { "Modernization", "Version Upgrade", "Code Remediation", "Containerization" },
+                "Accelerator" => new[] { "IaC Generation", "Terraform Generation", "Bicep Generation" }, // IaC only
+                "IaC" => new[] { "Target Architecture", "IaC Generation", "Terraform Generation", "Bicep Generation" },
+                "GHCP" => activities.Select(a => a.Name).Where(n => n != "Portfolio Assessment").ToArray(),
+                _ => Array.Empty<string>(),
+            };
+            return activities.Where(a => names.Contains(a.Name)).Select(a => a.Id).ToArray();
+        }
+
+        return tools.Select(t => new MigrationToolDto(
+            t.Id, t.Name, t.Category, t.Vendor, t.SortOrder, t.ActiveFlag, Applicable(t.Category))).ToList();
+    }
 
     public async Task<IReadOnlyList<MigrationActivityDto>> GetMigrationActivitiesAsync(CancellationToken ct = default)
         => await _db.MigrationActivities.AsNoTracking().Where(a => a.ActiveFlag)
             .OrderBy(a => a.SortOrder).ThenBy(a => a.Name)
             .Select(a => new MigrationActivityDto(a.Id, a.Name, a.Stage, a.SortOrder, a.ActiveFlag))
             .ToListAsync(ct);
+
+    public async Task<CapabilityUtilizationDto> GetCapabilityAsync(string? region, CancellationToken ct = default)
+    {
+        var scoped = !string.IsNullOrWhiteSpace(region) && !region.Equals("Global View", StringComparison.OrdinalIgnoreCase);
+        var rows = await (
+            from u in _db.NominationToolUsages.AsNoTracking()
+            join n in _db.Nominations.AsNoTracking() on u.NominationId equals n.Id
+            join t in _db.MigrationTools.AsNoTracking() on u.ToolId equals t.Id
+            join a in _db.MigrationActivities.AsNoTracking() on u.ActivityId equals a.Id into aj
+            from a in aj.DefaultIfEmpty()
+            where !scoped || n.Region == region
+            select new { u.NominationId, ToolName = t.Name, t.Category, ActivityName = a != null ? a.Name : null })
+            .ToListAsync(ct);
+
+        var byTool = rows.GroupBy(r => r.ToolName)
+            .Select(g => new NameValueDto(g.Key, g.Select(x => x.NominationId).Distinct().Count()))
+            .OrderByDescending(x => x.Value).ToArray();
+        var byCategory = rows.GroupBy(r => r.Category)
+            .Select(g => new NameValueDto(g.Key, g.Select(x => x.NominationId).Distinct().Count()))
+            .OrderByDescending(x => x.Value).ToArray();
+        var byActivity = rows.Where(r => r.ActivityName != null).GroupBy(r => r.ActivityName!)
+            .Select(g => new NameValueDto(g.Key, g.Select(x => x.NominationId).Distinct().Count()))
+            .OrderByDescending(x => x.Value).ToArray();
+
+        // Most-used tool per activity: for each activity, the tool with the most distinct nominations.
+        var mostUsed = rows.Where(r => r.ActivityName != null)
+            .GroupBy(r => r.ActivityName!)
+            .Select(g =>
+            {
+                var top = g.GroupBy(x => x.ToolName)
+                    .Select(tg => new { Tool = tg.Key, Count = tg.Select(x => x.NominationId).Distinct().Count() })
+                    .OrderByDescending(x => x.Count).First();
+                return new CapabilityOutcomeDto(g.Key, top.Tool, top.Count);
+            })
+            .OrderByDescending(x => x.Nominations).ToList();
+
+        return new CapabilityUtilizationDto(
+            rows.Count,
+            rows.Select(r => r.NominationId).Distinct().Count(),
+            byTool, byCategory, byActivity, mostUsed);
+    }
 
     public async Task<NominationGovernanceDto?> AddToolUsageAsync(int nominationId, ToolUsageUpsert req, CancellationToken ct = default)
     {

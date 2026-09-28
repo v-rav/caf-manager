@@ -36,4 +36,8 @@ public class GovernanceBoardController(IGovernanceService governance, ILookupSer
     [HttpGet("migration-activities")]
     public async Task<IActionResult> MigrationActivities(CancellationToken ct)
         => Ok(await governance.GetMigrationActivitiesAsync(ct));
+
+    [HttpGet("capability")]
+    public async Task<IActionResult> Capability([FromQuery] string? region, CancellationToken ct)
+        => Ok(await governance.GetCapabilityAsync(region, ct));
 }

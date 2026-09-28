@@ -22,7 +22,8 @@ public record MilestoneDto(int Id, string MilestoneKey, DateOnly OccurredOn, str
 public record MilestoneUpsert(string MilestoneKey, DateOnly OccurredOn, string? ToolUsed, string? Notes);
 
 // Migration Capability Utilization: masters + the per-nomination Tool × Activity fact.
-public record MigrationToolDto(int Id, string Name, string Category, string? Vendor, int SortOrder, bool Active);
+public record MigrationToolDto(int Id, string Name, string Category, string? Vendor, int SortOrder, bool Active,
+    IReadOnlyList<int> ApplicableActivityIds);
 
 public record MigrationActivityDto(int Id, string Name, string? Stage, int SortOrder, bool Active);
 
@@ -31,6 +32,14 @@ public record ToolUsageDto(
     int? ActivityId, string? ActivityName, string? ActivityStage, int? Stage, DateOnly? UsedOn, string? UsedBy, string? Notes);
 
 public record ToolUsageUpsert(int ToolId, int? ActivityId, int? Stage, DateOnly? UsedOn, string? Notes);
+
+/// <summary>Leadership rollup: which capabilities were accelerated by which tools (distinct nominations).</summary>
+public record CapabilityUtilizationDto(
+    int TotalUsages, int NominationsWithUsage,
+    IReadOnlyList<NameValueDto> ByTool, IReadOnlyList<NameValueDto> ByCategory,
+    IReadOnlyList<NameValueDto> ByActivity, IReadOnlyList<CapabilityOutcomeDto> MostUsedToolPerActivity);
+
+public record CapabilityOutcomeDto(string Activity, string Tool, int Nominations);
 
 public record BlockerDto(
     int Id, int NominationId, string? Account, int? GateItemDefId, string Category, bool ClockStopped, string? Owner,

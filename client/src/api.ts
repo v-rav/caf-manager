@@ -15,6 +15,7 @@ import type {
   Blocker,
   MigrationTool,
   MigrationActivity,
+  CapabilityUtilization,
   NominationEvent,
   LookupValue,
   AcrRates,
@@ -250,6 +251,8 @@ export const api = {
     http.post<Governance>(`/api/nominations/${nominationId}/governance/tool-usages`, body).then((r) => r.data),
   deleteToolUsage: (nominationId: number, usageId: number) =>
     http.delete<Governance>(`/api/nominations/${nominationId}/governance/tool-usages/${usageId}`).then((r) => r.data),
+  capability: (region?: string) =>
+    http.get<CapabilityUtilization>('/api/governance/capability', { params: { region } }).then((r) => r.data),
   lookups: (category?: string) =>
     http.get<LookupValue[]>('/api/configuration/lookups', { params: { category } }).then((r) => r.data),
   addLookup: (category: string, value: string) =>

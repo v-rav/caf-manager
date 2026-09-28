@@ -17,5 +17,6 @@ public interface IGovernanceService
     Task<NominationGovernanceDto?> DeleteToolUsageAsync(int nominationId, int usageId, CancellationToken ct = default);
     Task<IReadOnlyList<MigrationToolDto>> GetMigrationToolsAsync(CancellationToken ct = default);
     Task<IReadOnlyList<MigrationActivityDto>> GetMigrationActivitiesAsync(CancellationToken ct = default);
+    Task<CapabilityUtilizationDto> GetCapabilityAsync(string? region, CancellationToken ct = default);
     IReadOnlyList<string> GetBlockerCategories();
 }

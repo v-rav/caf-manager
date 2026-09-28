@@ -11,9 +11,7 @@ public static class MigrationCapabilitySeed
     {
         ("Azure Migrate", "Assessment", "Microsoft"),
         ("AppCAT", "Assessment", "Microsoft"),
-        ("GitHub Copilot Enterprise", "GHCP", "GitHub"),
         ("GHCP Coding Agent (CI)", "GHCP", "GitHub"),
-        ("GHCP Agent Mode", "GHCP", "GitHub"),
         ("AppMod .NET", "AppMod", "Microsoft"),
         ("AppMod Java", "AppMod", "Microsoft"),
         ("Upgrade Assistant", "AppMod", "Microsoft"),
@@ -25,6 +23,9 @@ public static class MigrationCapabilitySeed
         ("Terraform Generator", "IaC", "HashiCorp"),
         ("Custom Prompt Framework", "Other", null!),
     };
+
+    /// <summary>Tools retired from the taxonomy — pruned on startup if present and unused.</summary>
+    private static readonly string[] DeprecatedTools = { "GitHub Copilot Enterprise", "GHCP Agent Mode" };
 
     // (Name, Stage)
     private static readonly (string Name, string Stage)[] Activities =
@@ -73,5 +74,19 @@ public static class MigrationCapabilitySeed
                 });
 
         await db.SaveChangesAsync(ct);
+
+        // Prune retired tools that carry no usage (idempotent taxonomy correction).
+        var deprecated = await db.MigrationTools.Where(t => DeprecatedTools.Contains(t.Name)).ToListAsync(ct);
+        if (deprecated.Count > 0)
+        {
+            var ids = deprecated.Select(t => t.Id).ToList();
+            var used = await db.NominationToolUsages.Where(u => ids.Contains(u.ToolId)).Select(u => u.ToolId).Distinct().ToListAsync(ct);
+            var removable = deprecated.Where(t => !used.Contains(t.Id)).ToList();
+            if (removable.Count > 0)
+            {
+                db.MigrationTools.RemoveRange(removable);
+                await db.SaveChangesAsync(ct);
+            }
+        }
     }
 }

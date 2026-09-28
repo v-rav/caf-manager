@@ -528,6 +528,7 @@ export interface MigrationTool {
   vendor?: string
   sortOrder: number
   active: boolean
+  applicableActivityIds: number[]
 }
 export interface MigrationActivity {
   id: number
@@ -550,6 +551,14 @@ export interface ToolUsage {
   usedOn?: string
   usedBy?: string
   notes?: string
+}
+export interface CapabilityUtilization {
+  totalUsages: number
+  nominationsWithUsage: number
+  byTool: NameValue[]
+  byCategory: NameValue[]
+  byActivity: NameValue[]
+  mostUsedToolPerActivity: { activity: string; tool: string; nominations: number }[]
 }
 export interface Milestone {
   id: number

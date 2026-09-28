@@ -1,4 +1,4 @@
-import { Badge, Button } from '@fluentui/react-components'
+import { Badge, Button, Text } from '@fluentui/react-components'
 import { ArrowDownloadRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
 import { api } from '../api'
@@ -134,6 +134,74 @@ export function AdoptionPage() {
           ))}
         </div>
       </Panel>
+
+      <CapabilitySection region={region} />
     </div>
+  )
+}
+
+// Leadership rollup: which capabilities were accelerated by which tools (distinct nominations).
+function CapabilitySection({ region }: { region?: string }) {
+  const { data, loading, error, reload } = useAsync(() => api.capability(region), [region])
+  if (loading && !data) return <Panel title="Migration Capability Utilization"><Loading /></Panel>
+  if (error) return <Panel title="Migration Capability Utilization"><ErrorText error={error} onRetry={reload} /></Panel>
+  if (!data) return null
+
+  const exportCsv = () =>
+    downloadCsv(
+      `capability-utilization-${new Date().toISOString().slice(0, 10)}`,
+      [
+        { header: 'Cut', value: (r: { cut: string; name: string; value: number | string }) => r.cut },
+        { header: 'Name', value: (r) => r.name },
+        { header: 'Value', value: (r) => r.value },
+      ],
+      [
+        ...data.byTool.map((t) => ({ cut: 'Tool adoption', name: t.name, value: t.value })),
+        ...data.byCategory.map((t) => ({ cut: 'By category', name: t.name, value: t.value })),
+        ...data.byActivity.map((t) => ({ cut: 'By activity', name: t.name, value: t.value })),
+        ...data.mostUsedToolPerActivity.map((t) => ({ cut: 'Most-used tool', name: t.activity, value: `${t.tool} (${t.nominations})` })),
+      ],
+    )
+
+  const maxTool = Math.max(1, ...data.byTool.map((t) => t.value))
+  const maxAct = Math.max(1, ...data.byActivity.map((t) => t.value))
+
+  return (
+    <Panel
+      title="Migration Capability Utilization"
+      action={<Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportCsv} disabled={!data.totalUsages}>Export</Button>}
+    >
+      <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
+        Which migration capability was accelerated by GHCP / AppMod / accelerators / Azure tooling — counts are distinct nominations.
+        {data.totalUsages === 0 ? ' Capture tool usage in a nomination workspace to populate this.' : ` ${data.nominationsWithUsage} nomination(s) with logged usage.`}
+      </Text>
+      {data.totalUsages === 0 ? null : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+          <div>
+            <Text size={300} weight="semibold" style={{ display: 'block', marginBottom: 6 }}>Tool adoption</Text>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {data.byTool.map((t) => <Bar key={t.name} label={t.name} count={t.value} max={maxTool} />)}
+            </div>
+          </div>
+          <div>
+            <Text size={300} weight="semibold" style={{ display: 'block', marginBottom: 6 }}>By activity</Text>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {data.byActivity.map((t) => <Bar key={t.name} label={t.name} count={t.value} max={maxAct} />)}
+            </div>
+          </div>
+          <div>
+            <Text size={300} weight="semibold" style={{ display: 'block', marginBottom: 6 }}>Most-used tool per activity</Text>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {data.mostUsedToolPerActivity.map((t) => (
+                <div key={t.activity} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0', borderBottom: '1px solid var(--colorNeutralStroke3)' }}>
+                  <span>{t.activity}</span>
+                  <span style={{ color: 'var(--colorNeutralForeground3)' }}>{t.tool} · {t.nominations}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </Panel>
   )
 }
