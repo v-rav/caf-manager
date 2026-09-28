@@ -210,7 +210,9 @@ export function NominationWorkspacePage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr 340px', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '250px minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
         <Panel title="Governance gates">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {gov.gates.map((g) => {
@@ -281,6 +283,67 @@ export function NominationWorkspacePage() {
             })}
           </div>
         </Panel>
+          </div>
+
+          <Panel title={`Migration Capability Utilization${toolUsages.length ? ` · ${toolUsages.length}` : ''}`}>
+            <Text size={200} style={{ display: 'block', color: 'var(--colorNeutralForeground3)', marginBottom: 10 }}>
+              Which capability was accelerated by which tool — the GHCP/AppMod/accelerator value story.
+            </Text>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: toolUsages.length ? 14 : 0 }}>
+              <div style={{ flex: '1 1 220px' }}>
+                <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Tool</Text>
+                <Dropdown
+                  value={capTools.find((t) => t.id === cuTool)?.name ?? ''}
+                  selectedOptions={cuTool ? [String(cuTool)] : []}
+                  onOptionSelect={(_, d) => { setCuTool(d.optionValue ? Number(d.optionValue) : ''); setCuAct('') }}
+                  style={{ width: '100%' }}
+                >
+                  {capTools.map((t) => <Option key={t.id} value={String(t.id)}>{`${t.name} · ${t.category}`}</Option>)}
+                </Dropdown>
+              </div>
+              <div style={{ flex: '1 1 220px' }}>
+                <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Activity</Text>
+                <Dropdown
+                  value={capActs.find((a) => a.id === cuAct)?.name ?? ''}
+                  selectedOptions={cuAct ? [String(cuAct)] : []}
+                  placeholder="—"
+                  onOptionSelect={(_, d) => setCuAct(d.optionValue ? Number(d.optionValue) : '')}
+                  style={{ width: '100%' }}
+                >
+                  <Option value="">—</Option>
+                  {capActsForTool.map((a) => <Option key={a.id} value={String(a.id)}>{`${a.name}${a.stage ? ` · ${a.stage}` : ''}`}</Option>)}
+                </Dropdown>
+              </div>
+              <div style={{ width: 160 }}>
+                <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Date</Text>
+                <input type="date" value={cuDate} onChange={(e) => setCuDate(e.target.value)} style={{ width: '100%', padding: '5px 8px', borderRadius: 4, border: '1px solid var(--colorNeutralStroke1)' }} />
+              </div>
+              <div style={{ flex: '2 1 240px' }}>
+                <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Notes</Text>
+                <Input value={cuNotes} onChange={(_, d) => setCuNotes(d.value)} placeholder="context" style={{ width: '100%' }} />
+              </div>
+              <Button appearance="primary" disabled={busyCu || !cuTool} onClick={() => void addToolUsage()}>Add</Button>
+            </div>
+            {toolUsages.length === 0 ? (
+              <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No tool usage captured.</Text>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 6 }}>
+                {toolUsages.map((u) => (
+                  <div key={u.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '4px 0', borderBottom: '1px solid var(--colorNeutralStroke3)' }}>
+                    <Badge appearance="tint" color="brand">{u.toolCategory}</Badge>
+                    <div style={{ flex: 1 }}>
+                      <Text size={300} weight="semibold">{u.toolName}</Text>
+                      <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
+                        {u.activityName ? u.activityName : 'no activity'}{u.usedOn ? ` · ${u.usedOn}` : ''}{u.notes ? ` · ${u.notes}` : ''}
+                      </Text>
+                    </div>
+                    <Button size="small" appearance="subtle" icon={<SubtractCircleRegular />} disabled={busyCu} onClick={() => void deleteToolUsage(u)} aria-label="Delete tool usage" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <Panel title={`Blockers${blockers.length ? ` · ${blockers.length} open` : ''}`}>
@@ -398,65 +461,6 @@ export function NominationWorkspacePage() {
       </Panel>
         </div>
       </div>
-
-      <Panel title={`Migration Capability Utilization${toolUsages.length ? ` · ${toolUsages.length}` : ''}`}>
-        <Text size={200} style={{ display: 'block', color: 'var(--colorNeutralForeground3)', marginBottom: 10 }}>
-          Which capability was accelerated by which tool — the GHCP/AppMod/accelerator value story.
-        </Text>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: toolUsages.length ? 14 : 0 }}>
-          <div style={{ flex: '1 1 220px' }}>
-            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Tool</Text>
-            <Dropdown
-              value={capTools.find((t) => t.id === cuTool)?.name ?? ''}
-              selectedOptions={cuTool ? [String(cuTool)] : []}
-              onOptionSelect={(_, d) => { setCuTool(d.optionValue ? Number(d.optionValue) : ''); setCuAct('') }}
-              style={{ width: '100%' }}
-            >
-              {capTools.map((t) => <Option key={t.id} value={String(t.id)}>{`${t.name} · ${t.category}`}</Option>)}
-            </Dropdown>
-          </div>
-          <div style={{ flex: '1 1 220px' }}>
-            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Activity</Text>
-            <Dropdown
-              value={capActs.find((a) => a.id === cuAct)?.name ?? ''}
-              selectedOptions={cuAct ? [String(cuAct)] : []}
-              placeholder="—"
-              onOptionSelect={(_, d) => setCuAct(d.optionValue ? Number(d.optionValue) : '')}
-              style={{ width: '100%' }}
-            >
-              <Option value="">—</Option>
-              {capActsForTool.map((a) => <Option key={a.id} value={String(a.id)}>{`${a.name}${a.stage ? ` · ${a.stage}` : ''}`}</Option>)}
-            </Dropdown>
-          </div>
-          <div style={{ width: 160 }}>
-            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Date</Text>
-            <input type="date" value={cuDate} onChange={(e) => setCuDate(e.target.value)} style={{ width: '100%', padding: '5px 8px', borderRadius: 4, border: '1px solid var(--colorNeutralStroke1)' }} />
-          </div>
-          <div style={{ flex: '2 1 240px' }}>
-            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Notes</Text>
-            <Input value={cuNotes} onChange={(_, d) => setCuNotes(d.value)} placeholder="context" style={{ width: '100%' }} />
-          </div>
-          <Button appearance="primary" disabled={busyCu || !cuTool} onClick={() => void addToolUsage()}>Add</Button>
-        </div>
-        {toolUsages.length === 0 ? (
-          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No tool usage captured.</Text>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 6 }}>
-            {toolUsages.map((u) => (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '4px 0', borderBottom: '1px solid var(--colorNeutralStroke3)' }}>
-                <Badge appearance="tint" color="brand">{u.toolCategory}</Badge>
-                <div style={{ flex: 1 }}>
-                  <Text size={300} weight="semibold">{u.toolName}</Text>
-                  <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
-                    {u.activityName ? u.activityName : 'no activity'}{u.usedOn ? ` · ${u.usedOn}` : ''}{u.notes ? ` · ${u.notes}` : ''}
-                  </Text>
-                </div>
-                <Button size="small" appearance="subtle" icon={<SubtractCircleRegular />} disabled={busyCu} onClick={() => void deleteToolUsage(u)} aria-label="Delete tool usage" />
-              </div>
-            ))}
-          </div>
-        )}
-      </Panel>
     </div>
   )
 }
