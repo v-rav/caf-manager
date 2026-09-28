@@ -190,9 +190,9 @@ export function NominationWorkspacePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-        <div>
+        <div style={{ flex: '1 1 340px', minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <Text size={600} weight="bold">{gov.account ?? `Nomination ${gov.nominationId}`}{gov.shortName ? ` · ${gov.shortName}` : ''}</Text>
+            <Text size={600} weight="bold" style={{ overflowWrap: 'anywhere' }}>{gov.account ?? `Nomination ${gov.nominationId}`}{gov.shortName ? ` · ${gov.shortName}` : ''}</Text>
             {gov.classification && gov.classification !== 'Standard Factory' && <Badge appearance="tint" color="brand">{gov.classification}</Badge>}
             {gov.stage != null && <Badge appearance="outline">FDO Stage {gov.stage}</Badge>}
             {gov.tpid && <Badge appearance="outline">TPID {gov.tpid}</Badge>}
@@ -203,7 +203,7 @@ export function NominationWorkspacePage() {
             {gov.clockStoppedDays > 0 ? ` · ${gov.clockStoppedDays}d clock-stopped` : ''}
           </Text>
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexShrink: 0, marginLeft: 'auto' }}>
           <Button appearance="subtle" size="small" icon={<ArrowLeftRegular />} onClick={() => navigate('/nominations')} style={{ alignSelf: 'center' }}>Back to Nominations</Button>
           <KpiCard label="Readiness compliance" value={`${gov.compliancePercent}%`} tone={gov.compliancePercent >= 80 ? 'success' : gov.compliancePercent >= 50 ? 'brand' : 'neutral'} />
           <KpiCard label="Migration Success Index" value={gov.msiScore} tone={gov.msiBand === 'Green' ? 'success' : gov.msiBand === 'Amber' ? 'warning' : 'danger'} />
