@@ -300,17 +300,19 @@ Capability masters (seeded + read-only today); retire the `/workspace` P0 mock (
 `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered leave; Entra auth;
 in-app upload; API smoke tests.
 - **Migration Capability Utilization** (the GHCP/AppMod/accelerator value story): two portal-owned masters —
-  **`MigrationTool`** (Name · Category · Vendor; seeded 13-tool taxonomy: Assessment, GHCP, AppMod, Accelerator, IaC,
-  Other) and **`MigrationActivity`** (Name · Stage; 20 activities across Assess/Modernize/Architect/Deploy/Migrate/
-  Operate) — plus the **`NominationToolUsage`** junction (Tool × Activity × optional Stage/date/notes) capturing *which
-  capability was accelerated by which tool*. Seeded idempotently by `MigrationCapabilitySeed` (also prunes retired
-  tools — GitHub Copilot Enterprise, GHCP Agent Mode — when unused). Each tool category carries **`ApplicableActivityIds`**
-  (a code-level capability map: Accelerators are **IaC-only**; AppMod = Modernize activities; Assessment = Assess;
-  GHCP = broad) so the SA Workspace **Activity picker only shows activities the selected tool can accelerate**. Captured
-  in the SA Workspace panel (add/list/delete, logged to the audit timeline); rolled up on the **GHCP Adoption** page
-  (`GET /api/governance/capability?region=`): **tool adoption · by activity · most-used tool per activity** (distinct
-  nominations) + CSV export. Endpoints: `GET governance/migration-tools|migration-activities|capability`,
-  `POST/DELETE nominations/{id}/governance/tool-usages`.
+  **`MigrationTool`** (Name · Category · Vendor; seeded 15-tool taxonomy — **Assessment** (Azure Migrate, AppCAT) ·
+  **GHCP** (GHCP-CI, GHCP Agent Mode, GHCP Custom Prompts, AppMod .NET/Java/CLI, Upgrade Assistant — AppMod is a
+  GHCP-powered capability, not its own category) · **Accelerator** (AKS/ACA/App Service) · **Other** (Partner Tooling,
+  Customer Tooling, Internal Automation)) and **`MigrationActivity`** (Name · Stage; 20 activities across Assessment /
+  Planning & Architecture / Modernization / Engineering Automation / Migration / Operations) — plus the
+  **`NominationToolUsage`** junction (Tool × Activity × optional date/notes) capturing *which capability was accelerated
+  by which tool*. **Activities are independent of tools** (model is simply Nomination → Tool → Activity; no capability
+  matrix). Seeded by `MigrationCapabilitySeed`, which **reconciles the masters to the canonical lists while no usage
+  exists** (taxonomy still malleable) and is additive-only once usage is captured. Captured in the SA Workspace panel
+  (full-width, below the gates; Tool · Activity · Date · Notes; add/list/delete, logged to the audit timeline); rolled
+  up on the **GHCP Adoption** page (`GET /api/governance/capability?region=`): **tool adoption · by activity ·
+  most-used tool per activity** (distinct nominations) + CSV export. Endpoints:
+  `GET governance/migration-tools|migration-activities|capability`, `POST/DELETE nominations/{id}/governance/tool-usages`.
 - **Role-based page access** (`/access` **User & Access** page, Admin-only): a `PageAccess` matrix (17 pages × roles,
   stored as `ApplicationSettings` `PageAccess:<key>` = csv roles via `AccessService`/`AccessController`). `Layout`
   filters the nav and **gates the route** by the signed-in role; **Admin bypasses everything**. The Users panel (create/
