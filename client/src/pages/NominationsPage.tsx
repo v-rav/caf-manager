@@ -50,6 +50,14 @@ function presentWaves(n: Nomination): string[] {
   return out
 }
 
+// Trim the noisy offering prefix (e.g. "App Modernization Nominations - Wave 18" → "Wave 18").
+function offeringShort(tech: string): string {
+  const wave = tech.match(/Wave\s*\d+/i)
+  if (wave) return wave[0].replace(/\s+/, ' ')
+  const dash = tech.lastIndexOf(' - ')
+  return dash >= 0 ? tech.slice(dash + 3).trim() : tech
+}
+
 // True when the person (name substring) holds any ownership/assignment role on the nomination.
 function matchesPerson(n: Nomination, person: string): boolean {
   const p = person.toLowerCase()
@@ -273,13 +281,6 @@ function recommendedAction(staleTier: string, ageDays: number): string | null {
   }
 }
 
-// Strategic tier tone maps A.13 status to a Fluent badge colour; short labels keep the grid tight.
-function strategicTone(tier: string): 'success' | 'warning' | 'danger' | 'brand' {
-  return tier === 'Exec' || tier === 'Red' ? 'danger' : tier === 'Amber' ? 'warning' : tier === 'Green' ? 'success' : 'brand'
-}
-function shortClass(c: string): string {
-  return c === 'Strategic Pilot' ? 'Pilot' : c === 'Lighthouse Engagement' ? 'Lighthouse' : c === 'Innovation / POC' ? 'Innovation' : c === 'Recovery Engagement' ? 'Recovery' : c
-}
 function msiTone(band: string): 'success' | 'warning' | 'danger' {
   return band === 'Green' ? 'success' : band === 'Amber' ? 'warning' : 'danger'
 }
@@ -603,7 +604,7 @@ export function NominationsPage() {
               columns={[
                 { key: 'account', header: 'Account', sortValue: (n) => n.accountName ?? '', render: (n) => <RouterLink to={`/nominations/${n.id}`}>{n.accountName ?? '\u2014'}</RouterLink> },
                 { key: 'tpid', header: 'TPID', sortValue: (n) => n.tpid ?? '', render: (n) => n.tpid ?? '—' },
-                { key: 'offering', header: 'Offering', sortValue: (n) => n.technology ?? '', render: (n) => n.technology ?? '—' },
+                { key: 'offering', header: 'Offering', sortValue: (n) => n.technology ?? '', render: (n) => n.technology ? <Tooltip relationship="description" content={n.technology}><span>{offeringShort(n.technology)}</span></Tooltip> : '—' },
                 { key: 'region', header: 'Region', sortValue: (n) => n.region },
                 {
                   key: 'stage',
@@ -707,21 +708,6 @@ export function NominationsPage() {
                   ),
                 },
                 {
-                  key: 'classification',
-                  header: 'Class',
-                  sortValue: (n) => n.classification,
-                  render: (n) =>
-                    n.isStrategic ? (
-                      <Tooltip relationship="description" content={`${n.classification}${n.velocityImpact ? ` · velocity ${n.velocityImpact}` : ''}${n.strategicTier ? ` · ${n.strategicTier}` : ''}`}>
-                        <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-                          <Badge appearance="tint" color={strategicTone(n.strategicTier)} size="small">{shortClass(n.classification)}</Badge>
-                        </span>
-                      </Tooltip>
-                    ) : (
-                      <span style={{ color: 'var(--colorNeutralForeground4)' }}>Standard</span>
-                    ),
-                },
-                {
                   key: 'links',
                   header: 'Waves',
                   sortValue: (n) => n.waveCount,
@@ -741,23 +727,6 @@ export function NominationsPage() {
                       </span>
                     </Tooltip>
                   ),
-                },
-                {
-                  key: 'lag',
-                  header: 'K→S',
-                  align: 'end',
-                  sortValue: (n) => n.kickoffToStartLagDays ?? -1,
-                  render: (n) =>
-                    n.kickoffToStartLagDays == null ? (
-                      <span style={{ color: 'var(--colorNeutralForeground4)' }}>—</span>
-                    ) : (
-                      <Tooltip
-                        relationship="description"
-                        content={`Kick-off ${n.kickoffDate ?? '?'} → actual migration start ${n.actualMigrationStartDate ?? '?'} · ${n.kickoffToStartLagDays}d lag`}
-                      >
-                        <Badge appearance="tint" color={n.kickoffToStartLagDays > 30 ? 'warning' : 'informative'} size="small">{n.kickoffToStartLagDays}d</Badge>
-                      </Tooltip>
-                    ),
                 },
                 {
                   key: 'team',
