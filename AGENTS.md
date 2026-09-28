@@ -305,14 +305,17 @@ in-app upload; API smoke tests.
   GHCP-powered capability, not its own category) · **Accelerator** (AKS/ACA/App Service) · **Other** (Partner Tooling,
   Customer Tooling, Internal Automation)) and **`MigrationActivity`** (Name · Stage; 20 activities across Assessment /
   Planning & Architecture / Modernization / Engineering Automation / Migration / Operations) — plus the
-  **`NominationToolUsage`** junction (Tool × Activity × optional date/notes) capturing *which capability was accelerated
-  by which tool*. **Activities are independent of tools** (model is simply Nomination → Tool → Activity; no capability
-  matrix). Seeded by `MigrationCapabilitySeed`, which **reconciles the masters to the canonical lists while no usage
-  exists** (taxonomy still malleable) and is additive-only once usage is captured. Captured in the SA Workspace panel
-  (full-width, below the gates; Tool · Activity · Date · Notes; add/list/delete, logged to the audit timeline); rolled
-  up on the **GHCP Adoption** page (`GET /api/governance/capability?region=`): **tool adoption · by activity ·
-  most-used tool per activity** (distinct nominations) + CSV export. Endpoints:
-  `GET governance/migration-tools|migration-activities|capability`, `POST/DELETE nominations/{id}/governance/tool-usages`.
+  **`NominationToolUsage`** junction (Tool × Activity × optional date/notes) capturing *which capability was actually
+  accelerated by which tool*. A separate configurable **`MigrationToolActivity`** mapping defines *which activities a
+  tool CAN support* (capability, not usage): empty mapping = supports **any** activity (Partner/Customer/Internal
+  tooling). Seeded by `MigrationCapabilitySeed`, which **reconciles the masters + capability mapping to the canonical
+  lists while no usage exists** (taxonomy still malleable) and is additive-only once usage is captured. `MigrationToolDto`
+  carries `SupportedActivityIds` (from the mapping) so the SA Workspace **Activity picker only shows activities the
+  selected tool supports**. Captured in the SA Workspace panel (full-width, below the gates; Tool · Activity · Date ·
+  Notes; add/list/delete, logged to the audit timeline); rolled up on the **GHCP Adoption** page
+  (`GET /api/governance/capability?region=`): **tool adoption · by activity · most-used tool per activity** (distinct
+  nominations) + CSV export. Endpoints: `GET governance/migration-tools|migration-activities|capability`,
+  `POST/DELETE nominations/{id}/governance/tool-usages`.
 - **Role-based page access** (`/access` **User & Access** page, Admin-only): a `PageAccess` matrix (17 pages × roles,
   stored as `ApplicationSettings` `PageAccess:<key>` = csv roles via `AccessService`/`AccessController`). `Layout`
   filters the nav and **gates the route** by the signed-in role; **Admin bypasses everything**. The Users panel (create/
