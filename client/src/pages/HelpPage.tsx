@@ -36,6 +36,8 @@ export function HelpPage() {
       </Panel>
 
       <ProposalsSection />
+
+      <ResourceClassificationSection />
     </div>
   )
 }
@@ -501,6 +503,230 @@ Next Session: [planned activity]`
               <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {FDO_REFS.map((r) => <li key={r}><Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>{r}</Text></li>)}
               </ul>
+            </AccordionPanel>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    </Panel>
+  )
+}
+
+// Table styles for the resource-classification section (full borders + shaded header,
+// per the requested look).
+const clsHead: CSSProperties = { textAlign: 'left', padding: '6px 10px', border: '1px solid #e6e6e6', background: '#f5f5f5', fontSize: 12, whiteSpace: 'nowrap' }
+const clsCell: CSSProperties = { padding: '6px 10px', border: '1px solid #e6e6e6', verticalAlign: 'top' }
+
+const RULE_OF_THUMB: [string, string][] = [
+  ['Hosts the application?', 'Primary Target Compute'],
+  ['Supports the application?', 'Ancillary Azure Service'],
+  ['Supports the migration team or deployment process?', 'Supporting Infrastructure'],
+  ['Shared enterprise resource with no migration effort?', 'Exclude from counting'],
+]
+
+const CATEGORIES: { n: string; what: string; examples: string; counted: string }[] = [
+  { n: '1 · Primary Target Compute', what: 'Directly hosts and runs the workload after migration.', examples: 'AKS · App Service · ACA · ARO · Functions · Spring Apps · VM (when the VM is the target host)', counted: 'Counted — this is the application' },
+  { n: '2 · Ancillary Azure Services', what: 'Support deployment, security, networking, monitoring, integration, and data — but don’t host the workload.', examples: 'Key Vault · ACR · Storage · App Insights · Log Analytics · VNet / NSG / Private Endpoint · Service Bus · APIM · Front Door · Redis · Event Hub / Grid', counted: 'Documented, not a separate application' },
+  { n: '3 · Supporting Infrastructure', what: 'Created specifically to execute, validate, deploy, or operate the migration.', examples: 'Jump Box · Bastion · DevOps agent VM · GitHub runner · staging / validation / cutover VMs', counted: 'Documented, not counted as apps' },
+  { n: '4 · Shared Enterprise Services', what: 'Customer platform-team services shared across many apps, with no migration effort.', examples: 'Shared ACR / Key Vault / Log Analytics / agent pool / hub network / landing zone / monitoring', counted: 'Excluded from counting' },
+]
+
+const ANCILLARY_GROUPS: [string, string][] = [
+  ['Security', 'Key Vault · Managed Identities · Defender for Cloud · Azure Firewall · WAF'],
+  ['Storage & Data', 'Storage Accounts · Azure Files · Blob Storage · Backup Vault · Recovery Services Vault'],
+  ['Monitoring & Operations', 'Azure Monitor · Application Insights · Log Analytics · Diagnostic Settings · Alerts'],
+  ['Networking', 'VNets · Subnets · NSGs · Route Tables · Private Endpoints · Private Link · DNS / Private DNS · Load Balancer · Application Gateway · Front Door · Traffic Manager · NAT Gateway'],
+  ['Integration', 'Service Bus · Event Hub · Event Grid · API Management'],
+  ['Containers', 'Azure Container Registry (ACR)'],
+  ['Caching', 'Azure Redis Cache'],
+  ['Automation', 'Automation Accounts · Deployment Scripts · Runbooks · Azure Policy configuration'],
+]
+
+const SUPPORTING_GROUPS: [string, string][] = [
+  ['Migration', 'Staging VM · Validation VM · Cutover VM · Temporary testing VM'],
+  ['Access', 'Jump Box VM · Azure Bastion'],
+  ['DevOps', 'Self-hosted DevOps agent VM · GitHub runner VM · Build agent · Release agent · CI/CD agent infra'],
+  ['Performance & Validation', 'Performance test env · UAT validation env · Migration verification env'],
+]
+
+const COUNT_WHEN: string[] = ['Application-specific', 'Migration effort required', 'Engineering work performed', 'Created, migrated, configured, modernized, or onboarded as part of the engagement', 'Dedicated to the workload']
+const COUNT_NOT: string[] = ['Already exists', 'Shared across applications', 'No migration effort required', 'Platform-owned enterprise resource', 'Included in standard landing-zone provisioning', 'Simply consumed by the application without migration work']
+
+const AKS_EXAMPLE: [string, string][] = [
+  ['AKS', 'Primary Target Compute'],
+  ['ACR', 'Ancillary Service'],
+  ['Key Vault', 'Ancillary Service'],
+  ['Storage Account', 'Ancillary Service'],
+  ['Application Insights', 'Ancillary Service'],
+  ['Log Analytics', 'Ancillary Service'],
+  ['Private Endpoint', 'Ancillary Service'],
+  ['Azure DevOps Agent VM', 'Supporting Infrastructure'],
+]
+
+const APPSVC_EXAMPLE: [string, string][] = [
+  ['App Service', 'Primary Target Compute'],
+  ['Key Vault', 'Ancillary Service'],
+  ['Storage Account', 'Ancillary Service'],
+  ['Front Door', 'Ancillary Service'],
+  ['Application Insights', 'Ancillary Service'],
+  ['Log Analytics', 'Ancillary Service'],
+]
+
+const EFFORT_IMPACT: [string, string][] = [
+  ['ACR', 'Low–Medium'],
+  ['Key Vault', 'Medium'],
+  ['Private Endpoints', 'Medium–High'],
+  ['API Management', 'High'],
+  ['Service Bus', 'High'],
+  ['Front Door', 'Medium'],
+  ['Application Gateway', 'Medium'],
+  ['Complex Networking', 'High'],
+]
+
+const FDO_CAPTURE: string[] = [
+  'Do not create ancillary services as separate applications — capture them as supporting resources on the primary application migration.',
+  'Document them wherever CAF engineers create, configure, migrate, modernize, or integrate them: Scope Document, Assessment Report, TAD, Deployment Architecture, and FDO notes.',
+  'In FDO, record them in the application notes / implementation-details section under “Ancillary Services Deployed / Configured”.',
+  'Application count keeps representing the application being migrated — ancillary services never inflate it.',
+  'They do increase migration effort and complexity, so capture them for delivery reporting and sizing.',
+  'Report three things per migration: number of applications migrated, the primary target platform, and the ancillary services used.',
+  'Dedicated DevOps infrastructure (agent VM, GitHub runner, build/release agent, deployment jump box) is documented as supporting infrastructure — but does not increase application count.',
+  'Shared enterprise resources are captured for reference only (architecture documentation) and are not counted.',
+]
+
+function TwoCol({ rows, head }: { rows: [string, string][]; head: [string, string] }) {
+  return (
+    <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <thead><tr><th style={clsHead}>{head[0]}</th><th style={clsHead}>{head[1]}</th></tr></thead>
+      <tbody>
+        {rows.map(([a, b]) => (
+          <tr key={a}><td style={clsCell}>{a}</td><td style={clsCell}>{b}</td></tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function ResourceClassificationSection() {
+  return (
+    <Panel title="Azure resource classification (FDO reporting)">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 820 }}>
+        <Text size={300}>
+          Standardizes how applications and their associated Azure resources are counted, reported, and governed in FDO
+          and App Factory reporting. Every migration classifies its resources into <b>four categories</b>.
+        </Text>
+
+        <div style={{ borderLeft: '3px solid var(--colorBrandStroke1)', paddingLeft: 12, color: 'var(--colorNeutralForeground2)' }}>
+          <Text size={300} weight="semibold" style={{ display: 'block', marginBottom: 6 }}>Governance rule</Text>
+          <Text size={300}>
+            One application remains <b>one application</b> in FDO regardless of the number of ancillary services deployed.
+            Ancillary Azure Services and Supporting Infrastructure must be <b>documented</b> to reflect migration
+            complexity and engineering effort, but they must <b>not inflate application counts</b>. Shared enterprise
+            resources are <b>excluded</b> from counting and recorded only where relevant for architecture documentation.
+          </Text>
+        </div>
+
+        <div>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>The four categories</Text>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead><tr><th style={clsHead}>Category</th><th style={clsHead}>What it is</th><th style={clsHead}>Examples</th><th style={clsHead}>Counting</th></tr></thead>
+            <tbody>
+              {CATEGORIES.map((c) => (
+                <tr key={c.n}>
+                  <td style={{ ...clsCell, whiteSpace: 'nowrap' }}><b>{c.n}</b></td>
+                  <td style={clsCell}>{c.what}</td>
+                  <td style={clsCell}>{c.examples}</td>
+                  <td style={clsCell}>{c.counted}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Rule of thumb</Text>
+          <TwoCol head={['Question', 'Classification']} rows={RULE_OF_THUMB} />
+        </div>
+
+        <Accordion collapsible multiple>
+          <AccordionItem value="cls-detail">
+            <AccordionHeader>What goes in each category (service reference)</AccordionHeader>
+            <AccordionPanel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Ancillary Azure Services</Text>
+                  <TwoCol head={['Group', 'Services']} rows={ANCILLARY_GROUPS} />
+                  <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginTop: 4 }}>
+                    ACR is ancillary — it stores container images and supports deployment but does not host the workload
+                    (e.g. AKS = Primary Target Compute, ACR = Ancillary).
+                  </Text>
+                </div>
+                <div>
+                  <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Supporting Infrastructure</Text>
+                  <TwoCol head={['Group', 'Resources']} rows={SUPPORTING_GROUPS} />
+                </div>
+              </div>
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="cls-count">
+            <AccordionHeader>Counting rules — when to count a resource</AccordionHeader>
+            <AccordionPanel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Count when all apply</Text>
+                  <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {COUNT_WHEN.map((c) => <li key={c}><Text size={300}>{c}</Text></li>)}
+                  </ul>
+                </div>
+                <div>
+                  <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Do not count when</Text>
+                  <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {COUNT_NOT.map((c) => <li key={c}><Text size={300}>{c}</Text></li>)}
+                  </ul>
+                </div>
+                <Text size={300}>
+                  <b>Dedicated vs shared:</b> a Jump Box or DevOps agent VM <b>is</b> counted (as supporting infrastructure)
+                  when it is dedicated to and built for the migration; it is <b>not</b> counted when it is a shared,
+                  enterprise-wide, or existing customer-managed resource.
+                </Text>
+              </div>
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="cls-examples">
+            <AccordionHeader>Worked examples</AccordionHeader>
+            <AccordionPanel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>AKS migration</Text>
+                  <TwoCol head={['Resource', 'Classification']} rows={AKS_EXAMPLE} />
+                </div>
+                <div>
+                  <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>App Service migration</Text>
+                  <TwoCol head={['Resource', 'Classification']} rows={APPSVC_EXAMPLE} />
+                </div>
+                <div style={{ borderLeft: '3px solid var(--colorBrandStroke1)', paddingLeft: 12, color: 'var(--colorNeutralForeground2)' }}>
+                  <Text size={300}>
+                    Application A migrated to AKS using ACR, Key Vault, Storage, App Insights and Log Analytics =
+                    <b> 1 migrated application</b>, not 5 additional applications.
+                  </Text>
+                </div>
+              </div>
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="cls-fdo">
+            <AccordionHeader>Capturing ancillary services in FDO (counting rules)</AccordionHeader>
+            <AccordionPanel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {FDO_CAPTURE.map((c) => <li key={c}><Text size={300}>{c}</Text></li>)}
+                </ul>
+                <div>
+                  <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Effort impact (for sizing, not counting)</Text>
+                  <TwoCol head={['Service', 'Effort impact']} rows={EFFORT_IMPACT} />
+                </div>
+              </div>
             </AccordionPanel>
           </AccordionItem>
         </Accordion>

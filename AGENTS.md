@@ -286,7 +286,12 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   A **Proposals** section documents the **containerized-app counting** convention for ACR — *1 containerized application
   = 1 application*; an app split into N independently deployable containers counts as N applications; FDO app count
   should reflect the actual containerized apps delivered (examples: 1→1, 1 split→5, 20→35). App-count framing (no "ACR
-  unit" term); aligns with the direction discussed with Pradeep Mamidi and Anuj, with a source-email link.
+  unit" term); aligns with the direction discussed with Pradeep Mamidi and Anuj, with a source-email link. An **Azure
+  resource classification (FDO reporting)** section codifies the 4-category model (Primary Target Compute · Ancillary
+  Azure Services · Supporting Infrastructure · Shared Enterprise Services = excluded), the rule-of-thumb, the governance
+  rule (*one application stays one application regardless of ancillary services; document effort, never inflate counts;
+  exclude shared enterprise resources*), per-category service reference, dedicated-vs-shared counting rules, AKS/App
+  Service worked examples, and how SAs capture ancillary services in FDO (notes not separate apps + effort-impact sizing).
 
 ## Editing rules for agents
 - Read a file before editing; keep changes minimal and scoped to the request.
