@@ -41,6 +41,9 @@ public interface IApplicationDbContext
     DbSet<NominationBlocker> NominationBlockers { get; }
     DbSet<NominationEvent> NominationEvents { get; }
     DbSet<NominationMilestone> NominationMilestones { get; }
+    DbSet<MigrationTool> MigrationTools { get; }
+    DbSet<MigrationActivity> MigrationActivities { get; }
+    DbSet<NominationToolUsage> NominationToolUsages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

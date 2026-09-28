@@ -13,5 +13,9 @@ public interface IGovernanceService
     Task<IReadOnlyList<NominationEventDto>> GetEventsAsync(int nominationId, CancellationToken ct = default);
     Task<NominationGovernanceDto?> AddMilestoneAsync(int nominationId, MilestoneUpsert req, CancellationToken ct = default);
     Task<NominationGovernanceDto?> DeleteMilestoneAsync(int nominationId, int milestoneId, CancellationToken ct = default);
+    Task<NominationGovernanceDto?> AddToolUsageAsync(int nominationId, ToolUsageUpsert req, CancellationToken ct = default);
+    Task<NominationGovernanceDto?> DeleteToolUsageAsync(int nominationId, int usageId, CancellationToken ct = default);
+    Task<IReadOnlyList<MigrationToolDto>> GetMigrationToolsAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<MigrationActivityDto>> GetMigrationActivitiesAsync(CancellationToken ct = default);
     IReadOnlyList<string> GetBlockerCategories();
 }

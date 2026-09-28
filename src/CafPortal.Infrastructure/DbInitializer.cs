@@ -58,6 +58,9 @@ public static class DbInitializer
         // Seed editable governance vocabularies (idempotent per category).
         await LookupSeed.SeedAsync(db, ct);
 
+        // Seed Migration Capability masters (tools + activities), idempotent.
+        await MigrationCapabilitySeed.SeedAsync(db, ct);
+
         if (workbookExists && !hasResources)
         {
             // Fresh database + real workbook present: run the one-time import automatically.

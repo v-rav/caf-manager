@@ -56,4 +56,18 @@ public class NominationGovernanceController(IGovernanceService governance) : Con
         var dto = await governance.DeleteMilestoneAsync(nominationId, milestoneId, ct);
         return dto is null ? NotFound() : Ok(dto);
     }
+
+    [HttpPost("tool-usages")]
+    public async Task<IActionResult> AddToolUsage(int nominationId, [FromBody] ToolUsageUpsert req, CancellationToken ct)
+    {
+        var dto = await governance.AddToolUsageAsync(nominationId, req, ct);
+        return dto is null ? NotFound() : Ok(dto);
+    }
+
+    [HttpDelete("tool-usages/{usageId:int}")]
+    public async Task<IActionResult> DeleteToolUsage(int nominationId, int usageId, CancellationToken ct)
+    {
+        var dto = await governance.DeleteToolUsageAsync(nominationId, usageId, ct);
+        return dto is null ? NotFound() : Ok(dto);
+    }
 }

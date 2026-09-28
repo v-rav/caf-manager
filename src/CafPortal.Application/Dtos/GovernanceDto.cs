@@ -14,11 +14,23 @@ public record NominationGovernanceDto(
     int CompliancePercent, IReadOnlyList<GateDto> Gates, IReadOnlyList<BlockerDto> Blockers,
     int MsiScore, string MsiBand,
     int? Stage = null, string? Pm = null, string? Cftl = null, string? Sa = null, int? AgeDays = null, int ClockStoppedDays = 0,
-    string? ShortName = null, IReadOnlyList<MilestoneDto>? Milestones = null);
+    string? ShortName = null, IReadOnlyList<MilestoneDto>? Milestones = null,
+    IReadOnlyList<ToolUsageDto>? ToolUsages = null);
 
 public record MilestoneDto(int Id, string MilestoneKey, DateOnly OccurredOn, string? ToolUsed, string? Notes, string? RecordedBy);
 
 public record MilestoneUpsert(string MilestoneKey, DateOnly OccurredOn, string? ToolUsed, string? Notes);
+
+// Migration Capability Utilization: masters + the per-nomination Tool × Activity fact.
+public record MigrationToolDto(int Id, string Name, string Category, string? Vendor, int SortOrder, bool Active);
+
+public record MigrationActivityDto(int Id, string Name, string? Stage, int SortOrder, bool Active);
+
+public record ToolUsageDto(
+    int Id, int NominationId, int ToolId, string ToolName, string ToolCategory, string? ToolVendor,
+    int? ActivityId, string? ActivityName, string? ActivityStage, int? Stage, DateOnly? UsedOn, string? UsedBy, string? Notes);
+
+public record ToolUsageUpsert(int ToolId, int? ActivityId, int? Stage, DateOnly? UsedOn, string? Notes);
 
 public record BlockerDto(
     int Id, int NominationId, string? Account, int? GateItemDefId, string Category, bool ClockStopped, string? Owner,

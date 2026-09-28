@@ -28,4 +28,12 @@ public class GovernanceBoardController(IGovernanceService governance, ILookupSer
     [HttpGet("milestone-types")]
     public async Task<IActionResult> MilestoneTypes(CancellationToken ct)
         => Ok(await lookups.ValuesAsync("Milestone", ct));
+
+    [HttpGet("migration-tools")]
+    public async Task<IActionResult> MigrationTools(CancellationToken ct)
+        => Ok(await governance.GetMigrationToolsAsync(ct));
+
+    [HttpGet("migration-activities")]
+    public async Task<IActionResult> MigrationActivities(CancellationToken ct)
+        => Ok(await governance.GetMigrationActivitiesAsync(ct));
 }

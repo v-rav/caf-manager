@@ -48,6 +48,18 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             .Select(x => new MilestoneDto(x.Id, x.MilestoneKey, x.OccurredOn, x.ToolUsed, x.Notes, x.RecordedBy))
             .ToListAsync(ct);
 
+        var toolUsages = await (
+            from u in _db.NominationToolUsages.AsNoTracking().Where(u => u.NominationId == nominationId)
+            join t in _db.MigrationTools.AsNoTracking() on u.ToolId equals t.Id
+            join a in _db.MigrationActivities.AsNoTracking() on u.ActivityId equals a.Id into aj
+            from a in aj.DefaultIfEmpty()
+            orderby t.Category, t.Name
+            select new ToolUsageDto(
+                u.Id, u.NominationId, u.ToolId, t.Name, t.Category, t.Vendor,
+                u.ActivityId, a != null ? a.Name : null, a != null ? a.Stage : null,
+                u.Stage, u.UsedOn, u.UsedBy, u.Notes))
+            .ToListAsync(ct);
+
         return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, nom.GhcpAdoptionLevel) with
         {
             Classification = nom.Classification,
@@ -59,6 +71,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             ClockStoppedDays = clockStoppedDays,
             ShortName = nom.ShortName,
             Milestones = milestones,
+            ToolUsages = toolUsages,
         };
     }
 
@@ -146,6 +159,50 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         var ms = await _db.NominationMilestones.FirstOrDefaultAsync(m => m.Id == milestoneId && m.NominationId == nominationId, ct);
         if (ms is null) return null;
         _db.NominationMilestones.Remove(ms);
+        await _db.SaveChangesAsync(ct);
+        return await GetForNominationAsync(nominationId, ct);
+    }
+
+    public async Task<IReadOnlyList<MigrationToolDto>> GetMigrationToolsAsync(CancellationToken ct = default)
+        => await _db.MigrationTools.AsNoTracking().Where(t => t.ActiveFlag)
+            .OrderBy(t => t.Category).ThenBy(t => t.SortOrder).ThenBy(t => t.Name)
+            .Select(t => new MigrationToolDto(t.Id, t.Name, t.Category, t.Vendor, t.SortOrder, t.ActiveFlag))
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<MigrationActivityDto>> GetMigrationActivitiesAsync(CancellationToken ct = default)
+        => await _db.MigrationActivities.AsNoTracking().Where(a => a.ActiveFlag)
+            .OrderBy(a => a.SortOrder).ThenBy(a => a.Name)
+            .Select(a => new MigrationActivityDto(a.Id, a.Name, a.Stage, a.SortOrder, a.ActiveFlag))
+            .ToListAsync(ct);
+
+    public async Task<NominationGovernanceDto?> AddToolUsageAsync(int nominationId, ToolUsageUpsert req, CancellationToken ct = default)
+    {
+        if (!await _db.Nominations.AnyAsync(n => n.Id == nominationId, ct)) return null;
+        var tool = await _db.MigrationTools.AsNoTracking().FirstOrDefaultAsync(t => t.Id == req.ToolId, ct);
+        if (tool is null) return await GetForNominationAsync(nominationId, ct);
+        var activityName = req.ActivityId is int aid
+            ? await _db.MigrationActivities.AsNoTracking().Where(a => a.Id == aid).Select(a => a.Name).FirstOrDefaultAsync(ct)
+            : null;
+        _db.NominationToolUsages.Add(new NominationToolUsage
+        {
+            NominationId = nominationId,
+            ToolId = req.ToolId,
+            ActivityId = req.ActivityId,
+            Stage = req.Stage,
+            UsedOn = req.UsedOn,
+            UsedBy = _currentUser.Name,
+            Notes = string.IsNullOrWhiteSpace(req.Notes) ? null : req.Notes.Trim(),
+        });
+        Log(nominationId, "ToolUsage", tool.Name, null, activityName, null);
+        await _db.SaveChangesAsync(ct);
+        return await GetForNominationAsync(nominationId, ct);
+    }
+
+    public async Task<NominationGovernanceDto?> DeleteToolUsageAsync(int nominationId, int usageId, CancellationToken ct = default)
+    {
+        var u = await _db.NominationToolUsages.FirstOrDefaultAsync(x => x.Id == usageId && x.NominationId == nominationId, ct);
+        if (u is null) return null;
+        _db.NominationToolUsages.Remove(u);
         await _db.SaveChangesAsync(ct);
         return await GetForNominationAsync(nominationId, ct);
     }

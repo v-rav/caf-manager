@@ -70,6 +70,29 @@ public class SkillConfigurationMap : IEntityTypeConfiguration<SkillConfiguration
     }
 }
 
+public class MigrationToolMap : IEntityTypeConfiguration<MigrationTool>
+{
+    public void Configure(EntityTypeBuilder<MigrationTool> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Name).HasMaxLength(120).IsRequired();
+        builder.Property(x => x.Category).HasMaxLength(60).IsRequired();
+        builder.Property(x => x.Vendor).HasMaxLength(80);
+        builder.HasIndex(x => x.Name).IsUnique();
+    }
+}
+
+public class MigrationActivityMap : IEntityTypeConfiguration<MigrationActivity>
+{
+    public void Configure(EntityTypeBuilder<MigrationActivity> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Name).HasMaxLength(120).IsRequired();
+        builder.Property(x => x.Stage).HasMaxLength(40);
+        builder.HasIndex(x => x.Name).IsUnique();
+    }
+}
+
 public class RolePermissionMap : IEntityTypeConfiguration<RolePermission>
 {
     public void Configure(EntityTypeBuilder<RolePermission> builder)

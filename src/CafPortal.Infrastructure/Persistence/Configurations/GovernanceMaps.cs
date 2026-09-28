@@ -87,3 +87,16 @@ public class NominationMilestoneMap : IEntityTypeConfiguration<NominationMilesto
         builder.HasIndex(x => new { x.NominationId, x.OccurredOn });
     }
 }
+
+public class NominationToolUsageMap : IEntityTypeConfiguration<NominationToolUsage>
+{
+    public void Configure(EntityTypeBuilder<NominationToolUsage> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.UsedBy).HasMaxLength(120);
+        builder.Property(x => x.Notes).HasMaxLength(1000);
+        builder.HasIndex(x => x.NominationId);
+        builder.HasIndex(x => x.ToolId);
+        builder.HasIndex(x => x.ActivityId);
+    }
+}

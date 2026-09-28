@@ -42,6 +42,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<NominationBlocker> NominationBlockers => Set<NominationBlocker>();
     public DbSet<NominationEvent> NominationEvents => Set<NominationEvent>();
     public DbSet<NominationMilestone> NominationMilestones => Set<NominationMilestone>();
+    public DbSet<MigrationTool> MigrationTools => Set<MigrationTool>();
+    public DbSet<MigrationActivity> MigrationActivities => Set<MigrationActivity>();
+    public DbSet<NominationToolUsage> NominationToolUsages => Set<NominationToolUsage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
