@@ -80,6 +80,8 @@ public class BackupService(AppDbContext db, IConfiguration configuration) : IBac
                 if (File.Exists(sidecar)) File.Delete(sidecar);
             SqliteConnection.ClearAllPools();
 
+            PrunePreRestoreCopies(dbPath, keep: 5);
+
             // Bring the restored schema up to the current migration set (idempotent) and read counts back.
             await db.Database.MigrateAsync(ct);
 
@@ -150,5 +152,22 @@ public class BackupService(AppDbContext db, IConfiguration configuration) : IBac
     {
         try { if (File.Exists(path)) File.Delete(path); }
         catch { /* best-effort temp cleanup */ }
+    }
+
+    /// <summary>Keeps only the newest <paramref name="keep"/> pre-restore safety copies; deletes older ones.</summary>
+    private static void PrunePreRestoreCopies(string dbPath, int keep)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(dbPath);
+            if (string.IsNullOrEmpty(dir)) return;
+            var prefix = Path.GetFileName(dbPath) + ".prerestore_";
+            var stale = Directory.EnumerateFiles(dir, prefix + "*")
+                .OrderByDescending(f => f, StringComparer.Ordinal) // timestamp suffix sorts chronologically
+                .Skip(Math.Max(0, keep))
+                .ToList();
+            foreach (var f in stale) TryDelete(f);
+        }
+        catch { /* best-effort housekeeping */ }
     }
 }

@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CafPortal.Api.Controllers;
@@ -6,6 +7,7 @@ namespace CafPortal.Api.Controllers;
 /// <summary>Database backup (download a compressed snapshot) and restore (replace the live DB from a backup zip).</summary>
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin")]
 public class BackupController(IBackupService backup) : ControllerBase
 {
     private const string Zip = "application/zip";
