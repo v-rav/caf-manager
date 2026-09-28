@@ -19,6 +19,8 @@ export function HelpPage() {
 
       <UsageGuide />
 
+      <FdoHygieneSection />
+
       <Panel title="Frequently asked questions">
         <Accordion collapsible multiple>
           <AccordionItem value="acr">
@@ -109,6 +111,18 @@ const GUIDE_WORKFLOWS: GuideStep[] = [
   { title: 'Back up before a risky change', body: 'Admin → Backup & Restore → Download a snapshot. Restore replaces the live DB and keeps a server-side safety copy.' },
 ]
 
+const WORKSPACE_STEPS: GuideStep[] = [
+  { title: '1 · Open the workspace', body: 'From the Nominations grid, click the account name (or go to /nominations/{id}). The header shows the account · short name, classification / FDO Stage / TPID badges, the PM · CFTL · SA · Age · clock-stopped meta line, and Readiness % + MSI cards.' },
+  { title: '2 · Read the gate stepper (left)', body: 'The 8 gates (G1 Discovery → G8 Closure) run down the left column; the current gate carries a red “!”. Click any gate to load its checklist in the middle column.' },
+  { title: '3 · Work the current-gate checklist (middle)', body: 'Each item has a checkbox (Pending → Done), an N/A toggle for items that don’t apply, kind chips, an optional doc-ref link, and a mandatory ⚑ flag. Tick items only when the work is genuinely done; mark truly non-applicable items N/A so the gate can go green.' },
+  { title: '4 · Advance the gate', body: 'The “Advance ▸” button enables only when the gate is green (every mandatory item Done or N/A). Advancing moves the current-gate marker forward and recomputes Readiness % and MSI. Repeat through G8.' },
+  { title: '5 · Raise & track blockers (right rail)', body: 'Add a blocker with category, owner, ETA, notes, and a clock-stopped flag. A clock-stopped blocker subtracts its open window from the SLA (the grid shows a Paused chip). Blockers surface on the Governance Board; resolve them here or there.' },
+  { title: '6 · Record milestones & dates (right rail)', body: 'Add dated app-factory events (type · date · tool used · notes). Kick-off and actual-migration-start are separate dated milestones — important for lift-n-shift where they differ. Each milestone is logged to the Timeline.' },
+  { title: '7 · Capture migration capability (panel below the gates)', body: 'Record which tool accelerated which activity (Tool · Activity · Date · Notes). The Activity list is filtered to the activities the selected tool supports. This is the value story — it rolls up on GHCP Adoption (tool adoption, by activity, most-used tool per activity, GHCP-accelerated KPI).' },
+  { title: '8 · Review the audit Timeline (right rail)', body: 'An append-only log of every gate-item change, blocker raise/resolve, and milestone add (type · field · old→new · by · at). Use it to see exactly what happened and who did it — no need to reconstruct history elsewhere.' },
+  { title: '9 · Keep FDO in sync', body: 'Portal gate/blocker/milestone/capability data is portal-owned and never overwritten by FDO imports — but the SA still owns the technical fields in FDO itself. See the FDO Hygiene guide below for exactly what to keep current and validate before wave closure.' },
+]
+
 function UsageGuide() {
   return (
     <Panel title="System usage guide">
@@ -137,6 +151,23 @@ function UsageGuide() {
                   </div>
                 ))}
               </div>
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="workspace">
+            <AccordionHeader>Using the SA Workspace (step by step)</AccordionHeader>
+            <AccordionPanel>
+              <Text size={300} style={{ display: 'block', marginBottom: 8 }}>
+                The <b>SA Workspace</b> (<code>/nominations/&#123;id&#125;</code>, opened by clicking an account on the
+                Nominations grid) is where a Solution Architect actually drives a migration through the 8 governance gates
+                and records the evidence behind it. There is no explicit save — every edit persists immediately and is
+                written to the audit Timeline.
+              </Text>
+              <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {WORKSPACE_STEPS.map((s) => (
+                  <li key={s.title}><Text size={300}><b>{s.title}</b> — {s.body}</Text></li>
+                ))}
+              </ol>
             </AccordionPanel>
           </AccordionItem>
 
@@ -171,6 +202,241 @@ function UsageGuide() {
                 items by their close date, in-flight items by when they entered. Choose <b>All FY</b> to see everything.
                 Analytics keeps its own dedicated Trends controls.
               </Text>
+            </AccordionPanel>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    </Panel>
+  )
+}
+
+type FdoBlock = string | string[]
+type FdoFaq = { q: string; blocks: FdoBlock[] }
+
+const FDO_CHECKLIST: string[] = [
+  'Technical Summary is current',
+  'Tool Used is recorded',
+  'Automation Used is recorded, when applicable',
+  'Product Feedback is captured, when applicable',
+  'Intellectual Property is captured, when applicable',
+  'Scope document is technically reviewed',
+  'Architecture and migration approach are documented',
+  'Technical risks, blockers, dependencies, and next actions are current',
+  'Application count, migration path, environments, and core data are accurate',
+  'App–DB and relevant dependent waves are linked',
+  'Technical artifacts, runbooks, and execution evidence are uploaded',
+  'Quality Gate review checkbox is completed where required',
+  'POE is validated before wave closure',
+]
+
+const FDO_FAQS: FdoFaq[] = [
+  { q: '1 · What is FDO hygiene?', blocks: [
+    'FDO hygiene means keeping the engagement record complete, accurate, current, and supported by evidence. A hygienic record should let another stakeholder understand:',
+    ['What is in scope', 'What has been completed', 'Which tools and automations were used', 'What is currently blocked', 'What happens next', 'What evidence supports the reported outcome'],
+    'FDO should remain the authoritative record for execution visibility, audit readiness, quality-gate compliance, and outcome reporting.',
+  ] },
+  { q: '2 · Who owns FDO hygiene: PM or SA?', blocks: [
+    'Ownership is shared, but responsibilities differ. PM owns:',
+    ['Overall engagement status and stage', 'Planned dates and follow-up dates', 'Customer communications and operational comments', 'Blocked or Deferred status processing', 'Project documentation and operational evidence', 'Overall closure coordination'],
+    'SA owns:',
+    ['Technical Summary', 'Tool Used', 'Automation Used', 'Product Feedback', 'Intellectual Property', 'Technical risks and dependencies', 'Technical validation of scope, architecture, migration path, application count, cores, and technical evidence', 'Technical Quality Gate review'],
+    'Shared: validate FDO reflects the actual engagement state, confirm application and core data before closure, confirm mandatory artifacts are present, confirm blockers/ownership/next actions/evidence, and validate the wave before it is marked complete.',
+  ] },
+  { q: '3 · When should an SA start updating FDO?', blocks: [
+    'Once assigned, and actively as scope and tooling become clear — normally during prerequisite execution and scope finalization. Do not wait until closure to populate all technical fields; update as it becomes known and validate the complete record before the wave closes.',
+  ] },
+  { q: '4 · How often should the Technical Summary be updated?', blocks: [
+    'Update it:',
+    ['After every customer or partner technical session', 'Whenever there is a major technical decision, blocker, or scope change', 'At least once per week for an active wave'],
+    'The Technical Summary is separate from the PM’s project summary.',
+  ] },
+  { q: '5 · What should a good Technical Summary contain?', blocks: [
+    'Use this structure — Completed: what was achieved since the last update. Issues/Blockers: technical or customer dependencies affecting progress. Actions: follow-ups, owners, expected outputs. Next Session: what will be addressed next.',
+    'Example: “Completed AppCAT assessment for 3 applications and reviewed findings with the customer. Repository access is available; lower-environment access is pending. Customer to provide access by 30 Sep. Next session will finalize remediation scope and migration sequencing.”',
+  ] },
+  { q: '6 · Is Tool Used mandatory?', blocks: [
+    'Yes — recorded at wave level for every applicable wave. Capture the tool/product name, the specific feature where relevant, and how it was used. Examples:',
+    ['Azure Migrate: Discovery and assessment', 'AppCAT: Application cloud-readiness assessment', 'GHCP App Modernization: Code assessment and remediation', 'GitHub Actions: CI/CD pipeline implementation', 'Bicep or Terraform: Infrastructure provisioning'],
+    'If no listed tool applies, follow the current FDO guidance for unavailable or manual options and provide meaningful details.',
+  ] },
+  { q: '7 · When should Tool Used be updated?', blocks: [
+    'When the execution tool is selected or begins to be used — usually during prerequisites or scope finalization. Do not leave it blank until closure; revalidate before closing the wave.',
+  ] },
+  { q: '8 · What should be entered under Automation Used?', blocks: [
+    'Any approved automation, script, or accelerator used during execution:',
+    ['PowerShell scripts', 'Approved assessment or migration automation', 'CI/CD automation', 'Infrastructure-as-code automation', 'Factory accelerators'],
+    'Include what the automation did and, where required, the effort saved. If not in the selectable list, use the applicable unavailable option and provide details.',
+  ] },
+  { q: '9 · When is Product Feedback required?', blocks: [
+    'When the team identifies:',
+    ['A product defect or bug', 'A tool limitation', 'Incorrect or incomplete assessment output', 'A recurring manual workaround', 'A feature request', 'A successful workaround that could improve the product'],
+    'Do not use Product Feedback merely to record that a tool was used — use Tool Used for normal tool tracking.',
+  ] },
+  { q: '10 · What should Product Feedback contain?', blocks: [
+    ['Product or tool name', 'Feature or component', 'Problem or observation', 'Customer or execution impact', 'Workaround, if any', 'Supporting evidence or document reference'],
+    'Where escalation is required, notify the CFTL so the relevant UAT/TFT tracking ID can be created and mapped back to the FDO feedback entry.',
+  ] },
+  { q: '11 · When should Intellectual Property be recorded?', blocks: [
+    'When a Factory, Microsoft, partner, or practice-owned reusable asset is used — script, tool, process, runbook, agent, or reusable accelerator. Include its category and a short description of how it supported execution.',
+  ] },
+  { q: '12 · Is the SA responsible for the scope document?', blocks: [
+    'The PM coordinates and maintains it; the SA is responsible for technical validation. Confirm the scope document correctly identifies:',
+    ['Applications and environments in scope', 'Source and target platforms', 'Migration or modernization activities', 'In-scope and out-of-scope items', 'Customer, partner, Factory, and account-team responsibilities', 'Assumptions and dependencies', 'Acceptance and exit criteria'],
+    'After reviewing the artifact, complete the applicable SA Quality Gate confirmation in FDO.',
+  ] },
+  { q: '13 · What technical documents should be available in FDO?', blocks: [
+    'Depending on stage and offering, validate the presence of applicable artifacts:',
+    ['Scope confirmation document', 'Assessment output', 'Target architecture or design', 'Migration approach and project plan', 'Prerequisite checklist', 'Runbooks', 'Risk and dependency log', 'Test or validation evidence', 'Deployment evidence', 'POE and closure evidence'],
+    'Uploading a document alone is not enough — the corresponding Quality Gate status must also be updated where required.',
+  ] },
+  { q: '14 · What is the SA’s responsibility for FDO status?', blocks: [
+    'The PM updates the official stage and status; the SA must promptly tell the PM when the displayed state does not match technical reality. Examples:',
+    ['Prerequisites are incomplete, but the wave shows Executing Migration', 'Execution has stopped for missing access, but the wave remains On Track', 'Migration is complete, but technical validation or POE is missing', 'Scope is not finalized, but the wave shows a later stage'],
+    'The SA should not silently allow an inaccurate status to remain.',
+  ] },
+  { q: '15 · What should happen when work cannot progress?', blocks: [
+    'Document the blocker clearly and work with the PM to apply the approved Blocked or Customer Deferred process. State:',
+    ['Exact dependency', 'Owner', 'Date identified', 'Impact on execution', 'Action taken', 'Next follow-up date', 'Evidence or customer communication'],
+    'Operational status changes are PM-owned; the SA provides the technical blocker details and validates the status reflects reality.',
+  ] },
+  { q: '16 · Does “Waiting Action on Follow-up Date” stop the velocity clock?', blocks: [
+    'Under current guidance, no — this waiting state does not stop the velocity clock. When execution cannot continue because of a customer or external dependency, the PM should use the documented Blocked or Customer Deferred process rather than leave the nomination in an inaccurate waiting state.',
+  ] },
+  { q: '17 · Who is responsible for App–DB linkage?', blocks: [
+    'The SA identifies whether a database dependency exists and validates linkage with the PM. Confirm whether a DB wave is required, that App and DB nominations are linked, validate the relationship before closure, and document why linkage is not applicable if so. The same applies to other dependent waves (ALZ Dispatch, Security) where required.',
+  ] },
+  { q: '18 · What should the SA validate for application counts and cores?', blocks: [
+    'Before closure, validate with the PM:',
+    ['Number of applications completed or remediated', 'Application technology, where supported', 'Primary migration path', 'Target Azure service', 'Number of environments', 'Reported core or ACR-related values', 'Whether one reported application contains multiple independently deployed components or containers'],
+    'Do not rely only on the core value — application count and technical scope must also be correct.',
+  ] },
+  { q: '19 · What is POE, and what is the SA’s responsibility?', blocks: [
+    'Proof of Execution demonstrates the agreed technical work was completed. Validate that POE matches the approved scope, identifies the workload/application, demonstrates the target Azure outcome, supports the reported application and core data, includes relevant screenshots/logs/deployment evidence or customer validation, and is available before technical closure. The PM coordinates closure; the SA validates the technical evidence.',
+  ] },
+  { q: '20 · Can a wave be closed if technical hygiene is incomplete?', blocks: [
+    'No wave is technically ready for closure while mandatory technical information or evidence is missing. Before closure confirm the Technical Summary is current, Tool Used is captured, Product Feedback and Automation are captured when applicable, scope and technical artifacts are present, risks and blockers are resolved or dispositioned, application counts and core values are validated, related nominations are linked, POE is complete, and Quality Gate reviews are updated.',
+  ] },
+  { q: '21 · What if FDO does not provide the required option?', blocks: [
+    'Do not leave the record blank without explanation. Use the currently approved unavailable / other / manual option where applicable, add meaningful details, and raise the gap through the appropriate FDO/CFTL support process.',
+  ] },
+  { q: '22 · What are the most common FDO hygiene mistakes?', blocks: [
+    ['Technical Summary missing or stale', 'Tool Used blank or only a tool name without usage details', 'Product Feedback not raised for known limitations', 'Scope document uploaded but Quality Gate not checked', 'Architecture or migration plan missing', 'Status does not match actual execution', 'Blockers with no owner or next action', 'Application count blank or zero despite completed work', 'App–DB or ALZ relationships missing', 'POE does not support the reported result', 'Updates postponed until closure'],
+  ] },
+  { q: '23 · What does “audit-ready” mean?', blocks: [
+    'An audit-ready FDO record has current data, approved artifacts, clear ownership, customer communication history, documented status decisions, technical evidence, and no unexplained gaps. A reviewer should not need to contact the SA or PM to understand what happened.',
+  ] },
+  { q: '24 · What is the simplest rule for SAs?', blocks: [
+    'After every meaningful technical activity, update FDO. Before every stage exit, validate FDO. Before closure, verify the evidence.',
+  ] },
+]
+
+const FDO_CLOSURE: { group: string; items: string[] }[] = [
+  { group: 'Scope and design', items: ['Scope is finalized and technically accurate', 'In-scope and out-of-scope items are explicit', 'Target architecture and migration path are validated', 'Customer and Factory responsibilities are clear'] },
+  { group: 'Technical data', items: ['Application count is correct', 'Technology and migration path are correct', 'Target service and environment count are correct', 'Core and ACR-related data are validated'] },
+  { group: 'Tools and feedback', items: ['Tool Used is complete', 'Automation is recorded, when applicable', 'Product Feedback is recorded, when applicable', 'UAT/TFT ID is mapped when required', 'IP is recorded, when applicable'] },
+  { group: 'Dependencies and linked work', items: ['Technical blockers are resolved or formally dispositioned', 'App–DB linkage is complete or justified as not applicable', 'ALZ Dispatch and other dependent waves are linked where applicable'] },
+  { group: 'Evidence and closure', items: ['Technical artifacts are uploaded', 'Validation or test evidence is available', 'POE supports the claimed outcome', 'Technical Summary reflects the final state', 'SA Quality Gate review is complete', 'PM and SA have jointly validated closure data'] },
+]
+
+const FDO_REFS: string[] = [
+  'FY27 CAF PM Operational Standards SOP',
+  'FDO Hygiene & Compliance for Tech Community guidance',
+  'FDO Product Feedback, Automation and IP walkthrough',
+  'App Modernization Leads and Architect Sync guidance',
+  'Blocked and Customer Deferred process communications',
+  'FDO Hygiene recurring review checklist',
+]
+
+function FdoBlocks({ blocks }: { blocks: FdoBlock[] }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {blocks.map((b, i) => Array.isArray(b) ? (
+        <ul key={i} style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {b.map((li) => <li key={li}><Text size={300}>{li}</Text></li>)}
+        </ul>
+      ) : (
+        <Text key={i} size={300}>{b}</Text>
+      ))}
+    </div>
+  )
+}
+
+function FdoHygieneSection() {
+  const tmpl = `Completed: [technical activities completed]
+Decision/Outcome: [technical decision or result]
+Blocker/Dependency: [issue, owner, impact]
+Action: [next action, owner, target date]
+Next Session: [planned activity]`
+  return (
+    <Panel title="FDO hygiene — Solution Architect guide">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 820 }}>
+        <div style={{ borderLeft: '3px solid var(--colorBrandStroke1)', paddingLeft: 12, color: 'var(--colorNeutralForeground2)' }}>
+          <Text size={300}>
+            <b>Core principle:</b> the <b>PM</b> owns overall operational FDO hygiene and project status. The <b>SA</b> owns
+            the accuracy, completeness, and currency of the <b>technical</b> information, and validates technical artifacts
+            and completion data with the PM.
+          </Text>
+        </div>
+
+        <Accordion collapsible multiple>
+          <AccordionItem value="fdo-checklist">
+            <AccordionHeader>Quick SA checklist (per active wave)</AccordionHeader>
+            <AccordionPanel>
+              <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {FDO_CHECKLIST.map((c) => <li key={c}><Text size={300}>{c}</Text></li>)}
+              </ul>
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="fdo-faq">
+            <AccordionHeader>Frequently asked questions (24)</AccordionHeader>
+            <AccordionPanel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {FDO_FAQS.map((f) => (
+                  <div key={f.q}>
+                    <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>{f.q}</Text>
+                    <FdoBlocks blocks={f.blocks} />
+                  </div>
+                ))}
+              </div>
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="fdo-tmpl">
+            <AccordionHeader>Technical Summary template</AccordionHeader>
+            <AccordionPanel>
+              <pre style={{ background: 'var(--colorNeutralBackground3)', borderRadius: 6, padding: '10px 12px', fontFamily: 'monospace', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>{tmpl}</pre>
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="fdo-closure">
+            <AccordionHeader>Wave closure checklist</AccordionHeader>
+            <AccordionPanel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {FDO_CLOSURE.map((g) => (
+                  <div key={g.group}>
+                    <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>{g.group}</Text>
+                    <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {g.items.map((i) => <li key={i}><Text size={300}>{i}</Text></li>)}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="fdo-gov">
+            <AccordionHeader>Governance note &amp; references</AccordionHeader>
+            <AccordionPanel>
+              <Text size={300} style={{ display: 'block', marginBottom: 8 }}>
+                This guidance separates technical ownership from operational ownership — the PM is the overall FDO hygiene
+                owner, while specific technical fields and reviews are assigned to the SA. Where process guidance changes,
+                the latest approved Factory process communication takes precedence.
+              </Text>
+              <Text size={200} weight="semibold" style={{ display: 'block', marginBottom: 4, color: 'var(--colorNeutralForeground3)' }}>Internal references used</Text>
+              <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {FDO_REFS.map((r) => <li key={r}><Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>{r}</Text></li>)}
+              </ul>
             </AccordionPanel>
           </AccordionItem>
         </Accordion>
