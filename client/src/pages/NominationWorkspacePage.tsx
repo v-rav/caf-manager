@@ -14,7 +14,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
-import type { Blocker, Gate, GateItem, Governance, Milestone, NominationEvent } from '../types'
+import type { Blocker, Gate, GateItem, Governance, MigrationActivity, MigrationTool, Milestone, NominationEvent, ToolUsage } from '../types'
 
 const KIND_TONE: Record<string, 'brand' | 'success' | 'warning' | 'informative' | 'subtle'> = {
   Task: 'informative', Prerequisite: 'warning', Deliverable: 'brand', Approval: 'success', Signoff: 'success',
@@ -59,12 +59,24 @@ export function NominationWorkspacePage() {
   const [msNotes, setMsNotes] = useState('')
   const [busyMs, setBusyMs] = useState(false)
 
+  // Migration Capability Utilization capture.
+  const [capTools, setCapTools] = useState<MigrationTool[]>([])
+  const [capActs, setCapActs] = useState<MigrationActivity[]>([])
+  const [cuTool, setCuTool] = useState<number | ''>('')
+  const [cuAct, setCuAct] = useState<number | ''>('')
+  const [cuStage, setCuStage] = useState<string>('')
+  const [cuDate, setCuDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [cuNotes, setCuNotes] = useState('')
+  const [busyCu, setBusyCu] = useState(false)
+
   const loadEvents = () => { api.governanceEvents(nominationId).then(setEvents).catch(() => {}) }
 
   useEffect(() => { api.blockerCategories().then((c) => { setCategories(c); setRc((v) => v || c[0] || '') }).catch(() => {}) }, [])
   useEffect(() => { api.blockerOwners().then(setOwners).catch(() => {}) }, [])
   useEffect(() => { api.milestoneTypes().then((t) => { setMsTypes(t); setMsKey((v) => v || t[0] || '') }).catch(() => {}) }, [])
   useEffect(() => { api.tools().then((t) => setTools(t.map((x) => x.name))).catch(() => {}) }, [])
+  useEffect(() => { api.migrationTools().then((t) => { setCapTools(t); setCuTool((v) => v || t[0]?.id || '') }).catch(() => {}) }, [])
+  useEffect(() => { api.migrationActivities().then(setCapActs).catch(() => {}) }, [])
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -102,6 +114,7 @@ export function NominationWorkspacePage() {
   const pending = current.items.filter((i) => i.status !== 'Done').length
   const blockers = gov.blockers ?? []
   const milestones = gov.milestones ?? []
+  const toolUsages = gov.toolUsages ?? []
 
   const raiseBlocker = async () => {
     if (!rc || busyBlk) return
@@ -132,6 +145,27 @@ export function NominationWorkspacePage() {
     if (busyMs) return
     setBusyMs(true)
     try { setGov(await api.deleteMilestone(nominationId, m.id)) } finally { setBusyMs(false) }
+  }
+
+  const addToolUsage = async () => {
+    if (!cuTool || busyCu) return
+    setBusyCu(true)
+    try {
+      setGov(await api.addToolUsage(nominationId, {
+        toolId: Number(cuTool),
+        activityId: cuAct ? Number(cuAct) : null,
+        stage: cuStage ? Number(cuStage) : null,
+        usedOn: cuDate || null,
+        notes: cuNotes || null,
+      }))
+      setCuNotes('')
+      loadEvents()
+    } finally { setBusyCu(false) }
+  }
+  const deleteToolUsage = async (u: ToolUsage) => {
+    if (busyCu) return
+    setBusyCu(true)
+    try { setGov(await api.deleteToolUsage(nominationId, u.id)) } finally { setBusyCu(false) }
   }
 
   const setNA = async (item: GateItem) => {
@@ -333,6 +367,78 @@ export function NominationWorkspacePage() {
                   </Text>
                 </div>
                 <Button size="small" appearance="subtle" icon={<SubtractCircleRegular />} disabled={busyMs} onClick={() => void deleteMilestone(m)} aria-label="Delete milestone" />
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      <Panel title={`Migration Capability Utilization${toolUsages.length ? ` · ${toolUsages.length}` : ''}`}>
+        <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)', marginBottom: 8 }}>
+          Which capability was accelerated by which tool — the GHCP/AppMod/accelerator value story.
+        </Text>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: toolUsages.length ? 12 : 0 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Tool</Text>
+              <Dropdown
+                value={capTools.find((t) => t.id === cuTool)?.name ?? ''}
+                selectedOptions={cuTool ? [String(cuTool)] : []}
+                onOptionSelect={(_, d) => setCuTool(d.optionValue ? Number(d.optionValue) : '')}
+                style={{ width: '100%' }}
+              >
+                {capTools.map((t) => <Option key={t.id} value={String(t.id)}>{`${t.name} · ${t.category}`}</Option>)}
+              </Dropdown>
+            </div>
+            <div style={{ flex: 1 }}>
+              <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Activity</Text>
+              <Dropdown
+                value={capActs.find((a) => a.id === cuAct)?.name ?? ''}
+                selectedOptions={cuAct ? [String(cuAct)] : []}
+                placeholder="—"
+                onOptionSelect={(_, d) => setCuAct(d.optionValue ? Number(d.optionValue) : '')}
+                style={{ width: '100%' }}
+              >
+                <Option value="">—</Option>
+                {capActs.map((a) => <Option key={a.id} value={String(a.id)}>{`${a.name}${a.stage ? ` · ${a.stage}` : ''}`}</Option>)}
+              </Dropdown>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ width: 110 }}>
+              <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Stage</Text>
+              <Dropdown value={cuStage ? `Stage ${cuStage}` : '—'} selectedOptions={cuStage ? [cuStage] : []} placeholder="—" onOptionSelect={(_, d) => setCuStage(d.optionValue ?? '')} style={{ width: '100%' }}>
+                <Option value="">—</Option>
+                {['1', '2', '3', '4'].map((s) => <Option key={s} value={s}>{`Stage ${s}`}</Option>)}
+              </Dropdown>
+            </div>
+            <div style={{ flex: 1 }}>
+              <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Date</Text>
+              <input type="date" value={cuDate} onChange={(e) => setCuDate(e.target.value)} style={{ width: '100%', padding: '5px 8px', borderRadius: 4, border: '1px solid var(--colorNeutralStroke1)' }} />
+            </div>
+          </div>
+          <div>
+            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Notes</Text>
+            <Input value={cuNotes} onChange={(_, d) => setCuNotes(d.value)} placeholder="context" style={{ width: '100%' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button appearance="primary" disabled={busyCu || !cuTool} onClick={() => void addToolUsage()}>Add</Button>
+          </div>
+        </div>
+        {toolUsages.length === 0 ? (
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No tool usage captured.</Text>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {toolUsages.map((u) => (
+              <div key={u.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '4px 0', borderBottom: '1px solid var(--colorNeutralStroke3)' }}>
+                <Badge appearance="tint" color="brand">{u.toolCategory}</Badge>
+                <div style={{ flex: 1 }}>
+                  <Text size={300} weight="semibold">{u.toolName}</Text>
+                  <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
+                    {u.activityName ? u.activityName : 'no activity'}{u.stage ? ` · S${u.stage}` : ''}{u.usedOn ? ` · ${u.usedOn}` : ''}{u.notes ? ` · ${u.notes}` : ''}
+                  </Text>
+                </div>
+                <Button size="small" appearance="subtle" icon={<SubtractCircleRegular />} disabled={busyCu} onClick={() => void deleteToolUsage(u)} aria-label="Delete tool usage" />
               </div>
             ))}
           </div>

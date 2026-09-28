@@ -13,6 +13,8 @@ import type {
   DataStatus,
   Governance,
   Blocker,
+  MigrationTool,
+  MigrationActivity,
   NominationEvent,
   LookupValue,
   AcrRates,
@@ -240,6 +242,14 @@ export const api = {
     http.post<Governance>(`/api/nominations/${nominationId}/governance/milestones`, body).then((r) => r.data),
   deleteMilestone: (nominationId: number, milestoneId: number) =>
     http.delete<Governance>(`/api/nominations/${nominationId}/governance/milestones/${milestoneId}`).then((r) => r.data),
+  migrationTools: () =>
+    http.get<MigrationTool[]>('/api/governance/migration-tools').then((r) => r.data),
+  migrationActivities: () =>
+    http.get<MigrationActivity[]>('/api/governance/migration-activities').then((r) => r.data),
+  addToolUsage: (nominationId: number, body: { toolId: number; activityId?: number | null; stage?: number | null; usedOn?: string | null; notes?: string | null }) =>
+    http.post<Governance>(`/api/nominations/${nominationId}/governance/tool-usages`, body).then((r) => r.data),
+  deleteToolUsage: (nominationId: number, usageId: number) =>
+    http.delete<Governance>(`/api/nominations/${nominationId}/governance/tool-usages/${usageId}`).then((r) => r.data),
   lookups: (category?: string) =>
     http.get<LookupValue[]>('/api/configuration/lookups', { params: { category } }).then((r) => r.data),
   addLookup: (category: string, value: string) =>

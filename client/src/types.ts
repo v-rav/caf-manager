@@ -519,6 +519,37 @@ export interface Governance {
   clockStoppedDays: number
   shortName?: string
   milestones: Milestone[]
+  toolUsages: ToolUsage[]
+}
+export interface MigrationTool {
+  id: number
+  name: string
+  category: string
+  vendor?: string
+  sortOrder: number
+  active: boolean
+}
+export interface MigrationActivity {
+  id: number
+  name: string
+  stage?: string
+  sortOrder: number
+  active: boolean
+}
+export interface ToolUsage {
+  id: number
+  nominationId: number
+  toolId: number
+  toolName: string
+  toolCategory: string
+  toolVendor?: string
+  activityId?: number
+  activityName?: string
+  activityStage?: string
+  stage?: number
+  usedOn?: string
+  usedBy?: string
+  notes?: string
 }
 export interface Milestone {
   id: number
