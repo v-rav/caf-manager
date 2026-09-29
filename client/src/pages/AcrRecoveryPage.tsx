@@ -1,5 +1,5 @@
 import { Badge, Button, Dropdown, Input, Menu, MenuItemCheckbox, MenuList, MenuPopover, MenuTrigger, Option, Text, Tooltip } from '@fluentui/react-components'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
@@ -140,6 +140,24 @@ export function AcrRecoveryPage() {
           )
         }
 
+        // Per-row rationale for the estimate (core floor + per-core rate + upside math).
+        const estRationale = (r: AcrCaptureRow) => {
+          const win = /windows/i.test(r.path)
+          const rateLabel = win ? 'AKS Windows' : 'AKS Linux'
+          const perYr = `$${Math.round(r.ratePerCoreYear).toLocaleString()}/core/yr`
+          const basis = r.gapType === 'Missing ACR'
+            ? `${r.cores} recorded cores priced at the ${rateLabel} rate`
+            : `assumes a ${data.coreFloor}-core floor for a containerized workload (recorded ${r.cores})`
+          return `${r.gapType}: ${basis}. ${r.estimatedCores} cores × ${perYr} = ${money(r.estimatedAcr)}/yr. `
+            + `Upside = ${money(r.estimatedAcr)} − current ${money(r.acr)} = ${money(r.gapAcr)}/yr. `
+            + `ACR is linear in cores, so capturing the true container-core count is the whole lever.`
+        }
+        const estCell = (r: AcrCaptureRow, content: ReactNode) => (
+          <Tooltip relationship="description" content={estRationale(r)}>
+            <span style={{ borderBottom: '1px dotted var(--colorNeutralStroke1)', cursor: 'help' }}>{content}</span>
+          </Tooltip>
+        )
+
         const columns = [
           { key: 'account', header: 'Account', sortValue: (r: AcrCaptureRow) => r.account, render: (r: AcrCaptureRow) => <RouterLink to={`/nominations/${r.id}`}>{r.account}</RouterLink> },
           { key: 'tpid', header: 'TPID', sortValue: (r: AcrCaptureRow) => r.tpid ?? '', render: (r: AcrCaptureRow) => r.tpid ?? '—' },
@@ -154,9 +172,9 @@ export function AcrRecoveryPage() {
           { key: 'cores', header: 'Cores', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.cores },
           { key: 'acr', header: 'ACR', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.acr, render: (r: AcrCaptureRow) => money(r.acr) },
           { key: 'gapType', header: 'Gap', sortValue: (r: AcrCaptureRow) => r.gapType, render: (r: AcrCaptureRow) => <Badge appearance="tint" color={GAP_TONE[r.gapType] ?? 'informative'}>{r.gapType}</Badge> },
-          { key: 'estimatedCores', header: 'Est. cores', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.estimatedCores },
-          { key: 'estimatedAcr', header: 'Est. ACR', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.estimatedAcr, render: (r: AcrCaptureRow) => money(r.estimatedAcr) },
-          { key: 'gapAcr', header: 'Upside/yr', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.gapAcr, render: (r: AcrCaptureRow) => <b>{money(r.gapAcr)}</b> },
+          { key: 'estimatedCores', header: 'Est. cores', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.estimatedCores, render: (r: AcrCaptureRow) => estCell(r, r.estimatedCores) },
+          { key: 'estimatedAcr', header: 'Est. ACR', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.estimatedAcr, render: (r: AcrCaptureRow) => estCell(r, money(r.estimatedAcr)) },
+          { key: 'gapAcr', header: 'Upside/yr', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.gapAcr, render: (r: AcrCaptureRow) => estCell(r, <b>{money(r.gapAcr)}</b>) },
           ...(canApply ? [{ key: 'action', header: '', align: 'end' as const, render: rowAction }] : []),
         ]
         // Account + action always shown; the rest respect the Columns menu.
