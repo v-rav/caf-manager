@@ -21,6 +21,7 @@ public class AcrService(IApplicationDbContext db) : IAcrService
         ("AcrAcaArpuPerCoreHour", r => r.AcaArpuPerCoreHour, (r, v) => r.AcaArpuPerCoreHour = v),
         ("AcrAcaUtilization", r => r.AcaUtilization, (r, v) => r.AcaUtilization = v),
         ("AcrAcaHoursPerMonth", r => r.AcaHoursPerMonth, (r, v) => r.AcaHoursPerMonth = v),
+        ("AcrContainerCoreFloor", r => r.ContainerCoreFloor, (r, v) => r.ContainerCoreFloor = v),
     };
 
     public async Task<AcrRatesDto> GetRatesAsync(CancellationToken ct = default)

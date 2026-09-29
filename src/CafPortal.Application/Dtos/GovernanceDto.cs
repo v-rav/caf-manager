@@ -33,6 +33,9 @@ public record ToolUsageDto(
 
 public record ToolUsageUpsert(int ToolId, int? ActivityId, int? Stage, DateOnly? UsedOn, string? Notes);
 
+/// <summary>Captures corrected cores/ACR onto a nomination from the ACR core-capture worklist (audited).</summary>
+public record AcrApplyRequest(int Cores, decimal? Acr, string? Reason);
+
 /// <summary>Leadership rollup: which capabilities were accelerated by which tools (distinct nominations).</summary>
 public record CapabilityUtilizationDto(
     int TotalUsages, int NominationsWithUsage,

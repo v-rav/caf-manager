@@ -43,6 +43,12 @@ public class NominationGovernanceController(IGovernanceService governance) : Con
     public async Task<IActionResult> Events(int nominationId, CancellationToken ct)
         => Ok(await governance.GetEventsAsync(nominationId, ct));
 
+    // Writes corrected cores/ACR onto the (FDO-owned) nomination from the ACR core-capture worklist; audited.
+    [HttpPost("acr")]
+    [Authorize(Roles = "Admin,Lead")]
+    public async Task<IActionResult> ApplyAcr(int nominationId, [FromBody] AcrApplyRequest req, CancellationToken ct)
+        => await governance.ApplyAcrCaptureAsync(nominationId, req, ct) ? Ok() : NotFound();
+
     [HttpPost("milestones")]
     public async Task<IActionResult> AddMilestone(int nominationId, [FromBody] MilestoneUpsert req, CancellationToken ct)
     {

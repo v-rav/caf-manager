@@ -256,6 +256,22 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         return await GetForNominationAsync(nominationId, ct);
     }
 
+    public async Task<bool> ApplyAcrCaptureAsync(int nominationId, AcrApplyRequest req, CancellationToken ct = default)
+    {
+        var n = await _db.Nominations.FirstOrDefaultAsync(x => x.Id == nominationId, ct);
+        if (n is null) return false;
+        var oldCores = n.TotalCores;
+        var oldAcr = n.TotalAcr;
+        if (req.Cores > 0) n.TotalCores = req.Cores;
+        if (req.Acr is not null) n.TotalAcr = req.Acr;
+        Log(nominationId, "AcrOverride", "TotalCores", oldCores?.ToString(), n.TotalCores?.ToString(), null);
+        Log(nominationId, "AcrOverride", "TotalAcr", oldAcr?.ToString(), n.TotalAcr?.ToString(), null);
+        if (!string.IsNullOrWhiteSpace(req.Reason))
+            Log(nominationId, "AcrOverride", "Reason", null, req.Reason, null);
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
     private void Log(int nominationId, string type, string? field, string? oldValue, string? newValue, int? gateItemDefId)
         => _db.NominationEvents.Add(new NominationEvent
         {

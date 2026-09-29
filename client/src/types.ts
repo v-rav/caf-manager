@@ -634,6 +634,7 @@ export interface AcrRates {
   acaArpuPerCoreHour: number
   acaUtilization: number
   acaHoursPerMonth: number
+  containerCoreFloor: number
 }
 export interface AcrEstimate {
   targetService: string

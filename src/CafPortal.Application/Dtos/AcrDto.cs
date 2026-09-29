@@ -12,6 +12,8 @@ public class AcrRatesDto
     public decimal AcaArpuPerCoreHour { get; set; } = 0m;
     public decimal AcaUtilization { get; set; } = 0.8m;
     public decimal AcaHoursPerMonth { get; set; } = 730m;
+    /// <summary>Conservative core floor a containerized workload is assumed not to fall below (ACR core-capture worklist).</summary>
+    public decimal ContainerCoreFloor { get; set; } = 20m;
 }
 
 /// <summary>targetService: AppService · AksLinux · AksWindows · Aca. Supply apps and/or cores.</summary>

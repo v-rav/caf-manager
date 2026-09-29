@@ -140,10 +140,8 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         var rates = await _acr.GetRatesAsync(ct);
         var months = rates.AnnualizationMonths <= 0 ? 12 : rates.AnnualizationMonths;
 
-        // Core floor a containerized workload is assumed not to fall below (config-overridable).
-        var floorSetting = await _db.ApplicationSettings.AsNoTracking()
-            .Where(s => s.Key == "AcrContainerCoreFloor").Select(s => s.Value).FirstOrDefaultAsync(ct);
-        var floor = int.TryParse(floorSetting, out var f) && f > 0 ? f : DefaultContainerCoreFloor;
+        // Core floor a containerized workload is assumed not to fall below (from the editable rate master).
+        var floor = rates.ContainerCoreFloor > 0 ? (int)rates.ContainerCoreFloor : DefaultContainerCoreFloor;
 
         double RatePerCoreYear(string? path)
         {

@@ -379,12 +379,15 @@ leave; Entra auth; in-app upload; API smoke tests.
   cores (cores × per-core rate × 12) and containerized paths drive ~66% of ACR, this flags Approved containerized
   nominations (path contains container/aks/aca/eks/ecs) whose value data looks under-captured — **Missing cores**
   (0 cores), **Missing ACR** (cores but no ACR), or **Low cores** (≤16, likely app-level not container-level) — and
-  estimates recoverable ACR per row at a conservative core floor (`AcrContainerCoreFloor`, default 20; setting-overridable)
-  using the live AKS Linux/Windows rates. Surfaced as KPIs (flagged · est. recoverable ACR/yr · ACR-with-no-core-basis ·
-  the three gap counts), a **worklist** `DataTable` (biggest upside first, account → workspace link, gap badge, est.
-  cores/ACR) with **CSV export**, and an inline **per-nomination ACR estimator** (target service + apps/containers or
-  cores → annual ACR via `POST /api/acr/estimate`, feeds a defensible number back into FDO). `AnalyticsService`
-  reuses `INominationService` + `IAcrService`. Read-only — it does not write back `TotalAcr`/`TotalCores` (FDO-owned).
+  estimates recoverable ACR per row at a conservative core floor (`AcrContainerCoreFloor`, default 20; editable in
+  Configuration → ACR calculation rates) using the live AKS Linux/Windows rates. Surfaced as KPIs (flagged · est.
+  recoverable ACR/yr · ACR-with-no-core-basis · the three gap counts), a **worklist** `DataTable` (biggest upside first,
+  account → workspace link, gap badge, est. cores/ACR) with **CSV export**, and an inline **per-nomination ACR estimator**
+  (target service + apps/containers or cores → annual ACR via `POST /api/acr/estimate`, feeds a defensible number back
+  into FDO). Admin/Lead can **Apply** a corrected core count per row — `POST nominations/{id}/governance/acr` re-prices ACR
+  at the AKS rate, writes `TotalCores`/`TotalAcr`, and **audits** the change on the nomination timeline (old→new by user).
+  Because those fields are FDO-owned, the Apply dialog warns the write can be superseded by the next FDO drop (update FDO
+  for a durable change). `AnalyticsService` reuses `INominationService` + `IAcrService`.
 Backlog: cycle-time measure (avg days / nominated→completed), bucket→Nominations date-range drill, trend CSV
   export, weekly view is sparse; Leave intake data source, my-view, global search, Entra auth, in-app upload,
   API smoke tests.

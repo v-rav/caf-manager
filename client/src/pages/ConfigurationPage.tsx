@@ -419,6 +419,9 @@ function AcrRatesPanel() {
               {num('ACA utilization', 'acaUtilization')}
               {num('ACA hours/mo', 'acaHoursPerMonth')}
             </div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', paddingLeft: 12, borderLeft: '1px solid var(--colorNeutralStroke2)' }}>
+              {num('Container core floor', 'containerCoreFloor')}
+            </div>
           </div>
 
           <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--colorNeutralStroke2)' }}>
