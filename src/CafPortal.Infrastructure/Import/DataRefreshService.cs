@@ -64,7 +64,8 @@ public class DataRefreshService(
 
             if (File.Exists(leavePath))
             {
-                await _db.LeaveFacts.ExecuteDeleteAsync(ct);
+                // Leave is portal-owned (never sourced from FDO): additive import that skips existing
+                // (resource, date) pairs, so it never duplicates or wipes portal-entered leave.
                 result.LeaveRecords = await TryImportAsync(leavePath, _leaveImport, "Leave calendar", result, ct);
             }
             else

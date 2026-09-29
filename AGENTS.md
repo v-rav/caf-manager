@@ -155,8 +155,9 @@ import the **web app is the system of record**.
   withdraw guard skips `Withdrawn/Closed/Completed/CustomerDeferred`, so completed migrations survive
   in-flight drops. `DataRefreshService` must **not**
   `ExecuteDeleteAsync` nominations. See `NominationImportService` loop + `DEVELOPMENT-PLAN.md` §8.
-  (⚠ `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` still wipe-and-rebuild — safe today; fix before
-  portal-entered leave.)
+  (**Leave is portal-owned** — never from FDO: `LeaveFacts` is **additive/idempotent** (skips existing
+  `(ResourceId, LeaveDate)` pairs) and the refresh **no longer wipes** it, so an FDO drop can't destroy
+  hand-entered leave. ⚠ `ResourceAccounts`/`EngagementFacts` still wipe-and-rebuild — safe today.)
 - **Nominations are NEVER hard-deleted by imports.** Absent-from-drop rows are soft-set `Withdrawn`;
   hard delete is a manual, user-only action from the UI. Do not add auto-purge of nominations.
 - **Import history** (Phase 5C): every upload/refresh records an `ImportRun` (+ `ImportChange` deltas:
@@ -324,8 +325,8 @@ left nav** (Overview / Delivery / Resourcing / Admin — only the active group e
 and **Migration Capability Utilization** (Tool × Activity masters + per-nomination usage + leadership rollups).
 **Backlog:** `NominationOutcome` value-capture (hours saved · defects · CSAT → real Factory Productivity);
 config-editable strategic time-thresholds + PV-01 stale-basis decision; retire the `/workspace` P0 mock
-(kept as reference); `ResourceAccounts`/`LeaveFacts`/`EngagementFacts` wipe-and-rebuild fix before portal-entered
-leave; Entra auth; in-app upload; API smoke tests.
+(kept as reference); `ResourceAccounts`/`EngagementFacts` wipe-and-rebuild fix (leave is already portal-owned/
+additive); Entra auth; in-app upload; API smoke tests.
 - **Migration Capability Utilization** (the GHCP/AppMod/accelerator value story): two portal-owned masters —
   **`MigrationTool`** (Name · Category · Vendor; seeded 15-tool taxonomy — **Assessment** (Azure Migrate, AppCAT) ·
   **GHCP** (GHCP-CI, GHCP Agent Mode, GHCP Custom Prompts, AppMod .NET/Java/CLI, Upgrade Assistant — AppMod is a

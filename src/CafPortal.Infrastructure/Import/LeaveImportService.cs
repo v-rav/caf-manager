@@ -2,6 +2,7 @@ using CafPortal.Application.Abstractions;
 using CafPortal.Domain.Entities;
 using CafPortal.Infrastructure.Persistence;
 using ClosedXML.Excel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CafPortal.Infrastructure.Import;
@@ -26,13 +27,19 @@ public class LeaveImportService(AppDbContext db, ILogger<LeaveImportService> log
         var lookup = await ResourceLookup.BuildAsync(_db, ct);
         var headers = ExcelHelpers.MapHeaders(rows[0]);
 
+        // Portal is the system of record for leave: append only, skipping (resource, date) pairs that
+        // already exist so a re-import never duplicates or wipes portal-entered leave.
+        var seen = (await _db.LeaveFacts.AsNoTracking()
+                .Select(l => new { l.ResourceId, l.LeaveDate }).ToListAsync(ct))
+            .Select(x => (x.ResourceId, x.LeaveDate)).ToHashSet();
+
         var colDate = ExcelHelpers.FindColumn(headers, "LeaveDate", "Date");
         var colType = ExcelHelpers.FindColumn(headers, "LeaveType", "Type", "Leave");
         var isLongFormat = colDate is not null && colType is not null;
 
         var inserted = isLongFormat
-            ? await ImportLongFormatAsync(rows, headers, lookup, colDate!.Value, colType!.Value, ct)
-            : ImportCalendarFormat(rows, headers, lookup);
+            ? await ImportLongFormatAsync(rows, headers, lookup, colDate!.Value, colType!.Value, seen, ct)
+            : ImportCalendarFormat(rows, headers, lookup, seen);
 
         await _db.SaveChangesAsync(ct);
         _logger.LogInformation("LeaveImportService inserted {Count} leave records ({Mode})",
@@ -41,7 +48,7 @@ public class LeaveImportService(AppDbContext db, ILogger<LeaveImportService> log
     }
 
     private Task<int> ImportLongFormatAsync(List<IXLRow> rows, Dictionary<string, int> headers,
-        ResourceLookup lookup, int colDate, int colType, CancellationToken ct)
+        ResourceLookup lookup, int colDate, int colType, HashSet<(int, DateOnly)> seen, CancellationToken ct)
     {
         var colPsid = ExcelHelpers.FindColumn(headers, "PSID", "PS ID");
         var colEmail = ExcelHelpers.FindColumn(headers, "Email");
@@ -60,6 +67,8 @@ public class LeaveImportService(AppDbContext db, ILogger<LeaveImportService> log
             var type = ExcelHelpers.GetString(row, colType) ?? "Leave";
             if (resourceId is null || date is null)
                 continue;
+            if (!seen.Add((resourceId.Value, date.Value)))
+                continue;
 
             _db.LeaveFacts.Add(new LeaveFact
             {
@@ -72,7 +81,7 @@ public class LeaveImportService(AppDbContext db, ILogger<LeaveImportService> log
         return Task.FromResult(inserted);
     }
 
-    private int ImportCalendarFormat(List<IXLRow> rows, Dictionary<string, int> headers, ResourceLookup lookup)
+    private int ImportCalendarFormat(List<IXLRow> rows, Dictionary<string, int> headers, ResourceLookup lookup, HashSet<(int, DateOnly)> seen)
     {
         var colPsid = ExcelHelpers.FindColumn(headers, "PSID", "PS ID");
         var colEmail = ExcelHelpers.FindColumn(headers, "Email");
@@ -104,6 +113,8 @@ public class LeaveImportService(AppDbContext db, ILogger<LeaveImportService> log
             {
                 var marker = ExcelHelpers.GetString(row, column);
                 if (string.IsNullOrWhiteSpace(marker))
+                    continue;
+                if (!seen.Add((resourceId.Value, date)))
                     continue;
                 _db.LeaveFacts.Add(new LeaveFact
                 {
