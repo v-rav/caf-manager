@@ -663,6 +663,7 @@ export interface AcrCaptureRow {
   sa?: string | null
   pm?: string | null
   waves: string
+  completedOn?: string | null
 }
 export interface AcrCapture {
   containerNoms: number

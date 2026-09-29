@@ -29,12 +29,12 @@ const STATUS_TONE: Record<string, 'informative' | 'warning' | 'success' | 'subtl
   Closed: 'subtle',
 }
 
-// Toggleable worklist columns (Account + action are always shown). TPID, Status, SA, PM and Waves are hidden by default.
+// Toggleable worklist columns (Account + action are always shown). TPID, Status, SA, PM, Waves and Completed are hidden by default.
 const TOGGLE_COLS: [string, string][] = [
-  ['tpid', 'TPID'], ['stage', 'Stage'], ['status', 'Status'], ['currentState', 'State'], ['sa', 'SA'], ['pm', 'PM'], ['waves', 'Waves'], ['path', 'Path'],
+  ['tpid', 'TPID'], ['stage', 'Stage'], ['status', 'Status'], ['currentState', 'State'], ['sa', 'SA'], ['pm', 'PM'], ['waves', 'Waves'], ['completedOn', 'Completed'], ['path', 'Path'],
   ['cores', 'Cores'], ['acr', 'ACR'], ['gapType', 'Gap'], ['estimatedCores', 'Est. cores'], ['estimatedAcr', 'Est. ACR'], ['gapAcr', 'Upside/yr'],
 ]
-const HIDDEN_BY_DEFAULT = new Set(['tpid', 'status', 'sa', 'pm', 'waves'])
+const HIDDEN_BY_DEFAULT = new Set(['tpid', 'status', 'sa', 'pm', 'waves', 'completedOn'])
 const DEFAULT_VISIBLE = TOGGLE_COLS.map((c) => c[0]).filter((k) => !HIDDEN_BY_DEFAULT.has(k))
 
 export function AcrRecoveryPage() {
@@ -115,6 +115,7 @@ export function AcrRecoveryPage() {
           { header: 'SA', value: (r: AcrCaptureRow) => r.sa ?? '' },
           { header: 'PM', value: (r: AcrCaptureRow) => r.pm ?? '' },
           { header: 'Waves', value: (r: AcrCaptureRow) => r.waves },
+          { header: 'Completed', value: (r: AcrCaptureRow) => r.completedOn ?? '' },
           { header: 'Cores', value: (r: AcrCaptureRow) => r.cores },
           { header: 'ACR', value: (r: AcrCaptureRow) => Math.round(r.acr) },
           { header: 'Gap', value: (r: AcrCaptureRow) => r.gapType },
@@ -148,6 +149,7 @@ export function AcrRecoveryPage() {
           { key: 'sa', header: 'SA', sortValue: (r: AcrCaptureRow) => r.sa ?? '', render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.sa ?? '—'}</span> },
           { key: 'pm', header: 'PM', sortValue: (r: AcrCaptureRow) => r.pm ?? '', render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.pm ?? '—'}</span> },
           { key: 'waves', header: 'Waves', sortValue: (r: AcrCaptureRow) => r.waves, render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.waves}</span> },
+          { key: 'completedOn', header: 'Completed', sortValue: (r: AcrCaptureRow) => r.completedOn ?? '', render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{day(r.completedOn)}</span> },
           { key: 'path', header: 'Path', sortValue: (r: AcrCaptureRow) => r.path, render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.path}</span> },
           { key: 'cores', header: 'Cores', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.cores },
           { key: 'acr', header: 'ACR', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.acr, render: (r: AcrCaptureRow) => money(r.acr) },

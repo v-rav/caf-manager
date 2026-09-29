@@ -173,7 +173,8 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             var wavesStr = waveTypes.Count > 0 ? string.Join(" · ", waveTypes) : "None";
             rows.Add(new AcrCaptureRow(n.Id, n.AccountName ?? "—", n.Tpid, n.Region, n.PrimaryMigrationPath ?? "—",
                 cores, Math.Round(acr), gap, Math.Round(ratePerCoreYr), estCores, Math.Round(estAcr), Math.Round(gapAcr),
-                stageLabel, n.Status, n.CurrentState, n.SolutionArchitect, n.ProjectCoordinator, wavesStr));
+                stageLabel, n.Status, n.CurrentState, n.SolutionArchitect, n.ProjectCoordinator, wavesStr,
+                n.ActualEndDate?.ToString("yyyy-MM-dd")));
         }
         rows = rows.OrderByDescending(r => r.GapAcr).ToList();
 
