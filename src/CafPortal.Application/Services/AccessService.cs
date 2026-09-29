@@ -18,6 +18,7 @@ public class AccessService(IApplicationDbContext db) : IAccessService
     {
         ("dashboard", "Executive Dashboard", All),
         ("analytics", "Migration Analytics", AdminLead),
+        ("acr-recovery", "ACR Recovery", AdminLead),
         ("resources", "Resource Hub", All),
         ("accounts", "Account Hub", All),
         ("capacity", "Capacity", All),

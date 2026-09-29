@@ -44,6 +44,7 @@ import {
   PersonStarRegular,
   WrenchRegular,
   QuestionCircleRegular,
+  MoneyRegular,
   ChevronDownRegular,
   ChevronRightRegular,
 } from '@fluentui/react-icons'
@@ -66,6 +67,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { to: '/', label: 'Executive Dashboard', end: true, icon: <DataPieRegular /> },
       { to: '/analytics', label: 'Migration Analytics', icon: <DataTrendingRegular /> },
+      { to: '/acr-recovery', label: 'ACR Recovery', icon: <MoneyRegular /> },
       { to: '/help', label: 'Help & FAQ', icon: <QuestionCircleRegular /> },
     ],
   },

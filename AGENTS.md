@@ -375,7 +375,7 @@ leave; Entra auth; in-app upload; API smoke tests.
   chronological sort key + stable key + display label (e.g. `FY27 Q1`, `Sep 2026`, `2026-W38`).
 - **Nomination enrichment**: offering fields + dates via `import-offerings` (Summary, single source; also
   creates Completed nominations from Actual End Date); FDO withdraw guard protects settled states.
-- **Containerized ACR core-capture** (`/analytics`, `GET /api/analytics/acr-capture?region=`): since ACR is linear in
+- **Containerized ACR core-capture** (**ACR Recovery** page `/acr-recovery`, Overview nav, Admin/Lead; `GET /api/analytics/acr-capture?region=`): since ACR is linear in
   cores (cores × per-core rate × 12) and containerized paths drive ~66% of ACR, this flags Approved containerized
   nominations (path contains container/aks/aca/eks/ecs) whose value data looks under-captured — **Missing cores**
   (0 cores), **Missing ACR** (cores but no ACR), or **Low cores** (≤16, likely app-level not container-level) — and

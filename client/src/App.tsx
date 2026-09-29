@@ -7,6 +7,7 @@ import { CapabilityMasterPage } from './pages/CapabilityMasterPage'
 import { GateTemplatePage } from './pages/GateTemplatePage'
 import { HelpPage } from './pages/HelpPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
+import { AcrRecoveryPage } from './pages/AcrRecoveryPage'
 import { BackupPage } from './pages/BackupPage'
 import { CapacityPage } from './pages/CapacityPage'
 import { ConfigurationPage } from './pages/ConfigurationPage'
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
+      { path: 'acr-recovery', element: <AcrRecoveryPage /> },
       { path: 'resources', element: <ResourcesPage /> },
       { path: 'accounts', element: <AccountsPage /> },
       { path: 'capacity', element: <CapacityPage /> },
