@@ -84,12 +84,13 @@ public class ExportService(
 
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("Nominations");
-        var headers = new[] { "Account", "TPID", "Technology", "Region", "Stage", "Migration Status", "Current State", "Status", "Approval", "PM", "CFTL", "SA", "Blocker Reason", "Blocked Since", "Follow-up", "Age In Stage (days)", "Stale Tier", "Waves", "Wave Types", "Remarks" };
+        var headers = new[] { "Task Id", "Account", "TPID", "Technology", "Region", "Stage", "Migration Status", "Current State", "Status", "Approval", "PM", "CFTL", "SA", "Blocker Reason", "Blocked Since", "Follow-up", "Age In Stage (days)", "Stale Tier", "Waves", "Wave Types", "Remarks" };
         WriteHeader(ws, headers);
         var r = 2;
         foreach (var x in rows)
         {
             var c = 1;
+            ws.Cell(r, c++).Value = x.ExternalTaskId ?? "";
             ws.Cell(r, c++).Value = x.AccountName ?? "";
             ws.Cell(r, c++).Value = x.Tpid ?? "";
             ws.Cell(r, c++).Value = x.Technology ?? "";

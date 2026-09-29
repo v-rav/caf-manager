@@ -181,7 +181,9 @@ import the **web app is the system of record**.
   **nominations** export is filter-aware: it accepts the same query params as the grid
   (`approval`, `migrationStatus`, `currentState`, `sla`, `links`, `search`, `region`) so the file
   matches the on-screen view — the Export button passes the live filter state via
-  `api.exportUrl('nominations', region, {...})`. It writes a numeric **Stage** column (1–4), a frozen
+  `api.exportUrl('nominations', region, {...})`. Its first column is the FDO **Task Id**
+  (`Nomination.ExternalTaskId`, surfaced onto `NominationDto.ExternalTaskId`) so exported rows are
+  traceable back to the FDO drop. It also writes a numeric **Stage** column (1–4), a frozen
   header + autofilter, and a second **Analysis** sheet with pivot-style counts (by approval, stage,
   region, SLA stale tier, wave linkage) of the filtered set.
 - The **analytics** export (`GET /api/export/analytics`) is the **single page-level** download for the

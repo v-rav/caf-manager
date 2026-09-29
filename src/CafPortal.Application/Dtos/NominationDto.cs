@@ -7,6 +7,8 @@ public class NominationDto
     public string? AccountName { get; set; }
     public string? ShortName { get; set; }
     public string? Tpid { get; set; }
+    /// <summary>FDO "Task Id" — the stable external key used for upsert-merge across drops.</summary>
+    public string? ExternalTaskId { get; set; }
     public string? Technology { get; set; }
     public string Region { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
