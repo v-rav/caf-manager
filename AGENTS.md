@@ -261,12 +261,17 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
 - **Ownership Effectiveness** — `/effectiveness` (`EffectivenessPage`, Delivery nav, Admin/Lead): a delivery
   scorecard for **PM/SA/CFTL** owners (role `TabList`, grouped by `ProjectCoordinator`/`SolutionArchitect`/
   `CftlPrimary`). Per owner: **Assigned** (book of work — a confidence/load signal), **Active** (in-flight),
-  **Delivered** (`Completed`), **Withdrawn**, **Deferred** (`Customer Deferred`), **Blocked** (open blockers),
-  **Success %** (delivered ÷ settled), **Avg delivery days** (`TotalDays` else nominated→actual-end over
-  completed), **Avg MSI**, **On-track %** + **SLA breaches** (active book, `staleTier`), **ACR delivered**, and a
-  composite **Effectiveness** (0–100 = `0.35·MSI + 0.40·success + 0.25·on-track`, weights renormalised to the
-  components that have data). Owner name opens an **inline individual drill-down** (their stat chips + their
-  nominations table, each linking to the SA Workspace; plus an "Open in Nominations" link); CSV export; honors
+  **Delivered** (`Completed`), **Delivered %** (delivered ÷ assigned), **Avg delivery days** (`TotalDays` else
+  nominated→actual-end over completed), **Avg age** (mean `effectiveAgeDays` of the active book — momentum),
+  **On-track %** + **SLA breaches** (active `staleTier`), **Avg MSI**, **ACR delivered**, and a **role-sensitive
+  composite Effectiveness** (0–100): **flow-led for PM/CFTL** (`0.30·on-track + 0.30·momentum + 0.25·speed +
+  0.15·delivered-share`, MSI excluded since gate-driven MSI is an SA lever) and **quality-led for SA** (`0.30·MSI +
+  0.25·on-track + 0.25·speed + 0.20·momentum`); `speed`/`momentum` are absolute target-based sub-scores
+  (speed: ≤45d→100, ≥180d→0; momentum: ≤10d→100, ≥75d→0) and weights renormalise over the components with data.
+  **Success rate is deliberately not scored** (with ~no withdrawn/deferred outcomes it sits at ~100% for
+  everyone) and the synthetic **`Closed`** status is **excluded** (ambiguous, not a real outcome; otherwise
+  all-Closed books read as 0). Owner name opens an **inline individual drill-down** (stat chips — incl. Withdrawn/
+  Deferred — + their nominations table linking to the SA Workspace; plus "Open in Nominations"); CSV export; honors
   Region + FY. Fully client-side from `api.nominations(region)` — no new backend service (only an `AccessService`
   catalog entry).
 - **Executive Dashboard 4 views (P5c)** — `/` is a `TabList`: **Leadership** (totals · ACR influenced · avg MSI +
