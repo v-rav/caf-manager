@@ -1,4 +1,4 @@
-import { Badge, Button, Dropdown, Input, Link, Option, Text } from '@fluentui/react-components'
+import { Badge, Button, Dropdown, Input, Link, Option, Text, Tooltip } from '@fluentui/react-components'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
@@ -315,6 +315,7 @@ function AcrCaptureSection({ region }: { region?: string }) {
   const [stage, setStage] = useState('')
   const [gap, setGap] = useState('')
   const [state, setState] = useState('')
+  const [status, setStatus] = useState('')
   if (loading) return <Loading label="Scanning containerized ACR capture…" />
   if (error) return <ErrorText error={error} onRetry={reload} />
   if (!data) return null
@@ -323,8 +324,9 @@ function AcrCaptureSection({ region }: { region?: string }) {
   const stages = uniq(data.rows.map((r) => r.stage))
   const gaps = uniq(data.rows.map((r) => r.gapType))
   const states = uniq(data.rows.map((r) => r.currentState))
+  const statuses = uniq(data.rows.map((r) => r.status))
   const rows = data.rows.filter((r) =>
-    (!stage || r.stage === stage) && (!gap || r.gapType === gap) && (!state || r.currentState === state))
+    (!stage || r.stage === stage) && (!gap || r.gapType === gap) && (!state || r.currentState === state) && (!status || r.status === status))
   const filtered = rows.length !== data.rows.length
 
   const exportCsv = () => downloadCsv('acr-core-capture', [
@@ -347,6 +349,7 @@ function AcrCaptureSection({ region }: { region?: string }) {
     { key: 'account', header: 'Account', sortValue: (r: AcrCaptureRow) => r.account, render: (r: AcrCaptureRow) => <RouterLink to={`/nominations/${r.id}`}>{r.account}</RouterLink> },
     { key: 'tpid', header: 'TPID', sortValue: (r: AcrCaptureRow) => r.tpid ?? '', render: (r: AcrCaptureRow) => r.tpid ?? '—' },
     { key: 'stage', header: 'Stage', sortValue: (r: AcrCaptureRow) => r.stage, render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.stage}</span> },
+    { key: 'status', header: 'Status', sortValue: (r: AcrCaptureRow) => r.status ?? '', render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.status ?? '—'}</span> },
     { key: 'currentState', header: 'State', sortValue: (r: AcrCaptureRow) => r.currentState ?? '', render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.currentState ?? '—'}</span> },
     { key: 'path', header: 'Path', sortValue: (r: AcrCaptureRow) => r.path, render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.path}</span> },
     { key: 'cores', header: 'Cores', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.cores },
@@ -355,7 +358,7 @@ function AcrCaptureSection({ region }: { region?: string }) {
     { key: 'estimatedCores', header: 'Est. cores', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.estimatedCores },
     { key: 'estimatedAcr', header: 'Est. ACR', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.estimatedAcr, render: (r: AcrCaptureRow) => money(r.estimatedAcr) },
     { key: 'gapAcr', header: 'Upside/yr', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.gapAcr, render: (r: AcrCaptureRow) => <b>{money(r.gapAcr)}</b> },
-    ...(canApply ? [{ key: 'apply', header: '', align: 'end' as const, render: (r: AcrCaptureRow) => <Button size="small" appearance="secondary" onClick={() => setApplyRow(r)}>Apply</Button> }] : []),
+    ...(canApply ? [{ key: 'apply', header: '', align: 'end' as const, render: (r: AcrCaptureRow) => <Tooltip relationship="label" content="Capture corrected cores → re-price ACR at the AKS rate and write it back to this nomination (audited on its timeline)."><Button size="small" appearance="secondary" onClick={() => setApplyRow(r)}>Apply</Button></Tooltip> }] : []),
   ]
 
   const filteredUpside = rows.reduce((s, r) => s + r.gapAcr, 0)
@@ -384,6 +387,7 @@ function AcrCaptureSection({ region }: { region?: string }) {
       <Panel title="Worklist — biggest ACR upside first">
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
           <FilterSelect label="Stage" value={stage} options={stages} onChange={setStage} minWidth={170} />
+          <FilterSelect label="Status" value={status} options={statuses} onChange={setStatus} minWidth={150} />
           <FilterSelect label="State" value={state} options={states} onChange={setState} minWidth={150} />
           <FilterSelect label="Gap" value={gap} options={gaps} onChange={setGap} minWidth={150} />
           {filtered && (

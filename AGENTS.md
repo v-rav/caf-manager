@@ -382,7 +382,7 @@ leave; Entra auth; in-app upload; API smoke tests.
   estimates recoverable ACR per row at a conservative core floor (`AcrContainerCoreFloor`, default 20; editable in
   Configuration → ACR calculation rates) using the live AKS Linux/Windows rates. Surfaced as KPIs (flagged · est.
   recoverable ACR/yr · ACR-with-no-core-basis · the three gap counts), a **worklist** `DataTable` (biggest upside first,
-  account → workspace link, **Stage / State / Gap** filters, gap badge, est. cores/ACR) with **CSV export**, and an inline **per-nomination ACR estimator**
+  account → workspace link, **Stage / Status / State / Gap** filters, gap badge, est. cores/ACR) with **CSV export**, and an inline **per-nomination ACR estimator**
   (target service + apps/containers or cores → annual ACR via `POST /api/acr/estimate`, feeds a defensible number back
   into FDO). Admin/Lead can **Apply** a corrected core count per row — `POST nominations/{id}/governance/acr` re-prices ACR
   at the AKS rate, writes `TotalCores`/`TotalAcr`, and **audits** the change on the nomination timeline (old→new by user).
