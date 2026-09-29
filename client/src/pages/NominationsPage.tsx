@@ -77,10 +77,6 @@ function matchesText(n: Nomination, query: string): boolean {
   return has(n.accountName) || has(n.tpid) || has(n.projectCoordinator) || has(n.cftlPrimary) || has(n.solutionArchitect)
 }
 
-// Approval-family statuses (everything that counts as approved, i.e. not Declined/blank).
-const APPROVED_FAMILY = ['Approved', 'Provisionally Approved', 'Active Concierge']
-const APPROVED_ANY = 'Any Approved'
-
 // Labelled full-width form field for the Manage dialog (keeps controls aligned).
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -348,15 +344,7 @@ export function NominationsPage() {
 
   // Approval + fiscal-year scope drive both the KPIs and the grid so counts match what's shown.
   const scoped = useMemo(
-    () =>
-      (data ?? []).filter(
-        (n) =>
-          nominationInFy(n, fy) &&
-          (!approvalFilter ||
-            (approvalFilter === APPROVED_ANY
-              ? APPROVED_FAMILY.includes(n.approvalStatus ?? '')
-              : (n.approvalStatus ?? '') === approvalFilter)),
-      ),
+    () => (data ?? []).filter((n) => nominationInFy(n, fy) && (!approvalFilter || (n.approvalStatus ?? '') === approvalFilter)),
     [data, approvalFilter, fy],
   )
 
@@ -371,7 +359,7 @@ export function NominationsPage() {
   const toggleApproval = (s: string) => setApprovalFilter(approvalFilter === s ? '' : s)
 
   const approvalOptions = useMemo(
-    () => [APPROVED_ANY, ...new Set(['Approved', 'Declined', ...(data ?? []).map((n) => n.approvalStatus).filter((v): v is string => !!v)])],
+    () => [...new Set(['Approved', 'Declined', ...(data ?? []).map((n) => n.approvalStatus).filter((v): v is string => !!v)])],
     [data],
   )
 
@@ -571,7 +559,7 @@ export function NominationsPage() {
                 {isSa && (
                   <Switch checked={mine} onChange={(_, d) => setMine(d.checked)} label="My nominations" />
                 )}
-                <FilterSelect label="Approval" value={approvalFilter} options={approvalOptions} onChange={setApprovalFilter} minWidth={150} />
+                <FilterSelect label="Approval" allLabel="All statuses" value={approvalFilter} options={approvalOptions} onChange={setApprovalFilter} minWidth={150} />
                 <FilterSelect label="Stage" value={migrationFilter} options={migrationOptions} onChange={setMigrationFilter} minWidth={200} />
                 <FilterSelect label="Status" value={currentStateFilter} options={currentStateOptions} onChange={setCurrentStateFilter} minWidth={200} />
                 <FilterSelect label="SLA breach" value={slaFilter} options={['Warn', 'Escalate', 'Defer']} onChange={setSlaFilter} minWidth={150} />

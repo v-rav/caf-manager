@@ -102,23 +102,26 @@ export function FilterSelect({
   options,
   onChange,
   minWidth = 150,
+  allLabel,
 }: {
   label: string
   value: string
   options: string[]
   onChange: (value: string) => void
   minWidth?: number
+  allLabel?: string
 }) {
+  const all = allLabel ?? `All ${label}`
   return (
     <Dropdown
       aria-label={label}
-      placeholder={`All ${label}`}
-      value={value || `All ${label}`}
+      placeholder={all}
+      value={value || all}
       selectedOptions={[value]}
       onOptionSelect={(_, d) => onChange(d.optionValue ?? '')}
       style={{ minWidth }}
     >
-      <Option value="">{`All ${label}`}</Option>
+      <Option value="">{all}</Option>
       {options.map((o) => (
         <Option key={o} value={o}>
           {o}

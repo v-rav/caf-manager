@@ -76,11 +76,9 @@ import the **web app is the system of record**.
 - **Approval status** (`Nomination.ApprovalStatus`, FDO-owned): from the FDO "Nomination Approval
   Status" column (values seen: Approved · Declined · Provisionally Approved · Active Concierge). The
   Nominations grid **defaults to `Approved` only** via an **Approval** `FilterSelect` (default state
-  `'Approved'`, "All Approval" clears it, and an **"Any Approved"** composite option matches the whole
-  approved family — Approved + Provisionally Approved + Active Concierge — for a "show me everything
-  approved in any form" view); the approval scope drives both the KPIs and the grid so
-  counts match. Surfaced as an **Approval** export column, and the export honors the `Any Approved`
-  value too (`ExportService.ApprovedFamily`). (Declined also maps to `Status=Withdrawn`
+  `'Approved'`, with an **"All statuses"** clear-option — `FilterSelect` `allLabel` — that shows every
+  approval status incl. Declined); the approval scope drives both the KPIs and the grid so
+  counts match. Surfaced as an **Approval** export column. (Declined also maps to `Status=Withdrawn`
   via `MapStatus` on first insert.) The grid **search box is cross-field** (`matchesText`): it matches
   account name, TPID, and all three ownership roles (PM/CFTL/SA), and the server export applies the
   same broadened `search` predicate so the file matches the on-screen view.- **Ownership short names** used in the Nominations grid: **PM** = `ProjectCoordinator`,
