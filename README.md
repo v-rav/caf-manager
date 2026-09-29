@@ -82,6 +82,10 @@ npm install
 npm run dev   # http://localhost:5173  (proxies /api to :5080)
 ```
 
+> The dev server proxies `/api` and `/health` to the backend on `:5080`, so **keep the API from step 1 running**.
+> If you see `http proxy error … ECONNREFUSED` in the Vite console, the backend isn't up — start it with
+> `dotnet run --project src/CafPortal.Api --urls http://localhost:5080` (add `--no-build` if the backend is unchanged).
+
 ### 3. Single-package build (SPA served by the API)
 
 ```powershell
