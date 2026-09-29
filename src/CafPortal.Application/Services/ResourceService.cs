@@ -24,9 +24,13 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
         if (!string.IsNullOrWhiteSpace(query.Status))
             resources = resources.Where(r => r.Status == query.Status);
         if (!string.IsNullOrWhiteSpace(query.Skill))
+        {
+            // Case-insensitive (SQLite Contains is case-sensitive), matching the name-search behavior.
+            var skill = query.Skill.Trim().ToLower();
             resources = resources.Where(r =>
-                (r.PrimarySkill != null && r.PrimarySkill.Contains(query.Skill)) ||
-                (r.Skills != null && r.Skills.Contains(query.Skill)));
+                (r.PrimarySkill != null && r.PrimarySkill.ToLower().Contains(skill)) ||
+                (r.Skills != null && r.Skills.ToLower().Contains(skill)));
+        }
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var term = query.Search.Trim().ToLower();
