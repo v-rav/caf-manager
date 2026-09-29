@@ -402,6 +402,11 @@ leave; Entra auth; in-app upload; API smoke tests.
   (claims · SA notified · realized · **ACR recovered (claimed)** · recovery rate · avg days-to-realize · estimate accuracy).
   Endpoints `GET acr-recovery|summary`, `POST flag|{id}/notify|{id}/close|reconcile` (mutations Admin/Lead). Portal-owned —
   imports never touch the ledger; one open claim per nomination. Scope: containerized only (extensible).
+  ⚠ **Parked (PV-02):** the worklist estimate uses a heuristic **`AcrContainerCoreFloor` (default 20)** for the Low-cores /
+  Missing-cores rows — an *assumption*, not measured, and it over-states genuinely small workloads (1 containerized app ≈
+  4 cores). It's a *potential/what-if* prompt to verify, never a booked claim (only FDO-confirmed rises are counted as
+  recovered). **Plan:** once FDO exposes the **number of apps** per nomination, replace the flat floor with **apps × 4
+  cores** (real, not assumed). Until then the floor stays as the conservative heuristic.
 Backlog: cycle-time measure (avg days / nominated→completed), bucket→Nominations date-range drill, trend CSV
   export, weekly view is sparse; Leave intake data source, my-view, global search, Entra auth, in-app upload,
   API smoke tests.
