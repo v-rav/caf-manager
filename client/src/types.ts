@@ -675,6 +675,41 @@ export interface AcrCapture {
   rows: AcrCaptureRow[]
 }
 
+export interface AcrRecoveryEntry {
+  id: number
+  nominationId: number
+  account: string
+  tpid?: string | null
+  region?: string | null
+  gapType?: string | null
+  baselineCores?: number | null
+  baselineAcr?: number | null
+  recommendedCores?: number | null
+  recommendedAcr?: number | null
+  flaggedUtc: string
+  flaggedBy?: string | null
+  notifiedUtc?: string | null
+  notifiedBy?: string | null
+  realizedCores?: number | null
+  realizedAcr?: number | null
+  realizedUtc?: string | null
+  recoveredAcr?: number | null
+  currentAcr?: number | null
+  status: string
+}
+export interface AcrRecoverySummary {
+  flaggedCount: number
+  notifiedCount: number
+  realizedCount: number
+  closedCount: number
+  baselineAcrOpen: number
+  recommendedAcrOpen: number
+  recoveredAcrTotal: number
+  recoveryRatePct: number
+  avgDaysToRealize?: number | null
+  estimateAccuracyPct?: number | null
+}
+
 export interface AttainmentBucket {
   key: string
   label: string

@@ -61,6 +61,7 @@ const GUIDE_WORKFLOWS: GuideStep[] = [
   { title: 'Ingest a new FDO drop', body: 'Refresh Data (header) upserts by FDO Task Id — FDO-owned fields refresh, portal-owned fields (status, blockers, waves, edited remarks) are preserved, absent rows are soft-withdrawn (never hard-deleted). Review the deltas on Import History.' },
   { title: 'Export what you see', body: 'Grid and analytics exports are filter-aware — the file matches the on-screen filters, region, and fiscal year. Use the export button on the page you’re viewing.' },
   { title: 'Back up before a risky change', body: 'Admin → Backup & Restore → Download a snapshot. Restore replaces the live DB and keeps a server-side safety copy.' },
+  { title: 'Claim recovered ACR', body: 'On ACR Recovery, the worklist flags containerized nominations with under-captured cores/ACR. Flag one to freeze its baseline, then Mark notified once you tell the SA. When the SA updates FDO and the next import lands, Reconcile books the rise above baseline as recovered ACR — the recovery ledger shows the Flagged → Notified → Realized funnel and the $ claimed. Apply instead writes a correction straight to the portal now (audited).' },
 ]
 
 const WORKSPACE_STEPS: GuideStep[] = [

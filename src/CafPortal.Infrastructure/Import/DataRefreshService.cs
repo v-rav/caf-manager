@@ -26,6 +26,7 @@ public class DataRefreshService(
     INominationImportService nominationImport,
     IAccountMasterImportService accountMasterImport,
     ICapacityRebuildService capacityRebuild,
+    IAcrRecoveryService acrRecovery,
     IHostEnvironment env,
     IOptions<SourceFileOptions> sourceOptions,
     ILogger<DataRefreshService> logger) : IDataRefreshService
@@ -37,6 +38,7 @@ public class DataRefreshService(
     private readonly INominationImportService _nominationImport = nominationImport;
     private readonly IAccountMasterImportService _accountMasterImport = accountMasterImport;
     private readonly ICapacityRebuildService _capacityRebuild = capacityRebuild;
+    private readonly IAcrRecoveryService _acrRecovery = acrRecovery;
     private readonly IHostEnvironment _env = env;
     private readonly SourceFileOptions _sources = sourceOptions.Value;
     private readonly ILogger<DataRefreshService> _logger = logger;
@@ -104,6 +106,10 @@ public class DataRefreshService(
             result.ResourceAccountLinks = await _db.ResourceAccounts.CountAsync(ct);
             await SyncStrategicFlagsAsync(ct);
             result.CapacityRowsRebuilt = await _capacityRebuild.RebuildAllAsync(ct);
+
+            // Book any ACR recovery whose FDO value rose above the frozen baseline this drop.
+            var recovered = await _acrRecovery.ReconcileAsync(ct);
+            if (recovered > 0) result.Messages.Add($"ACR recovery: {recovered} claim(s) realized.");
 
             result.Messages.Add("Capacity facts rebuilt; cache cleared.");
             result.Success = true;
@@ -686,6 +692,11 @@ public class DataRefreshService(
 
             if (apply)
                 await _db.SaveChangesAsync(ct);
+            if (apply)
+            {
+                var recovered = await _acrRecovery.ReconcileAsync(ct);
+                if (recovered > 0) result.Messages.Add($"ACR recovery: {recovered} claim(s) realized.");
+            }
             result.Success = true;
             result.Messages.Add($"{(apply ? "Applied" : "Preview")}: matched={nomMatched} (marked completed={matchedCompleted}), " +
                 $"completed created={completedCreated} (accounts created={accountsCreated}), tpid-mismatch={tpidMismatch}, " +

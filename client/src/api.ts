@@ -22,6 +22,8 @@ import type {
   AcrRates,
   AcrEstimate,
   AcrCapture,
+  AcrRecoveryEntry,
+  AcrRecoverySummary,
   ImportChange,
   ImportRun,
   LeaveClash,
@@ -63,6 +65,18 @@ export const api = {
     http.get<Attainment>('/api/analytics/attainment', { params: { region, fy } }).then((r) => r.data),
   acrCapture: (region?: string) =>
     http.get<AcrCapture>('/api/analytics/acr-capture', { params: { region } }).then((r) => r.data),
+  recoveryList: (region?: string) =>
+    http.get<AcrRecoveryEntry[]>('/api/acr-recovery', { params: { region } }).then((r) => r.data),
+  recoverySummary: (region?: string) =>
+    http.get<AcrRecoverySummary>('/api/acr-recovery/summary', { params: { region } }).then((r) => r.data),
+  flagRecovery: (body: { nominationId: number; recommendedCores?: number | null; recommendedAcr?: number | null; gapType?: string | null }) =>
+    http.post('/api/acr-recovery/flag', body).then((r) => r.data),
+  markRecoveryNotified: (id: number) =>
+    http.post(`/api/acr-recovery/${id}/notify`).then((r) => r.data),
+  closeRecovery: (id: number, note?: string | null) =>
+    http.post(`/api/acr-recovery/${id}/close`, { note }).then((r) => r.data),
+  reconcileRecovery: () =>
+    http.post<{ realized: number }>('/api/acr-recovery/reconcile').then((r) => r.data),
 
   timeseries: (params: Record<string, string | undefined>) =>
     http.get<TimeSeries>('/api/analytics/timeseries', { params }).then((r) => r.data),

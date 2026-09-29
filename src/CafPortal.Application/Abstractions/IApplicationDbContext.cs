@@ -45,6 +45,7 @@ public interface IApplicationDbContext
     DbSet<MigrationActivity> MigrationActivities { get; }
     DbSet<MigrationToolActivity> MigrationToolActivities { get; }
     DbSet<NominationToolUsage> NominationToolUsages { get; }
+    DbSet<AcrRecoveryEntry> AcrRecoveryEntries { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

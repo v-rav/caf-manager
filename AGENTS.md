@@ -388,6 +388,16 @@ leave; Entra auth; in-app upload; API smoke tests.
   at the AKS rate, writes `TotalCores`/`TotalAcr`, and **audits** the change on the nomination timeline (old→new by user).
   Because those fields are FDO-owned, the Apply dialog warns the write can be superseded by the next FDO drop (update FDO
   for a durable change). `AnalyticsService` reuses `INominationService` + `IAcrService`.
+- **ACR Recovery ledger** (same `/acr-recovery` page; `AcrRecoveryEntry` table, `IAcrRecoveryService`, `api/acr-recovery`):
+  attributes recovered ACR to the analysis. **Flag** a worklist row → freezes a portal-owned claim (baseline cores/ACR
+  snapshot + the system's recommendation, `FlaggedBy`); **Mark notified** records the SA hand-off (the causal anchor).
+  When the SA updates FDO and the next import lands, **reconciliation** (auto-run at the end of `DataRefreshService.RefreshAsync`
+  and the offerings apply, or the **Reconcile now** button) books any rise above baseline as **RecoveredAcr** and sets the
+  claim **Realized** — only increases count, so it never over-claims. A **recovery ledger** table (baseline → recommended →
+  current → recovered, status badge, Notify/Close actions, CSV) + a **Flagged → Notified → Realized funnel** of KPIs
+  (claims · SA notified · realized · **ACR recovered (claimed)** · recovery rate · avg days-to-realize · estimate accuracy).
+  Endpoints `GET acr-recovery|summary`, `POST flag|{id}/notify|{id}/close|reconcile` (mutations Admin/Lead). Portal-owned —
+  imports never touch the ledger; one open claim per nomination. Scope: containerized only (extensible).
 Backlog: cycle-time measure (avg days / nominated→completed), bucket→Nominations date-range drill, trend CSV
   export, weekly view is sparse; Leave intake data source, my-view, global search, Entra auth, in-app upload,
   API smoke tests.

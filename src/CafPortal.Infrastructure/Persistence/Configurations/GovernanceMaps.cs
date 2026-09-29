@@ -100,3 +100,17 @@ public class NominationToolUsageMap : IEntityTypeConfiguration<NominationToolUsa
         builder.HasIndex(x => x.ActivityId);
     }
 }
+
+public class AcrRecoveryEntryMap : IEntityTypeConfiguration<AcrRecoveryEntry>
+{
+    public void Configure(EntityTypeBuilder<AcrRecoveryEntry> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.GapType).HasMaxLength(40);
+        builder.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.FlaggedBy).HasMaxLength(120);
+        builder.Property(x => x.NotifiedBy).HasMaxLength(120);
+        builder.Property(x => x.Note).HasMaxLength(500);
+        builder.HasIndex(x => new { x.NominationId, x.Status });
+    }
+}

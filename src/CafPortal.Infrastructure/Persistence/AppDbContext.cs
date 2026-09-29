@@ -46,6 +46,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<MigrationActivity> MigrationActivities => Set<MigrationActivity>();
     public DbSet<MigrationToolActivity> MigrationToolActivities => Set<MigrationToolActivity>();
     public DbSet<NominationToolUsage> NominationToolUsages => Set<NominationToolUsage>();
+    public DbSet<AcrRecoveryEntry> AcrRecoveryEntries => Set<AcrRecoveryEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
