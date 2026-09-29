@@ -660,6 +660,9 @@ export interface AcrCaptureRow {
   stage: string
   status?: string | null
   currentState?: string | null
+  sa?: string | null
+  pm?: string | null
+  waves: string
 }
 export interface AcrCapture {
   containerNoms: number

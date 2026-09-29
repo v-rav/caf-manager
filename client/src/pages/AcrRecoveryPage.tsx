@@ -29,12 +29,13 @@ const STATUS_TONE: Record<string, 'informative' | 'warning' | 'success' | 'subtl
   Closed: 'subtle',
 }
 
-// Toggleable worklist columns (Account + action are always shown). TPID and Status are hidden by default.
+// Toggleable worklist columns (Account + action are always shown). TPID, Status, SA, PM and Waves are hidden by default.
 const TOGGLE_COLS: [string, string][] = [
-  ['tpid', 'TPID'], ['stage', 'Stage'], ['status', 'Status'], ['currentState', 'State'], ['path', 'Path'],
+  ['tpid', 'TPID'], ['stage', 'Stage'], ['status', 'Status'], ['currentState', 'State'], ['sa', 'SA'], ['pm', 'PM'], ['waves', 'Waves'], ['path', 'Path'],
   ['cores', 'Cores'], ['acr', 'ACR'], ['gapType', 'Gap'], ['estimatedCores', 'Est. cores'], ['estimatedAcr', 'Est. ACR'], ['gapAcr', 'Upside/yr'],
 ]
-const DEFAULT_VISIBLE = TOGGLE_COLS.map((c) => c[0]).filter((k) => k !== 'tpid' && k !== 'status')
+const HIDDEN_BY_DEFAULT = new Set(['tpid', 'status', 'sa', 'pm', 'waves'])
+const DEFAULT_VISIBLE = TOGGLE_COLS.map((c) => c[0]).filter((k) => !HIDDEN_BY_DEFAULT.has(k))
 
 export function AcrRecoveryPage() {
   const { region } = useRegion()
@@ -111,6 +112,9 @@ export function AcrRecoveryPage() {
           { header: 'Stage', value: (r: AcrCaptureRow) => r.stage },
           { header: 'Status', value: (r: AcrCaptureRow) => r.status ?? '' },
           { header: 'Current state', value: (r: AcrCaptureRow) => r.currentState ?? '' },
+          { header: 'SA', value: (r: AcrCaptureRow) => r.sa ?? '' },
+          { header: 'PM', value: (r: AcrCaptureRow) => r.pm ?? '' },
+          { header: 'Waves', value: (r: AcrCaptureRow) => r.waves },
           { header: 'Cores', value: (r: AcrCaptureRow) => r.cores },
           { header: 'ACR', value: (r: AcrCaptureRow) => Math.round(r.acr) },
           { header: 'Gap', value: (r: AcrCaptureRow) => r.gapType },
@@ -141,6 +145,9 @@ export function AcrRecoveryPage() {
           { key: 'stage', header: 'Stage', sortValue: (r: AcrCaptureRow) => r.stage, render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.stage}</span> },
           { key: 'status', header: 'Status', sortValue: (r: AcrCaptureRow) => r.status ?? '', render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.status ?? '—'}</span> },
           { key: 'currentState', header: 'State', sortValue: (r: AcrCaptureRow) => r.currentState ?? '', render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.currentState ?? '—'}</span> },
+          { key: 'sa', header: 'SA', sortValue: (r: AcrCaptureRow) => r.sa ?? '', render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.sa ?? '—'}</span> },
+          { key: 'pm', header: 'PM', sortValue: (r: AcrCaptureRow) => r.pm ?? '', render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.pm ?? '—'}</span> },
+          { key: 'waves', header: 'Waves', sortValue: (r: AcrCaptureRow) => r.waves, render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.waves}</span> },
           { key: 'path', header: 'Path', sortValue: (r: AcrCaptureRow) => r.path, render: (r: AcrCaptureRow) => <span style={{ fontSize: 12 }}>{r.path}</span> },
           { key: 'cores', header: 'Cores', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.cores },
           { key: 'acr', header: 'ACR', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.acr, render: (r: AcrCaptureRow) => money(r.acr) },

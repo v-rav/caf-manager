@@ -166,9 +166,14 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             var gapAcr = Math.Max(0, estAcr - acr);
             var stageIdx = StageIndex(n.MigrationStatus);
             var stageLabel = stageIdx is int si ? StageLabels[si - 1] : "—";
+            var waveTypes = new List<string>();
+            if (n.SecurityLinked) waveTypes.Add("Security");
+            if (n.DbLinked) waveTypes.Add("DB");
+            if (n.AlzLinked) waveTypes.Add("ALZ");
+            var wavesStr = waveTypes.Count > 0 ? string.Join(" · ", waveTypes) : "None";
             rows.Add(new AcrCaptureRow(n.Id, n.AccountName ?? "—", n.Tpid, n.Region, n.PrimaryMigrationPath ?? "—",
                 cores, Math.Round(acr), gap, Math.Round(ratePerCoreYr), estCores, Math.Round(estAcr), Math.Round(gapAcr),
-                stageLabel, n.Status, n.CurrentState));
+                stageLabel, n.Status, n.CurrentState, n.SolutionArchitect, n.ProjectCoordinator, wavesStr));
         }
         rows = rows.OrderByDescending(r => r.GapAcr).ToList();
 
