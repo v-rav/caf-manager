@@ -37,6 +37,8 @@ export function HelpPage() {
 
       <ProposalsSection />
 
+      <AcaReportingSection />
+
       <ResourceClassificationSection />
     </div>
   )
@@ -604,6 +606,104 @@ function TwoCol({ rows, head }: { rows: [string, string][]; head: [string, strin
         ))}
       </tbody>
     </table>
+  )
+}
+
+function AcaReportingSection() {
+  const baseline: [string, string][] = [
+    ['1 ACA business application', '4 cores'],
+    ['1 ACA business application', '$224.81 monthly ACR'],
+    ['1 ACA business application', '$2,697.72 annualized ACR'],
+  ]
+  const formula: [string, string][] = [
+    ['App Count', 'Number of business applications'],
+    ['Core Count', 'App Count × 4'],
+    ['Monthly ACR', 'App Count × $224.81'],
+    ['Annualized ACR', 'App Count × $2,697.72'],
+  ]
+  const examples: string[][] = [
+    ['1', '4', '$224.81', '$2,697.72'],
+    ['5', '20', '$1,124.05', '$13,488.60'],
+    ['10', '40', '$2,248.10', '$26,977.20'],
+    ['25', '100', '$5,620.25', '$67,443.00'],
+  ]
+  const considerations: string[] = [
+    'Do not count containers, replicas, revisions, sidecars, or pods.',
+    'Do not multiply cores by number of containers.',
+    'Count only independently managed business applications.',
+    'Use the standard ACA baseline of 4 cores per application unless customer sizing information is available.',
+    'If the customer provides actual ACA sizing significantly larger than baseline, use actual sizing and Azure Calculator estimates.',
+  ]
+
+  return (
+    <Panel title="Reporting Azure Container Apps (ACA) in FDO">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 760 }}>
+        <Text size={300}>
+          For Azure Container Apps, update <b>both</b> App Count and Cores consistently from the same standard baseline —
+          count <b>business applications</b>, not containers.
+        </Text>
+
+        <div>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Standard ACA baseline</Text>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <tbody>
+              {baseline.map(([a, b]) => (
+                <tr key={b}><td style={clsCell}>{a}</td><td style={clsCell}><b>{b}</b></td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>FDO update formula</Text>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead><tr><th style={clsHead}>Field in FDO</th><th style={clsHead}>Formula</th></tr></thead>
+            <tbody>
+              {formula.map(([f, v]) => (
+                <tr key={f}><td style={clsCell}>{f}</td><td style={clsCell}>{v}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Examples</Text>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead><tr><th style={clsHead}>Applications</th><th style={clsHead}>Cores</th><th style={clsHead}>Monthly ACR</th><th style={clsHead}>Annualized ACR</th></tr></thead>
+            <tbody>
+              {examples.map((r) => (
+                <tr key={r[0]}>{r.map((c, i) => <td key={i} style={clsCell}>{c}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>What counts as an application?</Text>
+          <Text size={300} style={{ display: 'block', marginBottom: 6 }}>Count business applications, not containers.</Text>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead><tr><th style={clsHead}>Scenario</th><th style={clsHead}>App Count</th><th style={clsHead}>Cores</th><th style={clsHead}>Monthly ACR</th></tr></thead>
+            <tbody>
+              <tr><td style={clsCell}>1 monolithic app containerized into 15 containers, hosted in ACA</td><td style={clsCell}>1</td><td style={clsCell}>4</td><td style={clsCell}>$224.81</td></tr>
+              <tr><td style={clsCell}>5 independent business apps, each with multiple containers</td><td style={clsCell}>5</td><td style={clsCell}>20</td><td style={clsCell}>$1,124.05</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <Text size={400} weight="semibold" style={{ display: 'block', marginBottom: 4 }}>Important considerations</Text>
+          <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {considerations.map((c) => <li key={c}><Text size={300}>{c}</Text></li>)}
+          </ul>
+        </div>
+
+        <div style={{ borderLeft: '3px solid var(--colorBrandStroke1)', paddingLeft: 12, color: 'var(--colorNeutralForeground2)' }}>
+          <Text size={300} weight="semibold" style={{ display: 'block', marginBottom: 2 }}>Quick rule</Text>
+          <Text size={300}>ACA apps → App Count × 4 = Cores · App Count × $224.81 = Monthly ACR. Keeps FDO consistent and stops
+            microservice/container architectures from inflating application counts or cores.</Text>
+        </div>
+      </div>
+    </Panel>
   )
 }
 

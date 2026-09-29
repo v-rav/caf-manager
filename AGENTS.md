@@ -292,6 +292,10 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   rule (*one application stays one application regardless of ancillary services; document effort, never inflate counts;
   exclude shared enterprise resources*), per-category service reference, dedicated-vs-shared counting rules, AKS/App
   Service worked examples, and how SAs capture ancillary services in FDO (notes not separate apps + effort-impact sizing).
+  A **Reporting Azure Container Apps (ACA) in FDO** section codifies the ACA baseline (1 business app = 4 cores =
+  $224.81/mo = $2,697.72/yr; App Count × 4 = Cores, × $224.81 = Monthly ACR), count business apps not containers, and a
+  worked-examples table. The ACA rate master default (`AcaArpuPerCoreHour = 0.096237` × 0.8 util × 730 hr/mo ≈
+  $56.20/core-mo) reproduces that baseline in the ACR estimator (1 app → $224.81/mo, $2,697.72/yr).
 
 ## Editing rules for agents
 - Read a file before editing; keep changes minimal and scoped to the request.

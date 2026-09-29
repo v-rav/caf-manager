@@ -9,7 +9,8 @@ public class AcrRatesDto
     public decimal AksLinuxArpuPerCoreMonth { get; set; } = 30m;
     public decimal AksWindowsArpuPerCoreMonth { get; set; } = 56m;
     public decimal AksCoresPerApp { get; set; } = 4m;
-    public decimal AcaArpuPerCoreHour { get; set; } = 0m;
+    // 0.096237/core-hr × 0.8 util × 730 hr/mo ≈ $56.20/core-mo → the ACA baseline of $224.81/mo for 4 cores/app.
+    public decimal AcaArpuPerCoreHour { get; set; } = 0.096237m;
     public decimal AcaUtilization { get; set; } = 0.8m;
     public decimal AcaHoursPerMonth { get; set; } = 730m;
     /// <summary>Conservative core floor a containerized workload is assumed not to fall below (ACR core-capture worklist).</summary>
