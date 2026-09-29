@@ -1,4 +1,4 @@
-import { Badge, Button, Dropdown, Input, Option, Text, Tooltip } from '@fluentui/react-components'
+import { Badge, Button, Dropdown, Input, Menu, MenuItemCheckbox, MenuList, MenuPopover, MenuTrigger, Option, Text, Tooltip } from '@fluentui/react-components'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
@@ -29,6 +29,13 @@ const STATUS_TONE: Record<string, 'informative' | 'warning' | 'success' | 'subtl
   Closed: 'subtle',
 }
 
+// Toggleable worklist columns (Account + action are always shown). TPID and Status are hidden by default.
+const TOGGLE_COLS: [string, string][] = [
+  ['tpid', 'TPID'], ['stage', 'Stage'], ['status', 'Status'], ['currentState', 'State'], ['path', 'Path'],
+  ['cores', 'Cores'], ['acr', 'ACR'], ['gapType', 'Gap'], ['estimatedCores', 'Est. cores'], ['estimatedAcr', 'Est. ACR'], ['gapAcr', 'Upside/yr'],
+]
+const DEFAULT_VISIBLE = TOGGLE_COLS.map((c) => c[0]).filter((k) => k !== 'tpid' && k !== 'status')
+
 export function AcrRecoveryPage() {
   const { region } = useRegion()
   const { user } = useAuth()
@@ -42,6 +49,7 @@ export function AcrRecoveryPage() {
   const [gap, setGap] = useState('')
   const [state, setState] = useState('')
   const [status, setStatus] = useState('')
+  const [visibleCols, setVisibleCols] = useState<string[]>(DEFAULT_VISIBLE)
   const [reconciling, setReconciling] = useState(false)
 
   const data = capture.data
@@ -142,6 +150,8 @@ export function AcrRecoveryPage() {
           { key: 'gapAcr', header: 'Upside/yr', align: 'end' as const, sortValue: (r: AcrCaptureRow) => r.gapAcr, render: (r: AcrCaptureRow) => <b>{money(r.gapAcr)}</b> },
           ...(canApply ? [{ key: 'action', header: '', align: 'end' as const, render: rowAction }] : []),
         ]
+        // Account + action always shown; the rest respect the Columns menu.
+        const shownColumns = columns.filter((c) => c.key === 'account' || c.key === 'action' || visibleCols.includes(c.key))
 
         return (
           <>
@@ -167,6 +177,16 @@ export function AcrRecoveryPage() {
                 <FilterSelect label="Status" value={status} options={statuses} onChange={setStatus} minWidth={150} />
                 <FilterSelect label="State" value={state} options={states} onChange={setState} minWidth={150} />
                 <FilterSelect label="Gap" value={gap} options={gaps} onChange={setGap} minWidth={150} />
+                <Menu checkedValues={{ columns: visibleCols }} onCheckedValueChange={(_, d) => setVisibleCols(d.checkedItems)}>
+                  <MenuTrigger disableButtonEnhancement>
+                    <Button appearance="secondary" size="small">Columns</Button>
+                  </MenuTrigger>
+                  <MenuPopover>
+                    <MenuList>
+                      {TOGGLE_COLS.map(([k, l]) => <MenuItemCheckbox key={k} name="columns" value={k}>{l}</MenuItemCheckbox>)}
+                    </MenuList>
+                  </MenuPopover>
+                </Menu>
                 {filtered && (
                   <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
                     {rows.length} of {data.rows.length} · {money(filteredUpside)}/yr upside
@@ -178,7 +198,7 @@ export function AcrRecoveryPage() {
                 rows={rows}
                 rowKey={(r) => r.id}
                 defaultSort={{ key: 'gapAcr', dir: 'desc' }}
-                columns={columns}
+                columns={shownColumns}
               />
             </Panel>
 
