@@ -549,7 +549,7 @@ export function NominationsPage() {
           <Panel
             title="Nominations"
             action={
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <SearchBox
                   placeholder="Search account, PM, CFTL, SA, TPID"
                   value={search}
@@ -559,7 +559,7 @@ export function NominationsPage() {
                 {isSa && (
                   <Switch checked={mine} onChange={(_, d) => setMine(d.checked)} label="My nominations" />
                 )}
-                <FilterSelect label="Approval" allLabel="All statuses" value={approvalFilter} options={approvalOptions} onChange={setApprovalFilter} minWidth={150} />
+                <FilterSelect label="Approval status" value={approvalFilter} options={approvalOptions} onChange={setApprovalFilter} minWidth={160} />
                 <FilterSelect label="Stage" value={migrationFilter} options={migrationOptions} onChange={setMigrationFilter} minWidth={200} />
                 <FilterSelect label="Status" value={currentStateFilter} options={currentStateOptions} onChange={setCurrentStateFilter} minWidth={200} />
                 <FilterSelect label="SLA breach" value={slaFilter} options={['Warn', 'Escalate', 'Defer']} onChange={setSlaFilter} minWidth={150} />

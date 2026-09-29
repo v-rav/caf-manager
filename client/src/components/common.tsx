@@ -1,4 +1,4 @@
-import { Badge, Button, Dropdown, Option, Spinner, Text } from '@fluentui/react-components'
+import { Badge, Button, Dropdown, Option, Spinner, Text, tokens } from '@fluentui/react-components'
 import { ArrowClockwiseRegular } from '@fluentui/react-icons'
 import type { ReactNode } from 'react'
 
@@ -111,22 +111,27 @@ export function FilterSelect({
   minWidth?: number
   allLabel?: string
 }) {
-  const all = allLabel ?? `All ${label}`
+  const all = allLabel ?? 'All'
   return (
-    <Dropdown
-      aria-label={label}
-      placeholder={all}
-      value={value || all}
-      selectedOptions={[value]}
-      onOptionSelect={(_, d) => onChange(d.optionValue ?? '')}
-      style={{ minWidth }}
-    >
-      <Option value="">{all}</Option>
-      {options.map((o) => (
-        <Option key={o} value={o}>
-          {o}
-        </Option>
-      ))}
-    </Dropdown>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Text size={200} weight="semibold" style={{ color: tokens.colorNeutralForeground3 }}>
+        {label}
+      </Text>
+      <Dropdown
+        aria-label={label}
+        placeholder={all}
+        value={value || all}
+        selectedOptions={[value]}
+        onOptionSelect={(_, d) => onChange(d.optionValue ?? '')}
+        style={{ minWidth }}
+      >
+        <Option value="">{all}</Option>
+        {options.map((o) => (
+          <Option key={o} value={o}>
+            {o}
+          </Option>
+        ))}
+      </Dropdown>
+    </div>
   )
 }

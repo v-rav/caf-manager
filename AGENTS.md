@@ -21,7 +21,8 @@ import the **web app is the system of record**.
     `Persistence/Migrations`).
 - **Frontend**: React 19 + TypeScript + Vite in `client/`, **Fluent UI v9**.
   - Reusable: `DataTable<T>` (sortable/paginated), `KpiCard` (tones + optional `onClick` for
-    drill-through), `Modal`/`ConfirmDialog`, `common.tsx` (`Panel`, `FilterSelect`, `StatusBadge`,
+    drill-through), `Modal`/`ConfirmDialog`, `common.tsx` (`Panel`, `FilterSelect` (renders a visible
+    label above the dropdown; reset option defaults to "All", override via `allLabel`), `StatusBadge`,
     `UtilizationBar`, `ErrorText`, `Loading`), `charts.tsx`, `hooks.ts` (`useAsync`, `useDebounced`).
   - `api.ts` is the single API client; `types.ts` mirrors backend DTOs; `region.tsx` holds the
     Global/Regional scope shared by all pages.
@@ -75,9 +76,9 @@ import the **web app is the system of record**.
   `Include(n => n.Account)` in `NominationService`.
 - **Approval status** (`Nomination.ApprovalStatus`, FDO-owned): from the FDO "Nomination Approval
   Status" column (values seen: Approved · Declined · Provisionally Approved · Active Concierge). The
-  Nominations grid **defaults to `Approved` only** via an **Approval** `FilterSelect` (default state
-  `'Approved'`, with an **"All statuses"** clear-option — `FilterSelect` `allLabel` — that shows every
-  approval status incl. Declined); the approval scope drives both the KPIs and the grid so
+  Nominations grid **defaults to `Approved` only** via an **Approval status** `FilterSelect` (default
+  state `'Approved'`, with an **"All"** clear-option that shows every approval status incl. Declined);
+  the approval scope drives both the KPIs and the grid so
   counts match. Surfaced as an **Approval** export column. (Declined also maps to `Status=Withdrawn`
   via `MapStatus` on first insert.) The grid **search box is cross-field** (`matchesText`): it matches
   account name, TPID, and all three ownership roles (PM/CFTL/SA), and the server export applies the
