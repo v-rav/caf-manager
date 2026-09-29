@@ -76,9 +76,14 @@ import the **web app is the system of record**.
 - **Approval status** (`Nomination.ApprovalStatus`, FDO-owned): from the FDO "Nomination Approval
   Status" column (values seen: Approved · Declined · Provisionally Approved · Active Concierge). The
   Nominations grid **defaults to `Approved` only** via an **Approval** `FilterSelect` (default state
-  `'Approved'`, "All Approval" clears it); the approval scope drives both the KPIs and the grid so
-  counts match. Surfaced as an **Approval** export column. (Declined also maps to `Status=Withdrawn`
-  via `MapStatus` on first insert.)- **Ownership short names** used in the Nominations grid: **PM** = `ProjectCoordinator`,
+  `'Approved'`, "All Approval" clears it, and an **"Any Approved"** composite option matches the whole
+  approved family — Approved + Provisionally Approved + Active Concierge — for a "show me everything
+  approved in any form" view); the approval scope drives both the KPIs and the grid so
+  counts match. Surfaced as an **Approval** export column, and the export honors the `Any Approved`
+  value too (`ExportService.ApprovedFamily`). (Declined also maps to `Status=Withdrawn`
+  via `MapStatus` on first insert.) The grid **search box is cross-field** (`matchesText`): it matches
+  account name, TPID, and all three ownership roles (PM/CFTL/SA), and the server export applies the
+  same broadened `search` predicate so the file matches the on-screen view.- **Ownership short names** used in the Nominations grid: **PM** = `ProjectCoordinator`,
   **CFTL** = `CftlPrimary`, **SA** = `SolutionArchitect`. These are **portal-owned** (editable in the
   Manage dialog); the FDO import only **seeds them when empty** (never overwrites a portal edit).
 - **Wave linkage (informational, NOT required)**: a nomination may legitimately have **no waves**;

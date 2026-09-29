@@ -15,6 +15,8 @@ public class ExportService(
     IDashboardService dashboard) : IExportService
 {
     private const string HeaderHtml = "#0F6CBD";
+    // Everything that counts as approved (matches the grid's "Any Approved" option).
+    private static readonly string[] ApprovedFamily = ["Approved", "Provisionally Approved", "Active Concierge"];
 
     public async Task<byte[]> ResourcesAsync(string? region, CancellationToken ct = default)
     {
@@ -74,12 +76,20 @@ public class ExportService(
         var all = await nominations.GetAsync(region, status: null, ct);
         // Apply the same filters the Nominations grid uses, so the export matches the on-screen view.
         var rows = all.Where(x =>
-            (string.IsNullOrEmpty(approval) || string.Equals(x.ApprovalStatus ?? "", approval, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(approval)
+                || (approval.Equals("Any Approved", StringComparison.OrdinalIgnoreCase)
+                    ? ApprovedFamily.Contains(x.ApprovalStatus ?? "", StringComparer.OrdinalIgnoreCase)
+                    : string.Equals(x.ApprovalStatus ?? "", approval, StringComparison.OrdinalIgnoreCase))) &&
             (string.IsNullOrEmpty(migrationStatus) || string.Equals(x.MigrationStatus, migrationStatus, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(currentState) || string.Equals(x.CurrentState, currentState, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(sla) || string.Equals(x.StaleTier, sla, StringComparison.OrdinalIgnoreCase)) &&
             MatchLinks(x, links) &&
-            (string.IsNullOrEmpty(search) || (x.AccountName ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)))
+            (string.IsNullOrEmpty(search)
+                || (x.AccountName ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (x.Tpid ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (x.ProjectCoordinator ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (x.CftlPrimary ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (x.SolutionArchitect ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         using var wb = new XLWorkbook();

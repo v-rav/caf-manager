@@ -70,6 +70,17 @@ function matchesPerson(n: Nomination, person: string): boolean {
   )
 }
 
+// Free-text search across account, TPID and the three ownership roles (PM / CFTL / SA).
+function matchesText(n: Nomination, query: string): boolean {
+  const q = query.toLowerCase()
+  const has = (v?: string) => (v ?? '').toLowerCase().includes(q)
+  return has(n.accountName) || has(n.tpid) || has(n.projectCoordinator) || has(n.cftlPrimary) || has(n.solutionArchitect)
+}
+
+// Approval-family statuses (everything that counts as approved, i.e. not Declined/blank).
+const APPROVED_FAMILY = ['Approved', 'Provisionally Approved', 'Active Concierge']
+const APPROVED_ANY = 'Any Approved'
+
 // Labelled full-width form field for the Manage dialog (keeps controls aligned).
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -337,7 +348,15 @@ export function NominationsPage() {
 
   // Approval + fiscal-year scope drive both the KPIs and the grid so counts match what's shown.
   const scoped = useMemo(
-    () => (data ?? []).filter((n) => nominationInFy(n, fy) && (!approvalFilter || (n.approvalStatus ?? '') === approvalFilter)),
+    () =>
+      (data ?? []).filter(
+        (n) =>
+          nominationInFy(n, fy) &&
+          (!approvalFilter ||
+            (approvalFilter === APPROVED_ANY
+              ? APPROVED_FAMILY.includes(n.approvalStatus ?? '')
+              : (n.approvalStatus ?? '') === approvalFilter)),
+      ),
     [data, approvalFilter, fy],
   )
 
@@ -352,7 +371,7 @@ export function NominationsPage() {
   const toggleApproval = (s: string) => setApprovalFilter(approvalFilter === s ? '' : s)
 
   const approvalOptions = useMemo(
-    () => [...new Set(['Approved', 'Declined', ...(data ?? []).map((n) => n.approvalStatus).filter((v): v is string => !!v)])],
+    () => [APPROVED_ANY, ...new Set(['Approved', 'Declined', ...(data ?? []).map((n) => n.approvalStatus).filter((v): v is string => !!v)])],
     [data],
   )
 
@@ -379,7 +398,7 @@ export function NominationsPage() {
             (linkFilter === 'Has DB' && n.dbLinked) ||
             (linkFilter === 'Has Security' && n.securityLinked)) &&
           (!effectivePerson || matchesPerson(n, effectivePerson)) &&
-          (!debouncedSearch || (n.accountName ?? '').toLowerCase().includes(debouncedSearch.toLowerCase())),
+          (!debouncedSearch || matchesText(n, debouncedSearch)),
       ),
     [scoped, currentStateFilter, migrationFilter, slaFilter, classFilter, linkFilter, effectivePerson, debouncedSearch],
   )
@@ -544,7 +563,7 @@ export function NominationsPage() {
             action={
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <SearchBox
-                  placeholder="Search account"
+                  placeholder="Search account, PM, CFTL, SA, TPID"
                   value={search}
                   onChange={(_, d) => setSearch(d.value)}
                   style={{ minWidth: 200 }}
