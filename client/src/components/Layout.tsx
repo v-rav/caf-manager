@@ -45,6 +45,7 @@ import {
   WrenchRegular,
   QuestionCircleRegular,
   MoneyRegular,
+  TrophyRegular,
   ChevronDownRegular,
   ChevronRightRegular,
 } from '@fluentui/react-icons'
@@ -77,6 +78,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { to: '/nominations', label: 'Nominations', icon: <ClipboardTaskListLtrRegular /> },
       { to: '/governance', label: 'Governance Board', icon: <ShieldTaskRegular /> },
       { to: '/flow', label: 'Migration Flow', icon: <DataFunnelRegular /> },
+      { to: '/effectiveness', label: 'Ownership Effectiveness', icon: <TrophyRegular /> },
       { to: '/strategic', label: 'Strategic Register', icon: <RocketRegular /> },
       { to: '/adoption', label: 'GHCP Adoption', icon: <SparkleRegular /> },
       { to: '/workspace', label: 'SA Workspace (preview)', icon: <ClipboardTaskListLtrRegular /> },

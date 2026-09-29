@@ -29,6 +29,7 @@ public class AccessService(IApplicationDbContext db) : IAccessService
         ("strategic", "Strategic Register", AdminLead),
         ("adoption", "GHCP Adoption", AdminLead),
         ("flow", "Migration Flow", AdminLead),
+        ("effectiveness", "Ownership Effectiveness", AdminLead),
         ("performance", "Performance", AdminLead),
         ("history", "Import History", AdminLead),
         ("help", "Help & FAQ", All),

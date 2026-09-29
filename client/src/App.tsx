@@ -21,6 +21,7 @@ import { GovernanceBoardPage } from './pages/GovernanceBoardPage'
 import { StrategicRegisterPage } from './pages/StrategicRegisterPage'
 import { AdoptionPage } from './pages/AdoptionPage'
 import { FlowPage } from './pages/FlowPage'
+import { EffectivenessPage } from './pages/EffectivenessPage'
 import { PerformancePage } from './pages/PerformancePage'
 import { ReconciliationPage } from './pages/ReconciliationPage'
 import { ResourcesPage } from './pages/ResourcesPage'
@@ -48,6 +49,7 @@ const router = createBrowserRouter([
       { path: 'strategic', element: <StrategicRegisterPage /> },
       { path: 'adoption', element: <AdoptionPage /> },
       { path: 'flow', element: <FlowPage /> },
+      { path: 'effectiveness', element: <EffectivenessPage /> },
       { path: 'performance', element: <PerformancePage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'configuration', element: <ConfigurationPage /> },

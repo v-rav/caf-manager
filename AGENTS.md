@@ -258,6 +258,15 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   both `NominationService` (grid) and `GovernanceService` (workspace) so they agree.
 - **Migration Flow (P5b)** — `/flow` (`FlowPage`): funnel conversion/drop-off across the journey + bottleneck
   analytics (in-flight by stage × age, blockers by category, SA workload, by migration type). Derived client-side.
+- **Ownership Effectiveness** — `/effectiveness` (`EffectivenessPage`, Delivery nav, Admin/Lead): a delivery
+  scorecard for **PM/SA/CFTL** owners (role `TabList`, grouped by `ProjectCoordinator`/`SolutionArchitect`/
+  `CftlPrimary`). Per owner: **Assigned** (book of work — a confidence/load signal), **Active** (in-flight),
+  **Delivered** (`Completed`), **Withdrawn**, **Deferred** (`Customer Deferred`), **Blocked** (open blockers),
+  **Success %** (delivered ÷ settled), **Avg delivery days** (`TotalDays` else nominated→actual-end over
+  completed), **Avg MSI**, **On-track %** + **SLA breaches** (active book, `staleTier`), **ACR delivered**, and a
+  composite **Effectiveness** (0–100 = `0.35·MSI + 0.40·success + 0.25·on-track`, weights renormalised to the
+  components that have data). Owner name links to `/nominations?person=`; CSV export; honors Region + FY. Fully
+  client-side from `api.nominations(region)` — no new backend service (only an `AccessService` catalog entry).
 - **Executive Dashboard 4 views (P5c)** — `/` is a `TabList`: **Leadership** (totals · ACR influenced · avg MSI +
   band rollup · adoption rate) · **Operational** (by-stage · **Standard-only** clock-aware SLA · blockers · avg
   effective age · SA load) · **GHCP Adoption** (F4 embedded) · **Factory Productivity** (completed · ACR realized ·
