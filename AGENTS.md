@@ -265,8 +265,10 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   **Success %** (delivered ÷ settled), **Avg delivery days** (`TotalDays` else nominated→actual-end over
   completed), **Avg MSI**, **On-track %** + **SLA breaches** (active book, `staleTier`), **ACR delivered**, and a
   composite **Effectiveness** (0–100 = `0.35·MSI + 0.40·success + 0.25·on-track`, weights renormalised to the
-  components that have data). Owner name links to `/nominations?person=`; CSV export; honors Region + FY. Fully
-  client-side from `api.nominations(region)` — no new backend service (only an `AccessService` catalog entry).
+  components that have data). Owner name opens an **inline individual drill-down** (their stat chips + their
+  nominations table, each linking to the SA Workspace; plus an "Open in Nominations" link); CSV export; honors
+  Region + FY. Fully client-side from `api.nominations(region)` — no new backend service (only an `AccessService`
+  catalog entry).
 - **Executive Dashboard 4 views (P5c)** — `/` is a `TabList`: **Leadership** (totals · ACR influenced · avg MSI +
   band rollup · adoption rate) · **Operational** (by-stage · **Standard-only** clock-aware SLA · blockers · avg
   effective age · SA load) · **GHCP Adoption** (F4 embedded) · **Factory Productivity** (completed · ACR realized ·

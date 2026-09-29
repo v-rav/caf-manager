@@ -1,6 +1,6 @@
-import { Badge, Button, Tab, TabList, Text, Tooltip } from '@fluentui/react-components'
-import { ArrowDownloadRegular } from '@fluentui/react-icons'
-import { useMemo, useState } from 'react'
+import { Badge, Button, Link, Tab, TabList, Text, Tooltip } from '@fluentui/react-components'
+import { ArrowDownloadRegular, ArrowLeftRegular, OpenRegular } from '@fluentui/react-icons'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
@@ -99,15 +99,57 @@ const money = (v: number) => (v ? '$' + Math.round(v).toLocaleString() : '—')
 const pct = (v: number | null) => (v == null ? '—' : `${v}%`)
 const effTone = (v: number): 'success' | 'warning' | 'danger' => (v >= 75 ? 'success' : v >= 55 ? 'warning' : 'danger')
 
+// Migration stage number from the raw status text (matches the grid's 1–4 encoding).
+function stageNum(n: Nomination): string {
+  const m = (n.migrationStatus ?? '').toLowerCase()
+  if (m.includes('executing migration')) return '4'
+  if (m.includes('finalize')) return '3'
+  if (m.includes('pre-requisite') || m.includes('prerequisite') || m.includes('pre requisite')) return '2'
+  if (m.includes('validating')) return '1'
+  return '—'
+}
+
+const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'informative'> = {
+  Completed: 'success',
+  Blocked: 'danger',
+  Withdrawn: 'danger',
+  'Customer Deferred': 'warning',
+  'Waiting for Customer Action': 'warning',
+  'Waiting on Follow-up': 'warning',
+}
+
+// Compact stat chip for the individual drill-down header.
+function Stat({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div style={{ minWidth: 92 }}>
+      <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.3, color: 'var(--colorNeutralForeground3)' }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 600 }}>{value}</div>
+    </div>
+  )
+}
+
 export function EffectivenessPage() {
   const { region } = useRegion()
   const { fy } = useFy()
   const noms = useAsync(() => api.nominations(region), [region])
   const [role, setRole] = useState<Role>('PM')
+  const [selected, setSelected] = useState<string | null>(null)
+  useEffect(() => setSelected(null), [role]) // a role switch clears the open owner
 
   // Fiscal-year + region scoped (the global selectors drive this page like the rest of Delivery).
   const scoped = useMemo(() => (noms.data ?? []).filter((n) => nominationInFy(n, fy)), [noms.data, fy])
   const rows = useMemo(() => buildRows(scoped, role), [scoped, role])
+
+  // The selected owner's row + their nominations (in the current role), for the inline drill-down.
+  const detail = useMemo(() => {
+    if (!selected) return null
+    const row = rows.find((r) => r.name === selected)
+    if (!row) return null
+    const list = scoped
+      .filter((n) => ownerOf(n, role) === selected)
+      .sort((a, b) => (b.msiScore ?? 0) - (a.msiScore ?? 0))
+    return { row, list }
+  }, [selected, rows, scoped, role])
 
   // Pooled totals for the KPI band (computed straight from the scoped set for this role).
   const kpis = useMemo(() => {
@@ -154,7 +196,9 @@ export function EffectivenessPage() {
       header: ROLE_LABEL[role],
       minWidth: 200,
       sortValue: (r) => r.name,
-      render: (r) => <RouterLink to={`/nominations?person=${encodeURIComponent(r.name)}`}>{r.name}</RouterLink>,
+      render: (r) => (
+        <Link as="button" onClick={() => setSelected(r.name)} style={{ textAlign: 'left' }}>{r.name}</Link>
+      ),
     },
     { key: 'assigned', header: 'Assigned', align: 'end', sortValue: (r) => r.assigned, render: (r) => r.assigned },
     { key: 'active', header: 'Active', align: 'end', sortValue: (r) => r.active, render: (r) => r.active },
@@ -208,6 +252,33 @@ export function EffectivenessPage() {
     },
   ]
 
+  const detailColumns: Column<Nomination>[] = [
+    {
+      key: 'account',
+      header: 'Account',
+      minWidth: 200,
+      sortValue: (n) => n.accountName ?? '',
+      render: (n) => <RouterLink to={`/nominations/${n.id}`}>{n.accountName ?? '—'}{n.shortName ? ` · ${n.shortName}` : ''}</RouterLink>,
+    },
+    { key: 'tpid', header: 'TPID', sortValue: (n) => n.tpid ?? '', render: (n) => n.tpid ?? '—' },
+    { key: 'stage', header: 'Stage', align: 'center', sortValue: (n) => stageNum(n), render: (n) => stageNum(n) },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (n) => n.status,
+      render: (n) => <Badge appearance="tint" color={STATUS_TONE[n.status] ?? 'informative'}>{n.status}</Badge>,
+    },
+    { key: 'msi', header: 'MSI', align: 'end', sortValue: (n) => n.msiScore ?? 0, render: (n) => n.msiScore ?? '—' },
+    {
+      key: 'days',
+      header: 'Delivery days',
+      align: 'end',
+      sortValue: (n) => deliveryDays(n) ?? Number.MAX_SAFE_INTEGER,
+      render: (n) => deliveryDays(n) ?? '—',
+    },
+    { key: 'acr', header: 'ACR', align: 'end', sortValue: (n) => n.totalAcr ?? 0, render: (n) => money(n.totalAcr ?? 0) },
+  ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
@@ -233,6 +304,46 @@ export function EffectivenessPage() {
         <KpiCard label="Success rate" value={kpis.success == null ? '—' : `${kpis.success}%`} tone={kpis.success != null && kpis.success >= 70 ? 'success' : 'warning'} />
         <KpiCard label="Avg MSI" value={kpis.avgMsi} tone={kpis.avgMsi >= 80 ? 'success' : kpis.avgMsi >= 60 ? 'warning' : 'danger'} />
       </div>
+
+      {detail && (
+        <Panel
+          title={`${selected} · ${role}`}
+          action={
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button appearance="secondary" icon={<OpenRegular />} as="a" href={`/nominations?person=${encodeURIComponent(selected!)}`}>
+                Open in Nominations
+              </Button>
+              <Button appearance="secondary" icon={<ArrowLeftRegular />} onClick={() => setSelected(null)}>
+                Back to all
+              </Button>
+            </div>
+          }
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, marginBottom: 14 }}>
+            <Stat label="Assigned" value={detail.row.assigned} />
+            <Stat label="Active" value={detail.row.active} />
+            <Stat label="Delivered" value={detail.row.delivered} />
+            <Stat label="Withdrawn" value={detail.row.withdrawn} />
+            <Stat label="Deferred" value={detail.row.deferred} />
+            <Stat label="Blocked" value={detail.row.blocked} />
+            <Stat label="Success %" value={pct(detail.row.successRate)} />
+            <Stat label="Avg days" value={detail.row.avgDeliveryDays ?? '—'} />
+            <Stat label="Avg MSI" value={detail.row.avgMsi} />
+            <Stat label="On-track %" value={pct(detail.row.onTrackPct)} />
+            <Stat label="ACR delivered" value={money(detail.row.acrDelivered)} />
+            <Stat label="Effectiveness" value={<Badge appearance="filled" color={effTone(detail.row.effectiveness)}>{detail.row.effectiveness}</Badge>} />
+          </div>
+          <DataTable<Nomination>
+            ariaLabel={`${selected} nominations`}
+            rows={detail.list}
+            rowKey={(n) => n.id}
+            columns={detailColumns}
+            defaultSort={{ key: 'status', dir: 'asc' }}
+            emptyMessage="No nominations in scope."
+            pageSize={15}
+          />
+        </Panel>
+      )}
 
       <Panel
         title={`${role} scorecard`}
