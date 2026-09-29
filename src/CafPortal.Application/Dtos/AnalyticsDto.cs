@@ -71,4 +71,5 @@ public class AcrCaptureDto
 }
 
 public record AcrCaptureRow(int Id, string Account, string? Tpid, string? Region, string Path,
-    int Cores, double Acr, string GapType, double RatePerCoreYear, int EstimatedCores, double EstimatedAcr, double GapAcr);
+    int Cores, double Acr, string GapType, double RatePerCoreYear, int EstimatedCores, double EstimatedAcr, double GapAcr,
+    string Stage, string? Status, string? CurrentState);

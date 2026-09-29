@@ -657,6 +657,9 @@ export interface AcrCaptureRow {
   estimatedCores: number
   estimatedAcr: number
   gapAcr: number
+  stage: string
+  status?: string | null
+  currentState?: string | null
 }
 export interface AcrCapture {
   containerNoms: number

@@ -164,8 +164,11 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             var estCores = gap == "Missing ACR" ? cores : Math.Max(cores, floor);
             var estAcr = estCores * ratePerCoreYr;
             var gapAcr = Math.Max(0, estAcr - acr);
+            var stageIdx = StageIndex(n.MigrationStatus);
+            var stageLabel = stageIdx is int si ? StageLabels[si - 1] : "—";
             rows.Add(new AcrCaptureRow(n.Id, n.AccountName ?? "—", n.Tpid, n.Region, n.PrimaryMigrationPath ?? "—",
-                cores, Math.Round(acr), gap, Math.Round(ratePerCoreYr), estCores, Math.Round(estAcr), Math.Round(gapAcr)));
+                cores, Math.Round(acr), gap, Math.Round(ratePerCoreYr), estCores, Math.Round(estAcr), Math.Round(gapAcr),
+                stageLabel, n.Status, n.CurrentState));
         }
         rows = rows.OrderByDescending(r => r.GapAcr).ToList();
 
