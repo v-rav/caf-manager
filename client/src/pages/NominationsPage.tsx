@@ -826,7 +826,7 @@ export function NominationsPage() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {(uploadResult?.messages ?? []).map((m, i) => (
-            <div key={i} style={{ fontSize: 13, fontWeight: i === 0 ? 600 : 400 }}>{m}</div>
+            <div key={i} style={{ fontSize: 13, fontWeight: /^(Detected|Records):/.test(m) ? 600 : 400 }}>{m}</div>
           ))}
         </div>
       </Modal>

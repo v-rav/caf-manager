@@ -171,7 +171,8 @@ import the **web app is the system of record**.
   nominations upsert-merge), **Summary of All Offerings** (`Factory Offering` + `Total ACR`/`Offering Id`/
   `Is Tool Attached` → offering enrichment), or **Nominations In-Flight** (`Segment`+`TPID`+`Customer Name`/
   `Account ID` → account master). A non-matching file returns a "not processed" message. The result dialog
-  shows the detected type + import summary; on success the page reloads. (Detection order: Offerings →
+  shows the detected type + a **Records** line (added · updated · withdrawn · unchanged, from the `ImportRun`)
+  + import summary; on success the page reloads. (Detection order: Offerings →
   Detail View → Account master, since Offerings/Account-master share TPID/Customer columns.)
 - **Import history** (Phase 5C): every upload/refresh records an `ImportRun` (+ `ImportChange` deltas:
   Added / Updated with field-level from→to / Withdrawn) via `NominationImportService`. Surfaced on the

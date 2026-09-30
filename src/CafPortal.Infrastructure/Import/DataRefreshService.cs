@@ -188,6 +188,7 @@ public class DataRefreshService(
 
         var headers = ReadHeaderSet(new MemoryStream(bytes));
         var kind = DetectFileKind(headers);
+        var beforeRunId = await _db.ImportRuns.MaxAsync(r => (int?)r.Id, ct) ?? 0;
 
         DataRefreshResultDto result;
         string label;
@@ -214,6 +215,10 @@ public class DataRefreshService(
                     Messages = { $"Unrecognised workbook '{fileName}'. Expected the FDO Detail View, Summary of All Offerings, or Nominations In-Flight export." },
                 };
         }
+        // Surface the add/update/withdraw breakdown from the import run this upload just produced.
+        var run = await _db.ImportRuns.OrderByDescending(r => r.Id).FirstOrDefaultAsync(ct);
+        if (run is not null && run.Id > beforeRunId)
+            result.Messages.Insert(0, $"Records: {run.Added} added · {run.Updated} updated · {run.Withdrawn} withdrawn · {run.Unchanged} unchanged.");
         result.Messages.Insert(0, $"Detected: {label} ({fileName}).");
         return result;
     }
