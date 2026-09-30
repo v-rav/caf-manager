@@ -20,7 +20,8 @@ import the **web app is the system of record**.
   - Migrations dir: `src/CafPortal.Infrastructure/Persistence/Migrations` (output-dir
     `Persistence/Migrations`).
 - **Frontend**: React 19 + TypeScript + Vite in `client/`, **Fluent UI v9**.
-  - Reusable: `DataTable<T>` (sortable/paginated), `KpiCard` (tones + optional `onClick` for
+  - Reusable: `DataTable<T>` (sortable/paginated; optional `expandedContent(row)` adds a per-row chevron
+    that expands a full-width inline detail panel), `KpiCard` (tones + optional `onClick` for
     drill-through), `Modal`/`ConfirmDialog`, `common.tsx` (`Panel`, `FilterSelect` (renders a visible
     label above the dropdown; reset option defaults to "All", override via `allLabel`), `StatusBadge`,
     `UtilizationBar`, `ErrorText`, `Loading`), `charts.tsx`, `hooks.ts` (`useAsync`, `useDebounced`).

@@ -9,10 +9,11 @@ import {
   Text,
 } from '@fluentui/react-components'
 import {
+  ChevronDownRegular,
   ChevronLeftRegular,
   ChevronRightRegular,
 } from '@fluentui/react-icons'
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 
 export interface Column<T> {
   key: string
@@ -38,6 +39,8 @@ interface DataTableProps<T> {
   /** Scroll region cap so headers stay reachable. */
   maxHeight?: number
   defaultSort?: { key: string; dir: 'asc' | 'desc' }
+  /** When provided, each row gets a chevron that expands a full-width detail panel below it. */
+  expandedContent?: (row: T) => ReactNode
 }
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
@@ -52,10 +55,12 @@ export function DataTable<T>({
   pageSize = 25,
   maxHeight = 560,
   defaultSort,
+  expandedContent,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState(defaultSort?.key)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(defaultSort?.dir ?? 'asc')
   const [page, setPage] = useState(0)
+  const [expanded, setExpanded] = useState<Set<string | number>>(() => new Set())
 
   const sorted = useMemo(() => {
     const col = columns.find((c) => c.key === sortKey)
@@ -95,6 +100,9 @@ export function DataTable<T>({
         <Table size="small" aria-label={ariaLabel} style={{ minWidth: 'max-content' }}>
           <TableHeader>
             <TableRow>
+              {expandedContent && (
+                <TableHeaderCell style={{ position: 'sticky', top: 0, zIndex: 1, background: headBg, width: 32, minWidth: 32 }} />
+              )}
               {columns.map((c) => {
                 const active = sortKey === c.key
                 return (
@@ -129,24 +137,57 @@ export function DataTable<T>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paged.map((row, i) => (
-              <TableRow
-                key={rowKey(row)}
-                style={{
-                  background: rowStyle?.(row) ? undefined : i % 2 ? 'var(--colorNeutralBackground2)' : undefined,
-                  ...rowStyle?.(row),
-                }}
-              >
-                {columns.map((c) => (
-                  <TableCell key={c.key} style={{ textAlign: c.align, verticalAlign: 'middle', fontSize: 12 }}>
-                    {c.render ? c.render(row) : (c.sortValue?.(row) ?? '—')}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
+            {paged.map((row, i) => {
+              const key = rowKey(row)
+              const isOpen = expandedContent != null && expanded.has(key)
+              return (
+                <Fragment key={key}>
+                  <TableRow
+                    style={{
+                      background: rowStyle?.(row) ? undefined : i % 2 ? 'var(--colorNeutralBackground2)' : undefined,
+                      ...rowStyle?.(row),
+                    }}
+                  >
+                    {expandedContent && (
+                      <TableCell style={{ width: 32, textAlign: 'center', verticalAlign: 'middle', padding: 0 }}>
+                        <Button
+                          size="small"
+                          appearance="subtle"
+                          aria-label={isOpen ? 'Collapse row' : 'Expand row'}
+                          icon={isOpen ? <ChevronDownRegular /> : <ChevronRightRegular />}
+                          onClick={() =>
+                            setExpanded((s) => {
+                              const n = new Set(s)
+                              if (n.has(key)) n.delete(key)
+                              else n.add(key)
+                              return n
+                            })
+                          }
+                        />
+                      </TableCell>
+                    )}
+                    {columns.map((c) => (
+                      <TableCell key={c.key} style={{ textAlign: c.align, verticalAlign: 'middle', fontSize: 12 }}>
+                        {c.render ? c.render(row) : (c.sortValue?.(row) ?? '—')}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {isOpen && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length + 1}
+                        style={{ background: 'var(--colorNeutralBackground2)', padding: 12 }}
+                      >
+                        {expandedContent!(row)}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </Fragment>
+              )
+            })}
             {paged.length === 0 && (
               <TableRow>
-                <TableCell colSpan={columns.length} style={{ color: 'var(--colorNeutralForeground3)', padding: 24, textAlign: 'center' }}>
+                <TableCell colSpan={columns.length + (expandedContent ? 1 : 0)} style={{ color: 'var(--colorNeutralForeground3)', padding: 24, textAlign: 'center' }}>
                   {emptyMessage}
                 </TableCell>
               </TableRow>
