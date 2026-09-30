@@ -50,6 +50,17 @@ public class AdminController(IDataRefreshService refresh) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Upload any of the 3 nomination workbooks; the type is auto-detected from its columns.</summary>
+    [HttpPost("upload-auto")]
+    [RequestSizeLimit(52_428_800)] // 50 MB
+    public async Task<IActionResult> UploadAuto([FromForm] IFormFile file, CancellationToken ct = default)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest("No file uploaded.");
+        await using var stream = file.OpenReadStream();
+        return Ok(await refresh.UploadAutoAsync(stream, file.FileName, ct));
+    }
+
     [HttpGet("status")]
     public async Task<IActionResult> Status(CancellationToken ct)
         => Ok(await refresh.GetStatusAsync(ct));

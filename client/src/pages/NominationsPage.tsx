@@ -326,6 +326,7 @@ export function NominationsPage() {
   const [resourceTyping, setResourceTyping] = useState(false)
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadResult, setUploadResult] = useState<{ success: boolean; messages: string[] } | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const runUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -334,11 +335,13 @@ export function NominationsPage() {
     if (!file) return
     setUploading(true)
     try {
-      await api.uploadData('nominations', file)
-      window.location.reload()
+      // Server auto-detects Detail View / Summary of Offerings / Nominations In-Flight from the columns.
+      const res = await api.uploadAuto(file)
+      setUploadResult(res)
     } catch {
+      setUploadResult({ success: false, messages: ['Upload failed. Ensure the file is a valid .xlsx export (Detail View, Summary of Offerings, or Nominations In-Flight).'] })
+    } finally {
       setUploading(false)
-      alert('Upload failed. Ensure the file is the FDO “Detail View” .xlsx export.')
     }
   }
 
@@ -572,14 +575,19 @@ export function NominationsPage() {
                   style={{ display: 'none' }}
                   onChange={runUpload}
                 />
-                <Button
-                  appearance="primary"
-                  icon={<ArrowUploadRegular />}
-                  disabled={uploading}
-                  onClick={() => fileInput.current?.click()}
+                <Tooltip
+                  relationship="description"
+                  content="Upload any of the 3 workbooks — Detail View (pipeline), Summary of All Offerings (enrichment), or Nominations In-Flight (account master). The type is auto-detected."
                 >
-                  {uploading ? 'Uploading…' : 'Upload'}
-                </Button>
+                  <Button
+                    appearance="primary"
+                    icon={<ArrowUploadRegular />}
+                    disabled={uploading}
+                    onClick={() => fileInput.current?.click()}
+                  >
+                    {uploading ? 'Uploading…' : 'Upload'}
+                  </Button>
+                </Tooltip>
                 <Button
                   as="a"
                   href={api.exportUrl('nominations', region, {
@@ -752,6 +760,29 @@ export function NominationsPage() {
           </Panel>
         </>
       )}
+
+      <Modal
+        open={!!uploadResult}
+        title={uploadResult?.success ? 'Upload processed' : 'Upload not processed'}
+        onClose={() => {
+          const ok = uploadResult?.success
+          setUploadResult(null)
+          if (ok) window.location.reload()
+        }}
+        onSubmit={() => {
+          const ok = uploadResult?.success
+          setUploadResult(null)
+          if (ok) window.location.reload()
+        }}
+        submitLabel={uploadResult?.success ? 'Reload' : 'Close'}
+        maxWidth={620}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {(uploadResult?.messages ?? []).map((m, i) => (
+            <div key={i} style={{ fontSize: 13, fontWeight: i === 0 ? 600 : 400 }}>{m}</div>
+          ))}
+        </div>
+      </Modal>
 
       <Modal
         open={!!editing}

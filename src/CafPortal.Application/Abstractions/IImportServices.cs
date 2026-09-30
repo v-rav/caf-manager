@@ -38,6 +38,10 @@ public interface IDataRefreshService
     /// <summary>Saves an uploaded source workbook (kind: nominations|resources|leave|engagement) then runs a refresh.</summary>
     Task<DataRefreshResultDto> UploadAndRefreshAsync(string kind, Stream content, string fileName, CancellationToken ct = default);
 
+    /// <summary>Detects which of the 3 nomination workbooks was uploaded (Detail View / Summary of
+    /// Offerings / Nominations In-Flight) from its columns and routes it to the right importer.</summary>
+    Task<DataRefreshResultDto> UploadAutoAsync(Stream content, string fileName, CancellationToken ct = default);
+
     /// <summary>Moves no-TPID accounts (non-canonical: departments/apps/abbreviations) out of the master into ParkedAccount. apply=false previews.</summary>
     Task<DataRefreshResultDto> ParkNoTpidAccountsAsync(bool apply, CancellationToken ct = default);
 

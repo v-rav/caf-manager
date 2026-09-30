@@ -11,6 +11,7 @@ import type {
   CapacityRow,
   ExecutiveDashboard,
   DataStatus,
+  DataRefreshResult,
   Governance,
   Blocker,
   MigrationTool,
@@ -336,6 +337,13 @@ export const api = {
     const form = new FormData()
     form.append('file', file)
     return http.post(`/api/admin/upload?kind=${kind}`, form).then((r) => r.data)
+  },
+
+  // Upload any of the 3 nomination workbooks; the server auto-detects the type from its columns.
+  uploadAuto: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return http.post<DataRefreshResult>('/api/admin/upload-auto', form).then((r) => r.data)
   },
 
   imports: (take = 100) => http.get<ImportRun[]>('/api/imports', { params: { take } }).then((r) => r.data),

@@ -164,6 +164,14 @@ import the **web app is the system of record**.
   hand-entered leave. ⚠ `ResourceAccounts`/`EngagementFacts` still wipe-and-rebuild — safe today.)
 - **Nominations are NEVER hard-deleted by imports.** Absent-from-drop rows are soft-set `Withdrawn`;
   hard delete is a manual, user-only action from the UI. Do not add auto-purge of nominations.
+- **Smart in-app upload** (Nominations page → **Upload**): `POST /api/admin/upload-auto` (multipart)
+  buffers the workbook, sniffs its header row (`DataRefreshService.DetectFileKind`), and routes it to the
+  right importer — **Detail View** (stage day-counts / `Linked to ID` / `Nomination Approval Status` →
+  nominations upsert-merge), **Summary of All Offerings** (`Factory Offering` + `Total ACR`/`Offering Id`/
+  `Is Tool Attached` → offering enrichment), or **Nominations In-Flight** (`Segment`+`TPID`+`Customer Name`/
+  `Account ID` → account master). A non-matching file returns a "not processed" message. The result dialog
+  shows the detected type + import summary; on success the page reloads. (Detection order: Offerings →
+  Detail View → Account master, since Offerings/Account-master share TPID/Customer columns.)
 - **Import history** (Phase 5C): every upload/refresh records an `ImportRun` (+ `ImportChange` deltas:
   Added / Updated with field-level from→to / Withdrawn) via `NominationImportService`. Surfaced on the
   **Import History** page (`/history`, `GET /api/imports`, `GET /api/imports/{id}/changes`). History rows

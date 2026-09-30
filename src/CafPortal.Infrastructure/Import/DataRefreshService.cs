@@ -175,6 +175,77 @@ public class DataRefreshService(
         return result;
     }
 
+    // Buffers the upload, sniffs its header row, and routes it to the correct importer so users can drop
+    // any of the 3 nomination workbooks on one control without picking a type.
+    public async Task<DataRefreshResultDto> UploadAutoAsync(Stream content, string fileName, CancellationToken ct = default)
+    {
+        if (!fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Only .xlsx workbooks are supported.");
+
+        using var ms = new MemoryStream();
+        await content.CopyToAsync(ms, ct);
+        var bytes = ms.ToArray();
+
+        var headers = ReadHeaderSet(new MemoryStream(bytes));
+        var kind = DetectFileKind(headers);
+
+        DataRefreshResultDto result;
+        string label;
+        switch (kind)
+        {
+            case "offerings":
+                label = "Summary of All Offerings — offering + date enrichment";
+                result = await ImportOfferingsAsync(new MemoryStream(bytes), apply: true, ct);
+                break;
+            case "nominations":
+                label = "Detail View — nomination pipeline (upsert-merge)";
+                result = await UploadAndRefreshAsync("nominations", new MemoryStream(bytes), fileName, ct);
+                break;
+            case "accounts":
+                label = "Nominations In-Flight — account master enrichment";
+                result = await UploadAndRefreshAsync("accounts", new MemoryStream(bytes), fileName, ct);
+                break;
+            default:
+                return new DataRefreshResultDto
+                {
+                    StartedUtc = DateTimeOffset.UtcNow,
+                    CompletedUtc = DateTimeOffset.UtcNow,
+                    Success = false,
+                    Messages = { $"Unrecognised workbook '{fileName}'. Expected the FDO Detail View, Summary of All Offerings, or Nominations In-Flight export." },
+                };
+        }
+        result.Messages.Insert(0, $"Detected: {label} ({fileName}).");
+        return result;
+    }
+
+    // First-row header set of an uploaded workbook (case-insensitive), used to identify the file type.
+    private static HashSet<string> ReadHeaderSet(Stream s)
+    {
+        using var wb = new XLWorkbook(s);
+        var ws = wb.Worksheets.First();
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var first = ws.RowsUsed().FirstOrDefault();
+        if (first is not null)
+            foreach (var cell in first.CellsUsed())
+                set.Add(cell.GetString().Trim());
+        return set;
+    }
+
+    // Signature match on distinctive columns (order matters: Offerings & Account master share TPID/Customer).
+    private static string DetectFileKind(HashSet<string> h)
+    {
+        // Summary of All Offerings — the ~100-col value/enrichment workbook.
+        if (h.Contains("Factory Offering") && (h.Contains("Total ACR") || h.Contains("Offering Id") || h.Contains("Is Tool Attached")))
+            return "offerings";
+        // FDO Detail View — the operational pipeline (per-stage day-counts + FDO linkage/approval).
+        if (h.Contains("1 - Validating & Initial Scope") || h.Contains("Nomination Approval Status") || h.Contains("Linked to ID"))
+            return "nominations";
+        // Nominations In-Flight — the narrow account master (Segment / TPID / Customer Name / Account ID).
+        if (h.Contains("Segment") && h.Contains("TPID") && (h.Contains("Customer Name") || h.Contains("Account ID")))
+            return "accounts";
+        return "unknown";
+    }
+
     // Imports an uploaded resources workbook directly (upsert), then rebuilds capacity. Not staged into
     // SourceData, so it never becomes a recurring auto-source — the resources table stays manual/upload-only.
     private async Task<DataRefreshResultDto> ImportResourcesUploadAsync(Stream content, string fileName, CancellationToken ct)

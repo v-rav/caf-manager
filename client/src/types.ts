@@ -87,6 +87,11 @@ export interface RestoreResult {
   accounts: number
 }
 
+export interface DataRefreshResult {
+  success: boolean
+  messages: string[]
+}
+
 export interface ImportRun {
   id: number
   startedUtc: string
