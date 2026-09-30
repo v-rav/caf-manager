@@ -242,6 +242,7 @@ export interface Nomination {
   accountId?: number
   accountName?: string
   shortName?: string
+  externalTaskId?: string
   tpid?: string
   technology?: string
   region: string

@@ -11,7 +11,7 @@ import {
   Textarea,
   Tooltip,
 } from '@fluentui/react-components'
-import { AddRegular, ArrowDownloadRegular, ArrowUploadRegular, DeleteRegular, DismissRegular, EditRegular } from '@fluentui/react-icons'
+import { AddRegular, ArrowDownloadRegular, ArrowUploadRegular, ChevronDownRegular, ChevronRightRegular, DeleteRegular, DismissRegular, EditRegular } from '@fluentui/react-icons'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { Modal } from '../components/Modal'
@@ -37,6 +37,12 @@ function ReadField({ label, children }: { label: string; children: ReactNode }) 
     </div>
   )
 }
+
+// Read-only value formatters for the "show all fields" panel.
+const roDash = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : String(v))
+const roYesNo = (b?: boolean | null) => (b == null ? '—' : b ? 'Yes' : 'No')
+const roUsd = (v?: number | null) => (v ? '$' + Math.round(v).toLocaleString() : '—')
+const roDays = (v?: number | null) => (v != null ? `${v}d` : '—')
 
 // Wave links are informational — no type is mandatory. These filters help find records to enrich.
 const LINK_FILTERS = ['No waves', 'Has any waves', 'Has DB', 'Has Security']
@@ -327,6 +333,7 @@ export function NominationsPage() {
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<{ success: boolean; messages: string[] } | null>(null)
+  const [showAllRo, setShowAllRo] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const runUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -396,6 +403,7 @@ export function NominationsPage() {
 
   const openManage = (n: Nomination) => {
     setEditing(n)
+    setShowAllRo(false)
     setForm({
       status: n.status,
       migrationStatus: n.migrationStatus ?? '',
@@ -824,6 +832,48 @@ export function NominationsPage() {
               <ReadField label="Offering">{editing.technology ?? '—'}</ReadField>
               <ReadField label="TPID · Region">{`${editing.tpid ?? '—'} · ${editing.region ?? '—'}`}</ReadField>
             </div>
+            <Button
+              appearance="transparent"
+              size="small"
+              icon={showAllRo ? <ChevronDownRegular /> : <ChevronRightRegular />}
+              onClick={() => setShowAllRo((v) => !v)}
+              style={{ alignSelf: 'flex-start', paddingLeft: 0 }}
+            >
+              {showAllRo ? 'Hide extra fields' : 'Show all fields'}
+            </Button>
+            {showAllRo && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
+                <ReadField label="Task Id">{roDash(editing.externalTaskId)}</ReadField>
+                <ReadField label="Short name">{roDash(editing.shortName)}</ReadField>
+                <ReadField label="Approval status">{roDash(editing.approvalStatus)}</ReadField>
+                <ReadField label="Classification">{roDash(editing.classification)}</ReadField>
+                <ReadField label="Velocity impact">{roDash(editing.velocityImpact)}</ReadField>
+                <ReadField label="Strategic">{editing.isStrategic ? `Yes · ${editing.strategicTier || '—'}` : 'No'}</ReadField>
+                <ReadField label="Days in flight">{roDays(editing.daysInFlight)}</ReadField>
+                <ReadField label="MSI">{`${editing.msiScore ?? '—'} · ${editing.msiBand ?? ''}`}</ReadField>
+                <ReadField label="GHCP level">{editing.ghcpAdoptionLevel != null ? `${editing.ghcpAdoptionLevel}/7` : '—'}</ReadField>
+                <ReadField label="Primary path">{roDash(editing.primaryMigrationPath)}</ReadField>
+                <ReadField label="Partner">{roDash(editing.partnerName)}</ReadField>
+                <ReadField label="Total cores">{roDash(editing.totalCores)}</ReadField>
+                <ReadField label="Mode of access">{roDash(editing.modeOfAccess)}</ReadField>
+                <ReadField label="Total ACR">{roUsd(editing.totalAcr)}</ReadField>
+                <ReadField label="NNR ACR">{roUsd(editing.nnrAcr)}</ReadField>
+                <ReadField label="Tool attached">{roYesNo(editing.isToolAttached)}</ReadField>
+                <ReadField label="Automation used">{roYesNo(editing.isAutomationUsed)}</ReadField>
+                <ReadField label="Nominated">{roDash(editing.nominatedDate)}</ReadField>
+                <ReadField label="Approval date">{roDash(editing.approvalDate)}</ReadField>
+                <ReadField label="Planned start · end">{`${roDash(editing.plannedStartDate)} · ${roDash(editing.plannedEndDate)}`}</ReadField>
+                <ReadField label="Actual start · end">{`${roDash(editing.actualStartDate)} · ${roDash(editing.actualEndDate)}`}</ReadField>
+                <ReadField label="Total days">{roDash(editing.totalDays)}</ReadField>
+                <ReadField label="Kickoff → start lag">{roDays(editing.kickoffToStartLagDays)}</ReadField>
+                <ReadField label="SLA tier">{roDash(editing.staleTier)}</ReadField>
+                <ReadField label="Effective age">{editing.effectiveAgeDays != null ? `${editing.effectiveAgeDays}d${editing.clockStopped ? ' · paused' : ''}` : '—'}</ReadField>
+                <ReadField label="Open blockers">{roDash(editing.openBlockerCount)}</ReadField>
+                <ReadField label="Days since update">{roDays(editing.daysSinceUpdate)}</ReadField>
+                <ReadField label="Waves">{editing.noWavesLinked ? 'None' : ([editing.dbLinked && 'DB', editing.securityLinked && 'Security', editing.alzLinked && 'ALZ'].filter(Boolean).join(' · ') || String(editing.waveCount))}</ReadField>
+                <ReadField label="Assigned resources">{roDash(editing.assignedResourceCount)}</ReadField>
+              </div>
+            )}
           </div>
         )}
 
