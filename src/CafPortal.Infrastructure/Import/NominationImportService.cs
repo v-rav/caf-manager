@@ -146,13 +146,15 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             // drop). Un-withdraw it symmetrically; MapStatus keeps FDO-declined/settled rows settled.
             if (!isNew && nom.Status == NominationStatusType.Withdrawn)
                 nom.Status = MapStatus(migration, approval);
-            // Ownership (PM/CFTL/SA) is portal-owned once set: seed from FDO only when empty.
-            if (string.IsNullOrWhiteSpace(nom.SolutionArchitect))
-                nom.SolutionArchitect = Clean(ExcelHelpers.GetString(row, colSolutionArchitect));
-            if (string.IsNullOrWhiteSpace(nom.CftlPrimary))
-                nom.CftlPrimary = Clean(ExcelHelpers.GetString(row, colCftl));
-            if (string.IsNullOrWhiteSpace(nom.ProjectCoordinator))
-                nom.ProjectCoordinator = Clean(ExcelHelpers.GetString(row, colProjectCoordinator));
+            // Ownership (PM/CFTL/SA) is FDO-authoritative: overwrite from FDO on every drop so reassignments
+            // flow through. A blank FDO cell keeps the current value (no accidental wipe); hand-edits in the
+            // Manage dialog are superseded by the next FDO drop.
+            var saFdo = Clean(ExcelHelpers.GetString(row, colSolutionArchitect));
+            if (saFdo is not null) nom.SolutionArchitect = saFdo;
+            var cftlFdo = Clean(ExcelHelpers.GetString(row, colCftl));
+            if (cftlFdo is not null) nom.CftlPrimary = cftlFdo;
+            var pmFdo = Clean(ExcelHelpers.GetString(row, colProjectCoordinator));
+            if (pmFdo is not null) nom.ProjectCoordinator = pmFdo;
             // Portal-owned (Status, BlockedReason, BlockedSince, FollowUpDate, WaveLinks) preserved.
             // Wave links: refresh FDO-sourced links from "Linked to"; keep portal-added links untouched.
             SyncFdoWaveLinks(nom!, account.AccountId,

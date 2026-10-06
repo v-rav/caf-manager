@@ -84,8 +84,9 @@ import the **web app is the system of record**.
   via `MapStatus` on first insert.) The grid **search box is cross-field** (`matchesText`): it matches
   account name, TPID, and all three ownership roles (PM/CFTL/SA), and the server export applies the
   same broadened `search` predicate so the file matches the on-screen view.- **Ownership short names** used in the Nominations grid: **PM** = `ProjectCoordinator`,
-  **CFTL** = `CftlPrimary`, **SA** = `SolutionArchitect`. These are **portal-owned** (editable in the
-  Manage dialog); the FDO import only **seeds them when empty** (never overwrites a portal edit).
+  **CFTL** = `CftlPrimary`, **SA** = `SolutionArchitect`. These are **FDO-authoritative** — the import
+  **overwrites them from FDO on every drop** so reassignments flow through (a **blank** FDO cell keeps the
+  current value, no accidental wipe). Manage-dialog edits are editable but **superseded by the next FDO drop**.
 - **Wave linkage (informational, NOT required)**: a nomination may legitimately have **no waves**;
   no wave type is mandatory (a DB wave is only sometimes relevant, and many apps have no DB). Wave
   links come from the FDO export's **`Linked to` / `Linked to ID`** columns (';'-separated), which
