@@ -156,7 +156,10 @@ import the **web app is the system of record**.
   FDO **Task Id** (`Nomination.ExternalTaskId`, indexed); FDO-owned fields are refreshed each drop and
   portal-owned fields (`Status`, `BlockedReason`, `BlockedSince`, `FollowUpDate`, `WaveLinks`, edited
   `Remarks`) are **preserved**. Rows missing from a drop are soft-set `NominationStatusType.Withdrawn`
-  (`= 8`) — never hard-deleted (keeps history + waves). **Settled states are never auto-withdrawn**: the
+  (`= 8`) — never hard-deleted (keeps history + waves). **The withdraw is symmetric**: a row that
+  **returns** in a later drop is **revived** (un-withdrawn) via `MapStatus(migration, approval)`, so a
+  **partial drop can't permanently kill rows** (FDO-declined/settled rows stay settled since MapStatus
+  re-derives them). **Settled states are never auto-withdrawn**: the
   withdraw guard skips `Withdrawn/Closed/Completed/CustomerDeferred`, so completed migrations survive
   in-flight drops. `DataRefreshService` must **not**
   `ExecuteDeleteAsync` nominations. See `NominationImportService` loop + `DEVELOPMENT-PLAN.md` §8.

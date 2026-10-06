@@ -142,6 +142,10 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             nom.ApprovalStatus = approval;
             nom.StageAgeDays = stageAge;
             nom.CurrentState = Truncate(Clean(ExcelHelpers.GetString(row, colCurrentState)), 2000);
+            // Revive: a row present in this drop was wrongly withdrawn (e.g. absent from an earlier partial
+            // drop). Un-withdraw it symmetrically; MapStatus keeps FDO-declined/settled rows settled.
+            if (!isNew && nom.Status == NominationStatusType.Withdrawn)
+                nom.Status = MapStatus(migration, approval);
             // Ownership (PM/CFTL/SA) is portal-owned once set: seed from FDO only when empty.
             if (string.IsNullOrWhiteSpace(nom.SolutionArchitect))
                 nom.SolutionArchitect = Clean(ExcelHelpers.GetString(row, colSolutionArchitect));
