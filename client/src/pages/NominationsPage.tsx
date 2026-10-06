@@ -277,12 +277,13 @@ const WAVE_OPTIONS = ['App', 'DB', 'Security/Defender', 'Landing Zone', 'Dispatc
 const ASSIGN_ROLES = ['Solution Architect', 'Migration Engineer', 'DevOps Engineer']
 
 // Which resource Role values are eligible for each delivery role (keyword match, case-insensitive).
-// Solution Architect ← *Architect*; Migration Engineer ← *Engineer* (non-DevOps) / SME / ME; DevOps ← *DevOps*.
+// Solution Architect ← *Architect* / SME (SMEs are sometimes allocated as SAs); Migration Engineer ←
+// *Engineer* (non-DevOps) / SME / ME; DevOps ← *DevOps*.
 function eligibleForRole(assignRole: string, resourceRole?: string): boolean {
   const r = (resourceRole ?? '').toLowerCase()
   switch (assignRole) {
     case 'Solution Architect':
-      return r.includes('architect')
+      return r.includes('architect') || r.includes('sme')
     case 'Migration Engineer':
       return (r.includes('engineer') && !r.includes('devops')) || r.includes('migration') || r.includes('sme')
     case 'DevOps Engineer':
