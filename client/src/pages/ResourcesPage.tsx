@@ -13,7 +13,7 @@ import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { ConfirmDialog, Modal } from '../components/Modal'
 import { DataTable } from '../components/DataTable'
-import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
+import { ErrorText, FilterSelect, Loading, MultiFilterSelect, Panel } from '../components/common'
 import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import { useSearchParams } from 'react-router-dom'
@@ -42,27 +42,32 @@ const emptyForm: ResourceUpsert = {
 export function ResourcesPage() {
   const { region } = useRegion()
   const [search, setSearch] = useState('')
-  const [role, setRole] = useState('')
+  const [roleSel, setRoleSel] = useState<string[]>([])
   const [skill, setSkill] = useState('')
   const debouncedSearch = useDebounced(search)
   const debouncedSkill = useDebounced(skill)
+  // Role is filtered client-side (multi-select); search/skill/region stay server-side.
   const { data, loading, error, reload } = useAsync(
-    () => api.resources({ search: debouncedSearch || undefined, region, role: role || undefined, skill: debouncedSkill || undefined }),
-    [debouncedSearch, region, role, debouncedSkill],
+    () => api.resources({ search: debouncedSearch || undefined, region, skill: debouncedSkill || undefined }),
+    [debouncedSearch, region, debouncedSkill],
   )
   const { data: regions } = useAsync(() => api.regions(), [])
   const { data: roles } = useAsync(() => api.roles(), [])
   const [searchParams] = useSearchParams()
-  const [capacityFilter, setCapacityFilter] = useState(searchParams.get('capacity') ?? '')
+  const [capSel, setCapSel] = useState<string[]>(() => {
+    const q = searchParams.get('capacity')
+    return q ? [q] : []
+  })
   const [activeFilter, setActiveFilter] = useState('Active')
   const rows = useMemo(
     () =>
       (data ?? []).filter(
         (r) =>
-          (!capacityFilter || r.capacityStatus === capacityFilter) &&
+          (roleSel.length === 0 || roleSel.includes(r.role)) &&
+          (capSel.length === 0 || capSel.includes(r.capacityStatus)) &&
           (!activeFilter || (activeFilter === 'Active' ? r.activeFlag : !r.activeFlag)),
       ),
-    [data, capacityFilter, activeFilter],
+    [data, roleSel, capSel, activeFilter],
   )
 
   const [form, setForm] = useState<ResourceUpsert | null>(null)
@@ -134,8 +139,8 @@ export function ResourcesPage() {
         action={
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <SearchBox placeholder="Search name / PSID" value={search} onChange={(_, d) => setSearch(d.value)} style={{ minWidth: 180 }} />
-            <FilterSelect label="Roles" value={role} options={roles ?? []} onChange={setRole} />
-            <FilterSelect label="Capacity" value={capacityFilter} options={CAPACITY_STATUSES} onChange={setCapacityFilter} minWidth={170} />
+            <MultiFilterSelect label="Roles" values={roleSel} options={roles ?? []} onChange={setRoleSel} minWidth={170} />
+            <MultiFilterSelect label="Capacity" values={capSel} options={CAPACITY_STATUSES} onChange={setCapSel} minWidth={190} />
             <FilterSelect label="Active" value={activeFilter} options={['Active', 'Inactive']} onChange={setActiveFilter} minWidth={130} />
             <SearchBox placeholder="Skill" value={skill} onChange={(_, d) => setSkill(d.value)} style={{ minWidth: 140 }} />
             <Button as="a" href={api.exportUrl('resources', region)} appearance="secondary" icon={<ArrowDownloadRegular />}>

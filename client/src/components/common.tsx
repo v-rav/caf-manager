@@ -135,3 +135,45 @@ export function FilterSelect({
     </div>
   )
 }
+
+/** Multi-select variant of FilterSelect: pick any number of options; empty = all. */
+export function MultiFilterSelect({
+  label,
+  values,
+  options,
+  onChange,
+  minWidth = 150,
+  allLabel,
+}: {
+  label: string
+  values: string[]
+  options: string[]
+  onChange: (values: string[]) => void
+  minWidth?: number
+  allLabel?: string
+}) {
+  const all = allLabel ?? 'All'
+  const display = values.length === 0 ? all : values.length === 1 ? values[0] : `${values.length} selected`
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Text size={200} weight="semibold" style={{ color: tokens.colorNeutralForeground3 }}>
+        {label}
+      </Text>
+      <Dropdown
+        aria-label={label}
+        multiselect
+        placeholder={all}
+        value={display}
+        selectedOptions={values}
+        onOptionSelect={(_, d) => onChange(d.selectedOptions)}
+        style={{ minWidth }}
+      >
+        {options.map((o) => (
+          <Option key={o} value={o}>
+            {o}
+          </Option>
+        ))}
+      </Dropdown>
+    </div>
+  )
+}

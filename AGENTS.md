@@ -23,7 +23,8 @@ import the **web app is the system of record**.
   - Reusable: `DataTable<T>` (sortable/paginated; optional `expandedContent(row)` adds a per-row chevron
     that expands a full-width inline detail panel), `KpiCard` (tones + optional `onClick` for
     drill-through), `Modal`/`ConfirmDialog`, `common.tsx` (`Panel`, `FilterSelect` (renders a visible
-    label above the dropdown; reset option defaults to "All", override via `allLabel`), `StatusBadge`,
+    label above the dropdown; reset option defaults to "All", override via `allLabel`),
+    `MultiFilterSelect` (multi-select variant — empty = all; used for Resource Hub Roles/Capacity), `StatusBadge`,
     `UtilizationBar`, `ErrorText`, `Loading`), `charts.tsx`, `hooks.ts` (`useAsync`, `useDebounced`).
   - `api.ts` is the single API client; `types.ts` mirrors backend DTOs; `region.tsx` holds the
     Global/Regional scope shared by all pages.
