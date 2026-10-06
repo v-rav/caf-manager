@@ -78,8 +78,21 @@ function NominationDetail({ n }: { n: Nomination }) {
       <ReadField label="Open blockers">{roDash(n.openBlockerCount)}</ReadField>
       <ReadField label="Days since update">{roDays(n.daysSinceUpdate)}</ReadField>
       <ReadField label="Waves">{n.noWavesLinked ? 'None' : ([n.dbLinked && 'DB', n.securityLinked && 'Security', n.alzLinked && 'ALZ'].filter(Boolean).join(' · ') || String(n.waveCount))}</ReadField>
-      <ReadField label="Assigned resources">{roDash(n.assignedResourceCount)}</ReadField>
       <ReadField label="Remarks">{roDash(n.remarks)}</ReadField>
+      <div style={{ gridColumn: '1 / -1' }}>
+        <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block' }}>
+          Team ({n.assignedResources?.length ?? 0})
+        </Text>
+        {n.assignedResources && n.assignedResources.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+            {n.assignedResources.map((m) => (
+              <Badge key={m.resourceId} appearance="tint" color="brand">{m.name}{m.role ? ` · ${m.role}` : ''}</Badge>
+            ))}
+          </div>
+        ) : (
+          <Text size={300}>No resources assigned yet.</Text>
+        )}
+      </div>
     </div>
   )
 }
