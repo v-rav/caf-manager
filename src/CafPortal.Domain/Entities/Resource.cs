@@ -10,6 +10,8 @@ public class Resource : AuditableEntity
     public string Name { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Mobile { get; set; }
+    /// <summary>Band/grade from the resource roster (e.g. from the APP-TEAM Excel "Grade" column).</summary>
+    public string? Grade { get; set; }
     /// <summary>Semicolon-separated alternate name spellings (FDO variants) used to match this person by name.</summary>
     public string? Aliases { get; set; }
     public string Region { get; set; } = string.Empty;

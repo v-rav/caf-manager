@@ -125,6 +125,7 @@ export interface Resource {
   name: string
   email?: string
   mobile?: string
+  grade?: string
   aliases?: string
   region: string
   role: string

@@ -60,6 +60,8 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
         var colRegion = ExcelHelpers.FindColumn(h, "Region", "Geo");
         var colRole = ExcelHelpers.FindColumn(h, "Role", "Designation");
         var colSeparated = ExcelHelpers.FindColumn(h, "Separated");
+        var colGrade = ExcelHelpers.FindColumn(h, "Grade");
+        var colMobile = ExcelHelpers.FindColumn(h, "Mobile", "Phone");
 
         var count = 0;
         foreach (var row in rows.Skip(1))
@@ -82,6 +84,8 @@ public class ResourceImportService(AppDbContext db, ILogger<ResourceImportServic
             if (region != "UNSPECIFIED" || string.IsNullOrWhiteSpace(resource.Region))
                 resource.Region = region;
             resource.Role = ExcelHelpers.GetString(row, colRole) ?? resource.Role;
+            resource.Grade = Clean(ExcelHelpers.GetString(row, colGrade)) ?? resource.Grade;
+            resource.Mobile = Clean(ExcelHelpers.GetString(row, colMobile)) ?? resource.Mobile;
             var skill = ExcelHelpers.GetString(row, colSkill);
             resource.PrimarySkill = skill ?? resource.PrimarySkill;
             resource.Skills = skill ?? resource.Skills;

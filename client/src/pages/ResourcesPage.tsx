@@ -169,6 +169,7 @@ export function ResourcesPage() {
               { key: 'mobile', header: 'Mobile', sortValue: (r) => r.mobile ?? '', render: (r) => r.mobile ?? '—' },
               { key: 'region', header: 'Region', sortValue: (r) => r.region },
               { key: 'role', header: 'Role', sortValue: (r) => r.role },
+              { key: 'grade', header: 'Grade', sortValue: (r) => r.grade ?? '', render: (r) => r.grade ?? '—' },
               { key: 'skill', header: 'Primary Skill', sortValue: (r) => r.primarySkill ?? '', render: (r) => r.primarySkill ?? '—' },
               {
                 key: 'active',
