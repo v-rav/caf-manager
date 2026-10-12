@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IAcrService, AcrService>();
         services.AddScoped<IAcrRecoveryService, AcrRecoveryService>();
+        services.AddScoped<INameConsistencyService, NameConsistencyService>();
         services.AddScoped<IAccessService, AccessService>();
         return services;
     }

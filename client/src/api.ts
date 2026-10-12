@@ -33,6 +33,8 @@ import type {
   SeedAssignmentResult,
   UnmatchedPeopleResult,
   LinkCleanupResult,
+  NameConsistencyReport,
+  NameConsistencyApplyResult,
   LeaveUpsert,
   LeaveWindow,
   Nomination,
@@ -104,6 +106,15 @@ export const api = {
     http
       .post<LinkCleanupResult>('/api/reconciliation/cleanup', null, { params: { region, apply } })
       .then((r) => r.data),
+
+  nameConsistencyAccounts: (threshold?: number) =>
+    http.get<NameConsistencyReport>('/api/name-consistency/accounts', { params: { threshold } }).then((r) => r.data),
+  nameConsistencyResources: (threshold?: number) =>
+    http.get<NameConsistencyReport>('/api/name-consistency/resources', { params: { threshold } }).then((r) => r.data),
+  applyAccountAliases: (body: { canonicalName: string; aliases: string[] }) =>
+    http.post<NameConsistencyApplyResult>('/api/name-consistency/accounts/apply', body).then((r) => r.data),
+  applyResourceAliases: (body: { resourceId: number; aliases: string[] }) =>
+    http.post<NameConsistencyApplyResult>('/api/name-consistency/resources/apply', body).then((r) => r.data),
 
   exportUrl: (
     what: 'resources' | 'capacity' | 'nominations' | 'performance' | 'summary' | 'analytics' | 'reconciliation',

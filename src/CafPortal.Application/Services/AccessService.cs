@@ -23,6 +23,7 @@ public class AccessService(IApplicationDbContext db) : IAccessService
         ("accounts", "Account Hub", All),
         ("capacity", "Capacity", All),
         ("reconciliation", "Reconciliation", AdminLead),
+        ("name-consistency", "Name Consistency", AdminOnly),
         ("leave", "Leave", All),
         ("nominations", "Nominations", All),
         ("governance", "Governance Board", AdminLead),

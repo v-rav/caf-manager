@@ -24,6 +24,7 @@ import { FlowPage } from './pages/FlowPage'
 import { EffectivenessPage } from './pages/EffectivenessPage'
 import { PerformancePage } from './pages/PerformancePage'
 import { ReconciliationPage } from './pages/ReconciliationPage'
+import { NameConsistencyPage } from './pages/NameConsistencyPage'
 import { ResourcesPage } from './pages/ResourcesPage'
 import { WorkspaceMockPage } from './pages/WorkspaceMockPage'
 import { AuthProvider, useAuth } from './auth'
@@ -42,6 +43,7 @@ const router = createBrowserRouter([
       { path: 'accounts', element: <AccountsPage /> },
       { path: 'capacity', element: <CapacityPage /> },
       { path: 'reconciliation', element: <ReconciliationPage /> },
+      { path: 'name-consistency', element: <NameConsistencyPage /> },
       { path: 'leave', element: <LeavePage /> },
       { path: 'nominations', element: <NominationsPage /> },
       { path: 'nominations/:id', element: <NominationWorkspacePage /> },

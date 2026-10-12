@@ -394,6 +394,35 @@ export interface LinkCleanupResult {
   orphans: number
 }
 
+export interface NameVariant {
+  id: number
+  name: string
+  tpid?: string
+  score: number
+  linkedCount: number
+}
+
+export interface NameSuggestion {
+  canonicalId: number
+  canonicalName: string
+  canonicalTpid?: string
+  minScore: number
+  variants: NameVariant[]
+}
+
+export interface NameConsistencyReport {
+  entity: string
+  threshold: number
+  groupCount: number
+  variantCount: number
+  groups: NameSuggestion[]
+}
+
+export interface NameConsistencyApplyResult {
+  aliasesWritten: number
+  message: string
+}
+
 export interface WaveLink {
   id: number
   waveType: string

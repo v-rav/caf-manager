@@ -99,6 +99,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     title: 'Admin',
     items: [
       { to: '/history', label: 'Import History', icon: <HistoryRegular /> },
+      { to: '/name-consistency', label: 'Name Consistency', icon: <SparkleRegular /> },
       { to: '/configuration', label: 'Configuration', icon: <SettingsRegular /> },
       { to: '/gates', label: 'Gate Template', icon: <ShieldTaskRegular /> },
       { to: '/capability', label: 'Capability Masters', icon: <WrenchRegular /> },
