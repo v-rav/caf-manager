@@ -23,9 +23,8 @@ public class CapacityCalculationService(IApplicationDbContext db, ISettingsProvi
 
     public async Task<int> ResolveCapacityLimitAsync(string role, int? resourceOverride, CancellationToken ct = default)
     {
-        if (resourceOverride is > 0)
-            return resourceOverride.Value;
-
+        // Precedence (per CapacityRebuildService): role config > per-resource override > default.
+        // The per-resource default must not short-circuit the role's configured "optimal accounts".
         if (!string.IsNullOrWhiteSpace(role))
         {
             var roleConfig = await _db.CapacityConfigurations.AsNoTracking()
@@ -33,6 +32,9 @@ public class CapacityCalculationService(IApplicationDbContext db, ISettingsProvi
             if (roleConfig is { CapacityLimit: > 0 })
                 return roleConfig.CapacityLimit;
         }
+
+        if (resourceOverride is > 0)
+            return resourceOverride.Value;
 
         return await _settings.GetIntAsync(SettingKeys.DefaultCapacityLimit, 5, ct);
     }
