@@ -1,4 +1,4 @@
-import { Badge, Button, Input, SearchBox, Text, Textarea } from '@fluentui/react-components'
+import { Badge, Button, Combobox, Input, Option, SearchBox, Text, Textarea } from '@fluentui/react-components'
 import { AddRegular, ArrowDownloadRegular, HistoryRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
 import { api } from '../api'
@@ -27,6 +27,7 @@ const emptyForm: PerformanceReviewUpsert = { personName: '', reviewDate: today()
 export function PerformancePage() {
   const { region } = useRegion()
   const { data, loading, error, reload } = useAsync(() => api.performance(region), [region])
+  const { data: roster } = useAsync(() => api.resources({}), [])
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounced(search)
 
@@ -61,6 +62,7 @@ export function PerformancePage() {
   const openAdd = () => setForm({ ...emptyForm, region: region ?? 'EMEA' })
   const openRescore = (r: PerformanceReview) =>
     setForm({
+      resourceId: r.resourceId,
       personName: r.personName,
       role: r.role,
       reportingManager: r.reportingManager,
@@ -257,7 +259,34 @@ export function PerformancePage() {
       >
         {form && (
           <>
-            <Input placeholder="Person name *" value={form.personName} onChange={(_, d) => patch({ personName: d.value })} />
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Text size={200}>Person (from roster) *</Text>
+              <Combobox
+                placeholder="Search roster…"
+                value={form.personName}
+                selectedOptions={form.resourceId ? [String(form.resourceId)] : []}
+                onChange={(e) => patch({ personName: e.target.value, resourceId: undefined })}
+                onOptionSelect={(_, d) => {
+                  const r = (roster ?? []).find((x) => String(x.resourceId) === d.optionValue)
+                  if (r) patch({ resourceId: r.resourceId, personName: r.name, role: form.role || r.role, region: form.region || r.region })
+                }}
+                style={{ width: '100%' }}
+              >
+                {(roster ?? [])
+                  .filter((r) => !form.personName || r.name.toLowerCase().includes(form.personName.toLowerCase()))
+                  .slice(0, 50)
+                  .map((r) => (
+                    <Option key={r.resourceId} value={String(r.resourceId)} text={r.name}>
+                      {r.name}{r.role ? ` · ${r.role}` : ''}
+                    </Option>
+                  ))}
+              </Combobox>
+              {form.resourceId ? (
+                <Text size={200} style={{ color: 'var(--colorPaletteGreenForeground1)' }}>Linked to roster</Text>
+              ) : form.personName ? (
+                <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>Not in roster (free text — may drift)</Text>
+              ) : null}
+            </label>
             <div style={{ display: 'flex', gap: 8 }}>
               <Input style={{ flex: 1 }} placeholder="Role" value={form.role ?? ''} onChange={(_, d) => patch({ role: d.value })} />
               <Input style={{ flex: 1 }} placeholder="Reporting Manager" value={form.reportingManager ?? ''} onChange={(_, d) => patch({ reportingManager: d.value })} />

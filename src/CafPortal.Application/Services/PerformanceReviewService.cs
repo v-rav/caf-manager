@@ -68,6 +68,20 @@ public class PerformanceReviewService(IApplicationDbContext db) : IPerformanceRe
             OfferingUnderstanding = input.OfferingUnderstanding,
             Comments = Trim(input.Comments)
         };
+
+        // Linked to a roster resource: the roster is authoritative for the name (prevents free-text drift).
+        if (input.ResourceId is int rid)
+        {
+            var res = await _db.Resources.AsNoTracking().FirstOrDefaultAsync(r => r.ResourceId == rid, ct);
+            if (res is not null)
+            {
+                review.ResourceId = res.ResourceId;
+                review.PersonName = res.Name;
+                if (string.IsNullOrWhiteSpace(review.Role)) review.Role = res.Role;
+                if (string.IsNullOrWhiteSpace(input.Region)) review.Region = res.Region;
+            }
+        }
+
         _db.PerformanceReviews.Add(review);
         await _db.SaveChangesAsync(ct);
         return Map(review, await GetThresholdAsync(ct));
@@ -102,6 +116,7 @@ public class PerformanceReviewService(IApplicationDbContext db) : IPerformanceRe
         return new PerformanceReviewDto
         {
             Id = r.Id,
+            ResourceId = r.ResourceId,
             PersonName = r.PersonName,
             Role = r.Role,
             ReportingManager = r.ReportingManager,

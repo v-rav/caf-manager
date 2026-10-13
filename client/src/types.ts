@@ -796,6 +796,7 @@ export interface Attainment {
 
 export interface PerformanceReview {
   id: number
+  resourceId?: number
   personName: string
   role?: string
   reportingManager?: string
@@ -816,6 +817,7 @@ export interface PerformanceReview {
 }
 
 export interface PerformanceReviewUpsert {
+  resourceId?: number
   personName: string
   role?: string
   reportingManager?: string

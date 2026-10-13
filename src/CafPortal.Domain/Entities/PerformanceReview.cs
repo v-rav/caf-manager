@@ -6,6 +6,8 @@ namespace CafPortal.Domain.Entities;
 public class PerformanceReview : AuditableEntity
 {
     public int Id { get; set; }
+    /// <summary>Optional link to the roster resource; when set, PersonName is kept in sync with the roster.</summary>
+    public int? ResourceId { get; set; }
     public string PersonName { get; set; } = string.Empty;
     public string? Role { get; set; }
     public string? ReportingManager { get; set; }

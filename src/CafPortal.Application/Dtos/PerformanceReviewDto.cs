@@ -3,6 +3,7 @@ namespace CafPortal.Application.Dtos;
 public class PerformanceReviewDto
 {
     public int Id { get; set; }
+    public int? ResourceId { get; set; }
     public string PersonName { get; set; } = string.Empty;
     public string? Role { get; set; }
     public string? ReportingManager { get; set; }
@@ -33,6 +34,7 @@ public class PerformanceReviewDto
 /// <summary>Add or re-score a person. Each save is a dated snapshot for trend tracking.</summary>
 public class PerformanceReviewUpsertDto
 {
+    public int? ResourceId { get; set; }
     public string PersonName { get; set; } = string.Empty;
     public string? Role { get; set; }
     public string? ReportingManager { get; set; }

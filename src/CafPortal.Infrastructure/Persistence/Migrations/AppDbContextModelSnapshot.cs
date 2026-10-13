@@ -1566,6 +1566,9 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ResourceId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateOnly>("ReviewDate")
                         .HasColumnType("TEXT");
 
