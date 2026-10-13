@@ -27,4 +27,12 @@ public class NameConsistencyController(INameConsistencyService service) : Contro
     [HttpPost("resources/apply")]
     public async Task<IActionResult> ApplyResources([FromBody] ApplyResourceAliasRequest request, CancellationToken ct)
         => Ok(await service.ApplyResourceAliasesAsync(request, ct));
+
+    [HttpGet("performance")]
+    public async Task<IActionResult> Performance([FromQuery] double threshold, CancellationToken ct)
+        => Ok(await service.GetPerformanceSuggestionsAsync(threshold <= 0 ? 0.84 : threshold, ct));
+
+    [HttpPost("performance/apply")]
+    public async Task<IActionResult> ApplyPerformance([FromBody] ApplyPerformanceNameRequest request, CancellationToken ct)
+        => Ok(await service.ApplyPerformanceNameAsync(request, ct));
 }

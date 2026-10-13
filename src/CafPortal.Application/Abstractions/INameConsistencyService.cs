@@ -19,4 +19,10 @@ public interface INameConsistencyService
 
     /// <summary>Appends the given variant names onto the canonical resource's alias list.</summary>
     Task<NameConsistencyApplyResultDto> ApplyResourceAliasesAsync(ApplyResourceAliasRequest request, CancellationToken ct = default);
+
+    /// <summary>Matches free-text performance-review names against the roster and suggests the canonical spelling. Read-only.</summary>
+    Task<PerformanceNameReportDto> GetPerformanceSuggestionsAsync(double threshold, CancellationToken ct = default);
+
+    /// <summary>Renames every performance review carrying CurrentName to the roster RosterName.</summary>
+    Task<NameConsistencyApplyResultDto> ApplyPerformanceNameAsync(ApplyPerformanceNameRequest request, CancellationToken ct = default);
 }

@@ -25,3 +25,11 @@ public record ApplyAccountAliasRequest(string CanonicalName, IReadOnlyList<strin
 public record ApplyResourceAliasRequest(int ResourceId, IReadOnlyList<string> Aliases);
 
 public record NameConsistencyApplyResultDto(int AliasesWritten, string Message);
+
+/// <summary>A free-text performance-review name that fuzzy-matches a roster resource it doesn't exactly equal.</summary>
+public record PerformanceNameSuggestionDto(
+    string CurrentName, int ReviewCount, int ResourceId, string RosterName, string? Psid, double Score);
+
+public record PerformanceNameReportDto(double Threshold, int Count, IReadOnlyList<PerformanceNameSuggestionDto> Suggestions);
+
+public record ApplyPerformanceNameRequest(string CurrentName, string RosterName);

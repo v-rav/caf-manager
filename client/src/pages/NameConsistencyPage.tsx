@@ -5,7 +5,7 @@ import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
 import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
-import type { NameConsistencyReport, NameSuggestion } from '../types'
+import type { NameSuggestion, PerformanceNameSuggestion } from '../types'
 
 const THRESHOLDS: Record<string, number> = {
   'Strict (0.95)': 0.95,
@@ -18,11 +18,16 @@ function scoreColor(s: number): 'success' | 'brand' | 'warning' {
 }
 
 export function NameConsistencyPage() {
-  const [tab, setTab] = useState<'accounts' | 'resources'>('accounts')
+  const [tab, setTab] = useState<'accounts' | 'resources' | 'performance'>('accounts')
   const [strictness, setStrictness] = useState('Balanced (0.88)')
   const t = THRESHOLDS[strictness] ?? 0.88
-  const { data, loading, error, reload } = useAsync<NameConsistencyReport>(
-    () => (tab === 'accounts' ? api.nameConsistencyAccounts(t) : api.nameConsistencyResources(t)),
+  const { data, loading, error, reload } = useAsync<any>(
+    () =>
+      tab === 'accounts'
+        ? api.nameConsistencyAccounts(t)
+        : tab === 'resources'
+          ? api.nameConsistencyResources(t)
+          : api.nameConsistencyPerformance(t),
     [tab, strictness],
   )
 
@@ -30,6 +35,20 @@ export function NameConsistencyPage() {
   const [selected, setSelected] = useState<Record<number, Set<number>>>({})
   const [done, setDone] = useState<Record<number, string>>({})
   const [busy, setBusy] = useState<number | null>(null)
+
+  // Performance tab apply state (keyed by the current free-text name).
+  const [perfDone, setPerfDone] = useState<Record<string, string>>({})
+  const [perfBusy, setPerfBusy] = useState<string | null>(null)
+
+  const applyPerf = async (s: PerformanceNameSuggestion) => {
+    setPerfBusy(s.currentName)
+    try {
+      const res = await api.applyPerformanceName({ currentName: s.currentName, rosterName: s.rosterName })
+      setPerfDone((d) => ({ ...d, [s.currentName]: res.message }))
+    } finally {
+      setPerfBusy(null)
+    }
+  }
 
   const sel = (g: NameSuggestion): Set<number> =>
     selected[g.canonicalId] ?? new Set(g.variants.map((v) => v.id))
@@ -82,15 +101,16 @@ export function NameConsistencyPage() {
         </div>
       </div>
 
-      <TabList selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as 'accounts' | 'resources')}>
+      <TabList selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as 'accounts' | 'resources' | 'performance')}>
         <Tab value="accounts">Accounts</Tab>
         <Tab value="resources">Resources</Tab>
+        <Tab value="performance">Performance</Tab>
       </TabList>
 
       {loading && <Loading />}
       {error && <ErrorText error={error} />}
 
-      {data && !loading && (
+      {data && !loading && tab !== 'performance' && data.groups && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
             <KpiCard label="Suggested groups" value={data.groupCount} tone="brand" />
@@ -104,7 +124,7 @@ export function NameConsistencyPage() {
             </Panel>
           )}
 
-          {data.groups.map((g) => {
+          {data.groups.map((g: NameSuggestion) => {
             const ids = sel(g)
             const message = done[g.canonicalId]
             return (
@@ -172,6 +192,70 @@ export function NameConsistencyPage() {
               </Panel>
             )
           })}
+        </>
+      )}
+
+      {data && !loading && tab === 'performance' && data.suggestions && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+            <KpiCard label="Suggested corrections" value={data.count} tone="brand" />
+            <KpiCard label="Match strictness" value={data.threshold.toFixed(2)} tone="neutral" />
+          </div>
+
+          {data.suggestions.length === 0 && (
+            <Panel title="Performance names">
+              <Text>Every performance-review name matches the roster at this strictness.</Text>
+            </Panel>
+          )}
+
+          {data.suggestions.length > 0 && (
+            <Panel title="Review names vs roster">
+              <div style={{ display: 'grid', gap: 10 }}>
+                {data.suggestions.map((s: PerformanceNameSuggestion) => {
+                  const msg = perfDone[s.currentName]
+                  return (
+                    <div
+                      key={s.currentName}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', opacity: msg ? 0.6 : 1 }}
+                    >
+                      <Text weight="semibold" style={{ minWidth: 150 }}>
+                        {s.currentName}
+                      </Text>
+                      <Text style={{ color: 'var(--colorNeutralForeground3)' }}>→</Text>
+                      <Text weight="semibold">{s.rosterName}</Text>
+                      {s.psid && (
+                        <Badge appearance="outline" size="small">
+                          PSID {s.psid}
+                        </Badge>
+                      )}
+                      <Tooltip content="Similarity to the roster name" relationship="label">
+                        <Badge appearance="tint" color={scoreColor(s.score)} size="small">
+                          {Math.round(s.score * 100)}%
+                        </Badge>
+                      </Tooltip>
+                      <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+                        {s.reviewCount} review{s.reviewCount === 1 ? '' : 's'}
+                      </Text>
+                      {msg ? (
+                        <Badge appearance="tint" color="success" icon={<CheckmarkRegular />}>
+                          {msg}
+                        </Badge>
+                      ) : (
+                        <Button
+                          appearance="primary"
+                          size="small"
+                          disabled={perfBusy === s.currentName}
+                          onClick={() => applyPerf(s)}
+                        >
+                          Rename to roster
+                        </Button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </Panel>
+          )}
         </>
       )}
     </div>

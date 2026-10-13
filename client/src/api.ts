@@ -35,6 +35,7 @@ import type {
   LinkCleanupResult,
   NameConsistencyReport,
   NameConsistencyApplyResult,
+  PerformanceNameReport,
   LeaveUpsert,
   LeaveWindow,
   Nomination,
@@ -115,6 +116,10 @@ export const api = {
     http.post<NameConsistencyApplyResult>('/api/name-consistency/accounts/apply', body).then((r) => r.data),
   applyResourceAliases: (body: { resourceId: number; aliases: string[] }) =>
     http.post<NameConsistencyApplyResult>('/api/name-consistency/resources/apply', body).then((r) => r.data),
+  nameConsistencyPerformance: (threshold?: number) =>
+    http.get<PerformanceNameReport>('/api/name-consistency/performance', { params: { threshold } }).then((r) => r.data),
+  applyPerformanceName: (body: { currentName: string; rosterName: string }) =>
+    http.post<NameConsistencyApplyResult>('/api/name-consistency/performance/apply', body).then((r) => r.data),
 
   exportUrl: (
     what: 'resources' | 'capacity' | 'nominations' | 'performance' | 'summary' | 'analytics' | 'reconciliation',

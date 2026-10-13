@@ -423,6 +423,21 @@ export interface NameConsistencyApplyResult {
   message: string
 }
 
+export interface PerformanceNameSuggestion {
+  currentName: string
+  reviewCount: number
+  resourceId: number
+  rosterName: string
+  psid?: string
+  score: number
+}
+
+export interface PerformanceNameReport {
+  threshold: number
+  count: number
+  suggestions: PerformanceNameSuggestion[]
+}
+
 export interface WaveLink {
   id: number
   waveType: string

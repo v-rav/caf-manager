@@ -129,6 +129,74 @@ public class NameConsistencyService(IApplicationDbContext db) : INameConsistency
             written > 0 ? $"Added {written} alias(es) to \"{resource.Name}\"." : "No new aliases to add.");
     }
 
+    public async Task<PerformanceNameReportDto> GetPerformanceSuggestionsAsync(double threshold, CancellationToken ct = default)
+    {
+        threshold = Clamp(threshold, 0.78);
+        var perf = await db.PerformanceReviews.AsNoTracking()
+            .GroupBy(p => p.PersonName)
+            .Select(g => new { Name = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        var resources = await db.Resources.AsNoTracking()
+            .Select(r => new { r.ResourceId, r.Name, r.Psid, r.Aliases })
+            .ToListAsync(ct);
+
+        // Match targets: each roster name + alias, all pointing back at the resource's primary name.
+        var targets = new List<(int Id, string Primary, string? Psid, string Canon, string Seq)>();
+        foreach (var r in resources)
+        {
+            var name = r.Name ?? string.Empty;
+            targets.Add((r.ResourceId, name, r.Psid, NameMatching.Canonicalize(name), NameMatching.Sequence(name)));
+            foreach (var al in SplitAliases(r.Aliases))
+                targets.Add((r.ResourceId, name, r.Psid, NameMatching.Canonicalize(al), NameMatching.Sequence(al)));
+        }
+
+        var suggestions = new List<PerformanceNameSuggestionDto>();
+        foreach (var p in perf)
+        {
+            if (string.IsNullOrWhiteSpace(p.Name)) continue;
+            var pc = NameMatching.Canonicalize(p.Name);
+            var psq = NameMatching.Sequence(p.Name);
+            if (pc.Length == 0) continue;
+
+            (int Id, string Primary, string? Psid, double Score)? best = null;
+            foreach (var t in targets)
+            {
+                if (t.Canon.Length == 0) continue;
+                var s = NameMatching.Score(pc, psq, t.Canon, t.Seq);
+                if (best is null || s > best.Value.Score) best = (t.Id, t.Primary, t.Psid, s);
+            }
+            if (best is null || best.Value.Score < threshold) continue;
+
+            var b = best.Value;
+            // Already consistent: exact (case-insensitive) match, or the same normalized form as the roster primary.
+            if (string.Equals(p.Name.Trim(), b.Primary.Trim(), StringComparison.OrdinalIgnoreCase)) continue;
+            if (NameMatching.Canonicalize(b.Primary) == pc) continue;
+
+            suggestions.Add(new PerformanceNameSuggestionDto(
+                p.Name, p.Count, b.Id, b.Primary, b.Psid, Math.Round(b.Score, 3)));
+        }
+
+        suggestions = suggestions.OrderByDescending(s => s.Score).ThenBy(s => s.CurrentName).ToList();
+        return new PerformanceNameReportDto(threshold, suggestions.Count, suggestions);
+    }
+
+    public async Task<NameConsistencyApplyResultDto> ApplyPerformanceNameAsync(ApplyPerformanceNameRequest request, CancellationToken ct = default)
+    {
+        var current = (request.CurrentName ?? string.Empty).Trim();
+        var roster = (request.RosterName ?? string.Empty).Trim();
+        if (current.Length == 0 || roster.Length == 0) return new NameConsistencyApplyResultDto(0, "Both names are required.");
+
+        var rows = await db.PerformanceReviews.Where(p => p.PersonName == current).ToListAsync(ct);
+        foreach (var r in rows)
+        {
+            r.PersonName = roster;
+            r.UpdatedUtc = DateTime.UtcNow;
+        }
+        await db.SaveChangesAsync(ct);
+        return new NameConsistencyApplyResultDto(rows.Count,
+            rows.Count > 0 ? $"Renamed {rows.Count} review(s) to \"{roster}\"." : "No matching reviews.");
+    }
+
     // ---- clustering ----
 
     private sealed record Node(int Id, string Name, string? Tpid, string Canon, string Seq, int Linked);
