@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { BarChart, DoughnutChart } from '../components/charts'
-import { ErrorText, Loading, Panel } from '../components/common'
+import { ErrorText, Loading, Panel, SaWorkloadList } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
@@ -133,11 +133,6 @@ function Operational({ d, m, blk, navigate }: { d: ExecutiveDashboard; m: M; blk
   const standard = m.active.filter((n) => !n.isStrategic)
   const sla = (t: string) => standard.filter((n) => n.staleTier === t).length
   const avgAge = m.active.length ? Math.round(m.active.reduce((s, n) => s + n.effectiveAgeDays, 0) / m.active.length) : 0
-  const saLoad = useMemo(() => {
-    const mp = new Map<string, number>()
-    for (const n of m.active) { const sa = (n.solutionArchitect ?? '').trim(); if (sa) mp.set(sa, (mp.get(sa) ?? 0) + 1) }
-    return [...mp.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
-  }, [m.active])
   const stageMax = Math.max(1, ...stages.map((s) => s.count))
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -158,13 +153,7 @@ function Operational({ d, m, blk, navigate }: { d: ExecutiveDashboard; m: M; blk
         </Panel>
         <Panel title="Capacity distribution"><DoughnutChart data={d.capacityDistribution} colors={CAPACITY_COLORS} /></Panel>
         <Panel title="SA workload (active)">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {saLoad.map(([sa, n]) => (
-              <div key={sa} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0', borderBottom: '1px solid var(--colorNeutralStroke3)' }}>
-                <span>{sa}</span><span style={{ color: 'var(--colorNeutralForeground3)' }}>{n}</span>
-              </div>
-            ))}
-          </div>
+          <SaWorkloadList rows={m.active} />
         </Panel>
       </div>
     </div>

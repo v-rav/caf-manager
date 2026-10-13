@@ -62,7 +62,9 @@ public class NominationService(IApplicationDbContext db) : INominationService
             g => g.SelectMany(x => ToolActivityClassifier.Classify(x.ToolName, x.Details)).Distinct().ToList());
 
         // Gate state for MSI: which item-defs belong to each MSI group, and each nomination's item statuses.
-        var msiModel = MsiModel.From(await SettingsCatalog.ReadAsync(_db, ct));
+        var settings = await SettingsCatalog.ReadAsync(_db, ct);
+        var msiModel = MsiModel.From(settings);
+        var upcomingAfter = today.AddDays((int)settings["WorkloadStartLookaheadDays"]);
         var gateDefs = await _db.GateDefinitions.AsNoTracking()
             .Where(g => g.Active)
             .Include(g => g.Items.Where(i => i.Active))
@@ -186,6 +188,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 StageIndex = stage,
                 StageLabel = NominationRules.StageLabel(stage),
                 IsSettled = NominationRules.IsSettled(n.Status),
+                EffectiveStartDate = n.ActualStartDate ?? n.PlannedStartDate,
+                IsUpcoming = !NominationRules.IsSettled(n.Status) && (n.ActualStartDate ?? n.PlannedStartDate) > upcomingAfter,
                 IsBlocked = StatusRules.IsBlocked(n.Status),
                 StatusTone = StatusRules.Tone(n.Status),
                 HealthBucket = NominationRules.HealthBucket(n.CurrentState),

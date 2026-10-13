@@ -3,7 +3,7 @@ import { ArrowDownloadRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
-import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
+import { ErrorText, FilterSelect, Loading, Panel, SaWorkloadList } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
@@ -96,15 +96,6 @@ export function FlowPage() {
     return [...m.entries()].sort((a, b) => b[1] - a[1])
   }, [blk.data])
 
-  const saWorkload = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const n of approved.filter((n) => !completed(n))) {
-      const sa = (n.solutionArchitect ?? '').trim()
-      if (sa) m.set(sa, (m.get(sa) ?? 0) + 1)
-    }
-    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
-  }, [approved])
-
   const byPath = useMemo(() => {
     const m = new Map<string, { count: number; age: number }>()
     for (const n of approved.filter((n) => !completed(n))) {
@@ -173,17 +164,7 @@ export function FlowPage() {
         </Panel>
 
         <Panel title="SA workload (active nominations)">
-          {saWorkload.length === 0 ? (
-            <span style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>No assigned SAs.</span>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {saWorkload.map(([sa, n]) => (
-                <div key={sa} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0', borderBottom: '1px solid var(--colorNeutralStroke3)' }}>
-                  <span>{sa}</span><span style={{ color: 'var(--colorNeutralForeground3)' }}>{n}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <SaWorkloadList rows={approved.filter((n) => !completed(n))} />
         </Panel>
 
         <Panel title="By migration type (path)">

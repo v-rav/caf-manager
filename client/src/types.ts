@@ -274,6 +274,8 @@ export interface Nomination {
   stageIndex?: number | null
   stageLabel?: string
   isSettled?: boolean
+  effectiveStartDate?: string | null
+  isUpcoming?: boolean
   isBlocked?: boolean
   statusTone?: 'success' | 'warning' | 'danger' | 'informative' | 'brand' | 'subtle'
   healthBucket?: string

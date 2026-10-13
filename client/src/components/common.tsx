@@ -1,6 +1,7 @@
-import { Badge, Button, Dropdown, Option, Spinner, Text, tokens } from '@fluentui/react-components'
+import { Badge, Button, Dropdown, Option, Spinner, Text, Tooltip, tokens } from '@fluentui/react-components'
 import { ArrowClockwiseRegular } from '@fluentui/react-icons'
 import type { ReactNode } from 'react'
+import type { Nomination } from '../types'
 
 /** Coloured badge mapping a capacity/risk status string to an intent. */
 export function StatusBadge({ status }: { status: string }) {
@@ -174,6 +175,40 @@ export function MultiFilterSelect({
           </Option>
         ))}
       </Dropdown>
+    </div>
+  )
+}
+
+/** SA workload over in-flight nominations: counts started waves (server `isUpcoming` = start after today + look-ahead
+ *  is excluded) and shows not-yet-started waves separately as "+N upcoming" with the next start date. */
+export function SaWorkloadList({ rows, top = 8 }: { rows: Nomination[]; top?: number }) {
+  const m = new Map<string, { active: number; upcoming: number; next?: string }>()
+  for (const n of rows) {
+    const sa = (n.solutionArchitect ?? '').trim()
+    if (!sa) continue
+    const e = m.get(sa) ?? { active: 0, upcoming: 0 }
+    if (n.isUpcoming) {
+      e.upcoming++
+      if (n.effectiveStartDate && (!e.next || n.effectiveStartDate < e.next)) e.next = n.effectiveStartDate
+    } else e.active++
+    m.set(sa, e)
+  }
+  const list = [...m.entries()].sort((a, b) => b[1].active - a[1].active || b[1].upcoming - a[1].upcoming).slice(0, top)
+  if (!list.length) return <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>No assigned SAs.</Text>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {list.map(([sa, e]) => (
+        <div key={sa} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13, padding: '3px 0', borderBottom: '1px solid var(--colorNeutralStroke3)' }}>
+          <span style={{ flex: 1 }}>{sa}</span>
+          {e.upcoming > 0 && (
+            <Tooltip content={`${e.upcoming} wave(s) not started yet (future start date) — next starts ${e.next ?? '—'}`} relationship="description">
+              <Badge appearance="tint" color="informative" size="small">+{e.upcoming} upcoming</Badge>
+            </Tooltip>
+          )}
+          <span style={{ color: tokens.colorNeutralForeground3, minWidth: 20, textAlign: 'right' }}>{e.active}</span>
+        </div>
+      ))}
+      <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>Counts started waves (actual start, else planned). Future-dated waves show as upcoming.</Text>
     </div>
   )
 }

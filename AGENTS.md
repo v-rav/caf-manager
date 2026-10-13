@@ -303,6 +303,9 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   both `NominationService` (grid) and `GovernanceService` (workspace) so they agree.
 - **Migration Flow (P5b)** — `/flow` (`FlowPage`): funnel conversion/drop-off across the journey + bottleneck
   analytics (in-flight by stage × age, blockers by category, SA workload, by migration type). Derived client-side.
+  **SA workload counts started waves only**: PMs pre-create future waves, so the server flags `NominationDto.IsUpcoming`
+  (not settled ∧ `EffectiveStartDate` = `ActualStartDate ?? PlannedStartDate` > today + `WorkloadStartLookaheadDays`,
+  default 0) and the shared `SaWorkloadList` (Dashboard Operational + Flow) shows those as "+N upcoming" with next start.
 - **Ownership Effectiveness** — `/effectiveness` (`EffectivenessPage`, Delivery nav, Admin/Lead): a delivery
   scorecard for **PM/SA/CFTL** owners (role `TabList`, grouped by `ProjectCoordinator`/`SolutionArchitect`/
   `CftlPrimary`). Per owner: **Assigned** (book of work — a confidence/load signal), **Active** (in-flight),

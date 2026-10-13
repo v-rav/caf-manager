@@ -45,6 +45,8 @@ public static class SettingsCatalog
 
         new("LeaveClashWindowDays", "Resourcing", "Leave-clash window (days)", "30", 1, 365, true,
             "Upcoming-leave window used to detect coverage clashes"),
+        new("WorkloadStartLookaheadDays", "Resourcing", "Count waves starting within (days)", "0", 0, 180, true,
+            "A wave counts as active workload once its start (actual, else planned) is within this many days; later starts are Upcoming"),
         new("PerformanceTrainingThreshold", "Resourcing", "Training-need score below", "4", 1, 5, false,
             "Review dimension score below which a training need is flagged"),
 

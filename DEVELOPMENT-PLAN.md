@@ -276,6 +276,7 @@ H1–H25, §10 inconsistencies I1–I13). **Progress metric:** items moving from
 | 6C-5 | `ResourceAccounts`/`EngagementFacts` → upsert-merge | I12 | ☐ |
 | 6C-6 | Unit tests per rule domain + API smoke test pinning KPI parity across pages | — | ☐ |
 | 6C-7 | PV-01 decision: drive `StaleTier` from `StageTargetDays1..4` or label targets informational | I8 | ☐ |
+| 6D-1 | **Upcoming waves** — PMs pre-create future waves; effective start = `ActualStartDate ?? PlannedStartDate` (FDO "actual" is often a future plan date); `IsUpcoming` = not settled ∧ start > today + `WorkloadStartLookaheadDays` (⚙️ 0) | — | ✅ server DTO `EffectiveStartDate`/`IsUpcoming`; SA workload (Dashboard Operational + Flow, shared `SaWorkloadList`) counts started waves, shows "+N upcoming" with next start (54 of 216 active upcoming at ship). **Open:** apply to capacity account count / Active KPIs / SLA? |
 
 **Rules for this phase:** no behaviour change in 6A (numbers must match before/after except the I1 GHCP fix, which is
 intended); every new setting is seeded idempotently with today's value; update `SYSTEM-REFERENCE.md` §8/§9 and this
