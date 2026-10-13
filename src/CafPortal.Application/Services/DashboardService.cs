@@ -46,7 +46,9 @@ public class DashboardService(IApplicationDbContext db) : IDashboardService
         var resourcesOnLeave = await leave.Select(l => l.ResourceId).Distinct().CountAsync(ct);
         var activeAccounts = await accounts.CountAsync(ct);
         var strategicAccounts = await accounts.CountAsync(a => a.Segment == "Strategic", ct);
-        var openNominations = await nominations.CountAsync(n => n.ApprovalStatus == "Approved" && !Settled.Contains(n.Status), ct);
+        var cutoff = await NominationRules.StartCutoffAsync(_db, ct);
+        var openNominations = await nominations.CountAsync(n => n.ApprovalStatus == "Approved" && !Settled.Contains(n.Status)
+            && ((n.ActualStartDate ?? n.PlannedStartDate) == null || (n.ActualStartDate ?? n.PlannedStartDate) <= cutoff), ct);
 
         var regionDistribution = await resources
             .GroupBy(r => r.Region)

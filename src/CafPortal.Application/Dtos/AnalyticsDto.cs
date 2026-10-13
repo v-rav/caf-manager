@@ -5,6 +5,7 @@ public class AnalyticsDto
 {
     public int TotalApproved { get; set; }
     public int InFlight { get; set; }
+    public int Upcoming { get; set; }
     public int Completed { get; set; }
 
     public double TotalAcr { get; set; }

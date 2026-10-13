@@ -64,7 +64,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
         // Gate state for MSI: which item-defs belong to each MSI group, and each nomination's item statuses.
         var settings = await SettingsCatalog.ReadAsync(_db, ct);
         var msiModel = MsiModel.From(settings);
-        var upcomingAfter = today.AddDays((int)settings["WorkloadStartLookaheadDays"]);
+        var upcomingAfter = await NominationRules.StartCutoffAsync(_db, ct);
         var gateDefs = await _db.GateDefinitions.AsNoTracking()
             .Where(g => g.Active)
             .Include(g => g.Items.Where(i => i.Active))
@@ -130,6 +130,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
             var inFlightDays = Math.Max(0, today.DayNumber - (n.NominatedDate ?? n.OpenedDate).DayNumber);
             var strategicTier = StrategicTier(isStrategic, n.Status, inFlightDays, green, amber, red);
             var stage = NominationRules.StageIndex(n.MigrationStatus);
+            var isUpcoming = !NominationRules.IsSettled(n.Status) && (n.ActualStartDate ?? n.PlannedStartDate) > upcomingAfter;
             var effectiveGhcp = ToolActivityClassifier.EffectiveLevel(
                 n.GhcpAdoptionLevel, n.IsToolAttached,
                 activitiesByNom.TryGetValue(n.Id, out var acts) ? acts : System.Array.Empty<string>());
@@ -189,7 +190,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 StageLabel = NominationRules.StageLabel(stage),
                 IsSettled = NominationRules.IsSettled(n.Status),
                 EffectiveStartDate = n.ActualStartDate ?? n.PlannedStartDate,
-                IsUpcoming = !NominationRules.IsSettled(n.Status) && (n.ActualStartDate ?? n.PlannedStartDate) > upcomingAfter,
+                IsUpcoming = isUpcoming,
                 IsBlocked = StatusRules.IsBlocked(n.Status),
                 StatusTone = StatusRules.Tone(n.Status),
                 HealthBucket = NominationRules.HealthBucket(n.CurrentState),
@@ -212,7 +213,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 MsiRisk = msi.Risk,
                 MsiGhcp = msi.Ghcp,
                 MsiSignoff = msi.Signoff,
-                StaleTier = StaleTier(n.Status, stage, effectiveDays, warn, escalate, defer),
+                StaleTier = isUpcoming ? string.Empty : StaleTier(n.Status, stage, effectiveDays, warn, escalate, defer),
                 DbLinked = dbLinked,
                 AlzLinked = alzLinked,
                 SecurityLinked = securityLinked,

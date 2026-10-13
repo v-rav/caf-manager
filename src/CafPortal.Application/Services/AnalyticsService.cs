@@ -48,7 +48,8 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         var dto = new AnalyticsDto
         {
             TotalApproved = noms.Count,
-            InFlight = noms.Count(n => !IsSettled(n)),
+            InFlight = noms.Count(n => !IsSettled(n) && !n.IsUpcoming),
+            Upcoming = noms.Count(n => n.IsUpcoming),
             Completed = noms.Count(n => { var s = (n.Status ?? string.Empty).ToLowerInvariant(); return s.Contains("complete") || s.Contains("closed"); }),
             TotalAcr = (double)noms.Sum(n => n.TotalAcr ?? 0m),
             NnrAcr = (double)noms.Sum(n => n.NnrAcr ?? 0m),

@@ -22,18 +22,21 @@ public class CapacityRebuildService(IApplicationDbContext db, ICapacityCalculati
         await _db.CapacityFacts.ExecuteDeleteAsync(ct);
 
         var thresholds = await _capacity.GetThresholdsAsync(ct);
+        var cutoff = await NominationRules.StartCutoffAsync(_db, ct);
 
         var resources = await _db.Resources.AsNoTracking()
             .Where(r => r.ActiveFlag)
             .Select(r => new { r.ResourceId, r.Role, r.CapacityLimit })
             .ToListAsync(ct);
 
-        // Real workload = distinct in-flight accounts via nominations (Approved + not settled),
+        // Real workload = distinct in-flight, started accounts via nominations (Approved + not settled + not upcoming),
         // matching CapacityService — NOT the noisy ResourceAccounts links.
         var pairs = await _db.NominationResources.AsNoTracking()
             .Where(nr => nr.Nomination!.AccountId != null
                       && nr.Nomination.ApprovalStatus == "Approved"
-                      && !Settled.Contains(nr.Nomination.Status))
+                      && !Settled.Contains(nr.Nomination.Status)
+                      && ((nr.Nomination.ActualStartDate ?? nr.Nomination.PlannedStartDate) == null
+                          || (nr.Nomination.ActualStartDate ?? nr.Nomination.PlannedStartDate) <= cutoff))
             .Select(nr => new { nr.ResourceId, AccountId = nr.Nomination!.AccountId!.Value })
             .Distinct()
             .ToListAsync(ct);
@@ -79,12 +82,15 @@ public class CapacityRebuildService(IApplicationDbContext db, ICapacityCalculati
 
         var thresholds = await _capacity.GetThresholdsAsync(ct);
         var limit = await _capacity.ResolveCapacityLimitAsync(resource.Role ?? string.Empty, resource.CapacityLimit, ct);
+        var cutoff = await NominationRules.StartCutoffAsync(_db, ct);
 
         var accountCount = await _db.NominationResources.AsNoTracking()
             .Where(nr => nr.ResourceId == resourceId
                       && nr.Nomination!.AccountId != null
                       && nr.Nomination.ApprovalStatus == "Approved"
-                      && !Settled.Contains(nr.Nomination.Status))
+                      && !Settled.Contains(nr.Nomination.Status)
+                      && ((nr.Nomination.ActualStartDate ?? nr.Nomination.PlannedStartDate) == null
+                          || (nr.Nomination.ActualStartDate ?? nr.Nomination.PlannedStartDate) <= cutoff))
             .Select(nr => nr.Nomination!.AccountId!.Value)
             .Distinct().CountAsync(ct);
 

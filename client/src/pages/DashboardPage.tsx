@@ -34,7 +34,7 @@ function Bar({ label, count, max }: { label: string; count: number; max: number 
 }
 
 type M = {
-  all: Nomination[]; approved: Nomination[]; active: Nomination[]; completed: Nomination[]; blocked: Nomination[]
+  all: Nomination[]; approved: Nomination[]; active: Nomination[]; upcoming: Nomination[]; completed: Nomination[]; blocked: Nomination[]
   sum: (xs: Nomination[], f: (n: Nomination) => number | undefined) => number
 }
 
@@ -59,11 +59,12 @@ export function DashboardPage() {
   const m: M = useMemo(() => {
     const all = (noms.data ?? []).filter((n) => nominationInFy(n, fy))
     const approved = all.filter((n) => (n.approvalStatus ?? '') === 'Approved')
-    const active = approved.filter((n) => !n.isSettled)
+    const active = approved.filter((n) => !n.isSettled && !n.isUpcoming)
+    const upcoming = approved.filter((n) => n.isUpcoming)
     const completed = approved.filter((n) => n.status === 'Completed')
     const blocked = active.filter((n) => n.openBlockerCount > 0)
     const sum = (xs: Nomination[], f: (n: Nomination) => number | undefined) => xs.reduce((s, n) => s + (f(n) ?? 0), 0)
-    return { all, approved, active, completed, blocked, sum }
+    return { all, approved, active, upcoming, completed, blocked, sum }
   }, [noms.data, fy])
 
   if ((dash.loading && !dash.data) || (noms.loading && !noms.data)) return <Loading label="Loading executive dashboard…" />
@@ -102,6 +103,7 @@ function Leadership({ d, m, region, navigate }: { d: ExecutiveDashboard; m: M; r
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <KpiCard label="Total nominations" value={m.all.length} tone="brand" onClick={() => navigate('/nominations')} />
         <KpiCard label="Active" value={m.active.length} onClick={() => navigate('/nominations')} />
+        <KpiCard label="Upcoming waves" value={m.upcoming.length} />
         <KpiCard label="Blocked" value={m.blocked.length} tone={m.blocked.length ? 'warning' : 'neutral'} onClick={() => navigate('/governance')} />
         <KpiCard label="Completed" value={m.completed.length} tone="success" />
         <KpiCard label="ACR influenced" value={money(acr)} tone="brand" onClick={() => navigate('/analytics')} />
@@ -138,6 +140,7 @@ function Operational({ d, m, blk, navigate }: { d: ExecutiveDashboard; m: M; blk
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <KpiCard label="Active" value={m.active.length} />
+        <KpiCard label="Upcoming waves" value={m.upcoming.length} />
         <KpiCard label="SLA Warn (Standard)" value={sla('Warn')} tone={sla('Warn') ? 'warning' : 'neutral'} onClick={() => navigate('/nominations?sla=Warn')} />
         <KpiCard label="SLA Escalate" value={sla('Escalate')} tone={sla('Escalate') ? 'warning' : 'neutral'} onClick={() => navigate('/nominations?sla=Escalate')} />
         <KpiCard label="SLA Defer" value={sla('Defer')} tone={sla('Defer') ? 'danger' : 'neutral'} onClick={() => navigate('/nominations?sla=Defer')} />
@@ -153,7 +156,7 @@ function Operational({ d, m, blk, navigate }: { d: ExecutiveDashboard; m: M; blk
         </Panel>
         <Panel title="Capacity distribution"><DoughnutChart data={d.capacityDistribution} colors={CAPACITY_COLORS} /></Panel>
         <Panel title="SA workload (active)">
-          <SaWorkloadList rows={m.active} />
+          <SaWorkloadList rows={[...m.active, ...m.upcoming]} />
         </Panel>
       </div>
     </div>

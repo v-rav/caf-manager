@@ -235,7 +235,7 @@ export function AnalyticsPage() {
         <div>
           <Text size={600} weight="bold">Migration Analytics</Text>
           <Text size={200} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
-            Approved nominations{region ? ` · ${region}` : ' · all regions'} · {data.totalApproved} total ({data.inFlight} in-flight,
+            Approved nominations{region ? ` · ${region}` : ' · all regions'} · {data.totalApproved} total ({data.inFlight} in-flight, {data.upcoming} upcoming,
             {' '}{data.completed} completed) · ACR/Cores from {data.withAcr} enriched records
           </Text>
         </div>
@@ -244,6 +244,7 @@ export function AnalyticsPage() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <KpiCard label="In-flight" value={num(data.inFlight)} tone="brand" />
+        <KpiCard label="Upcoming (not started)" value={num(data.upcoming)} />
         <KpiCard label="Total ACR (approved)" value={money(data.totalAcr)} tone="success" />
         <KpiCard label="NNR ACR (landed)" value={money(data.nnrAcr)} tone="success" />
         <KpiCard label="Total Cores" value={num(data.totalCores)} tone="neutral" />

@@ -49,7 +49,7 @@ import the **web app is the system of record**.
   Bands: 0–2 Available · 3–4 Partially Utilized · 5 Fully Utilized · 6+ Overloaded. `CapacityRowDto`
   carries a `HeatColor` (Green/Amber/Red).
   - **Account count is nomination-derived**: distinct in-flight accounts via `NominationResource → Nomination
-    → Account` (Approved + not settled), NOT the noisy `ResourceAccounts` links. Both the live `CapacityService`
+    → Account` (Approved + not settled + started, i.e. not an upcoming future wave), NOT the noisy `ResourceAccounts` links. Both the live `CapacityService`
     (Capacity page/export) and the materialized `CapacityFact` (Dashboard + Resources page) use this basis and the
     same `ResolveCapacityLimitAsync` limit engine, so all three agree. `CapacityRebuildService` rebuilds
     `CapacityFact` on startup and after every import/merge/park and after alias/rename edits.
@@ -306,6 +306,9 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   **SA workload counts started waves only**: PMs pre-create future waves, so the server flags `NominationDto.IsUpcoming`
   (not settled ∧ `EffectiveStartDate` = `ActualStartDate ?? PlannedStartDate` > today + `WorkloadStartLookaheadDays`,
   default 0) and the shared `SaWorkloadList` (Dashboard Operational + Flow) shows those as "+N upcoming" with next start.
+  The same cutoff (`NominationRules.StartCutoffAsync`) excludes upcoming waves from **capacity** (live + `CapacityFact`),
+  **Dashboard Active**, **Analytics in-flight** (separate Upcoming KPI) and the **SLA stale tier**. `CapacityFact` only
+  re-evaluates the date on rebuild (startup/import/edit); the live Capacity page is always current.
 - **Ownership Effectiveness** — `/effectiveness` (`EffectivenessPage`, Delivery nav, Admin/Lead): a delivery
   scorecard for **PM/SA/CFTL** owners (role `TabList`, grouped by `ProjectCoordinator`/`SolutionArchitect`/
   `CftlPrimary`). Per owner: **Assigned** (book of work — a confidence/load signal), **Active** (in-flight),

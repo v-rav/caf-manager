@@ -16,13 +16,16 @@ public class CapacityService(IApplicationDbContext db, ICapacityCalculationServi
     public async Task<IReadOnlyList<CapacityRowDto>> GetAsync(string? region, CancellationToken ct = default)
     {
         var thresholds = await _calc.GetThresholdsAsync(ct);
+        var cutoff = await NominationRules.StartCutoffAsync(_db, ct);
 
-        // Real workload = distinct in-flight accounts a resource is actually assigned to
-        // (NominationResource -> Nomination -> Account), not the noisy ResourceAccounts links.
+        // Real workload = distinct in-flight, started accounts a resource is actually assigned to
+        // (NominationResource -> Nomination -> Account), not the noisy ResourceAccounts links. Upcoming waves excluded.
         var pairs = await _db.NominationResources
             .Where(nr => nr.Nomination!.AccountId != null
                       && nr.Nomination.ApprovalStatus == "Approved"
-                      && !Settled.Contains(nr.Nomination.Status))
+                      && !Settled.Contains(nr.Nomination.Status)
+                      && ((nr.Nomination.ActualStartDate ?? nr.Nomination.PlannedStartDate) == null
+                          || (nr.Nomination.ActualStartDate ?? nr.Nomination.PlannedStartDate) <= cutoff))
             .Select(nr => new { nr.ResourceId, AccountId = nr.Nomination!.AccountId!.Value })
             .Distinct()
             .ToListAsync(ct);

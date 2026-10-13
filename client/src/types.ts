@@ -27,6 +27,7 @@ export interface TimeSeries {
 export interface Analytics {
   totalApproved: number
   inFlight: number
+  upcoming: number
   completed: number
   totalAcr: number
   nnrAcr: number

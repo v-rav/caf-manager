@@ -11,6 +11,11 @@ public static class NominationRules
 
     public static bool IsSettled(NominationStatusType status) => StatusRules.IsSettled(status);
 
+    /// <summary>Latest effective start (Actual ?? Planned) that still counts as started workload: today + look-ahead.
+    /// Later starts are pre-created future waves (Upcoming) and are excluded from workload, capacity, active KPIs and SLA.</summary>
+    public static async Task<DateOnly> StartCutoffAsync(Abstractions.IApplicationDbContext db, CancellationToken ct = default) =>
+        DateOnly.FromDateTime(DateTime.UtcNow).AddDays((int)(await SettingsCatalog.ReadAsync(db, ct))["WorkloadStartLookaheadDays"]);
+
     /// <summary>Classification that means "not strategic"; anything else is a strategic engagement.</summary>
     public const string StandardClassification = "Standard Factory";
 

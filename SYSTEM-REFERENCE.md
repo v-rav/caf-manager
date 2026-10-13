@@ -515,7 +515,7 @@ Client-side scorecard per PM/SA/CFTL (§5.14) · inline drill-down · CSV.
 |  Stage targets: `StageTargetDays1..4` | ⚙️ | 10 / 10 / 5 / 25 | **Nothing yet** (PV-01) |
 |  Strategic: `StrategicGreen/Amber/RedDays` | ⚙️ | 60 / 90 / 120 | Strategic tier |
 |  Capacity: `DefaultCapacityLimit`, `Available/PartiallyUtilized/OverloadedThreshold` | ⚙️ | 5 · 40 / 80 / 100 | Capacity limit + status |
-|  Resourcing: `LeaveClashWindowDays`, `PerformanceTrainingThreshold`, `WorkloadStartLookaheadDays` | ⚙️ | 30 · 4 · 0 | Leave clashes, training flag, upcoming-wave cut-off (`IsUpcoming` = start (actual ?? planned) > today + N) |
+|  Resourcing: `LeaveClashWindowDays`, `PerformanceTrainingThreshold`, `WorkloadStartLookaheadDays` | ⚙️ | 30 · 4 · 0 | Leave clashes, training flag, upcoming-wave cut-off (`IsUpcoming` = start (actual ?? planned) > today + N; excluded from SA workload, capacity, Active/in-flight KPIs and SLA tier) |
 |  Retention: `HistoryRetentionDays` | ⚙️ | 90 | Import history prune |
 | **Scoring models** (`SettingsCatalog` section *Scoring*) | Configuration → **Scoring models** (weight groups must total 100, bands ordered) | MSI 30/20/20/10/10/10 · bands 80/60 · risk 30/20 · Eff SA 30/25/25/20 · Eff PM/CFTL 30/30/25/15 · speed 45–180d · momentum 10–75d · tones 75/55 | MSI (grid + workspace), Ownership Effectiveness, Help page text |
 | Gate → MSI component (`GateDefinition.MsiGroup`) | Gate Template | G1–3 Readiness · G4–5 Scope · G6–7 Delivery · G8 Sign-off | MSI |
