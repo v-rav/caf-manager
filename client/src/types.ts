@@ -529,6 +529,12 @@ export interface OperationsSetting {
   key: string
   value: string
   description?: string
+  label: string
+  group: string
+  min: number
+  max: number
+  integer: boolean
+  default: string
 }
 
 export interface AcrTarget {

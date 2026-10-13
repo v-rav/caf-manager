@@ -36,6 +36,15 @@ public static class DbInitializer
         logger.LogInformation("Seeding configuration{Demo}...", workbookExists ? string.Empty : " and demo data");
         await SeedData.SeedAsync(db, seedDemo: !workbookExists, ct);
 
+        // Every catalog setting must exist (added with its default; never overwrites an edited value).
+        var settingKeys = await db.ApplicationSettings.Select(s => s.Key).ToListAsync(ct);
+        foreach (var def in SettingsCatalog.All.Where(d => !settingKeys.Contains(d.Key)))
+            db.ApplicationSettings.Add(new Domain.Entities.Configuration.ApplicationSetting
+            {
+                Key = def.Key, Value = def.Default, Description = def.Description,
+            });
+        await db.SaveChangesAsync(ct);
+
         // Bootstrap a default admin the first time (idempotent — only when no users exist).
         if (!await db.AppUsers.AnyAsync(ct))
         {

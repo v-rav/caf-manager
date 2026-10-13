@@ -214,15 +214,17 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
         await _db.SaveChangesAsync(ct);
 
         // Retention: prune import history beyond the window (nominations are never hard-deleted here).
-        var cutoff = DateTime.UtcNow.AddDays(-HistoryRetentionDays);
+        var retention = await _db.ApplicationSettings.AsNoTracking()
+            .Where(s => s.Key == "HistoryRetentionDays").Select(s => s.Value).FirstOrDefaultAsync(ct);
+        var retentionDays = int.TryParse(retention, out var rd) && rd > 0
+            ? rd : int.Parse(CafPortal.Application.Common.SettingsCatalog.Find("HistoryRetentionDays")!.Default);
+        var cutoff = DateTime.UtcNow.AddDays(-retentionDays);
         await _db.ImportRuns.Where(r => r.StartedUtc < cutoff).ExecuteDeleteAsync(ct);
 
         _logger.LogInformation("NominationImportService: {Added} added, {Updated} updated, {Unchanged} unchanged, {Withdrawn} withdrawn",
             added, updated, unchanged, withdrawnCount);
         return imported;
     }
-
-    private const int HistoryRetentionDays = 90;
 
     private sealed record FdoSnapshot(string? Mig, string? State, int? Age, string? Sa, string? Cftl, string? Pm, string? Region, string? Tech, string? Name);
 

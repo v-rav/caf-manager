@@ -375,6 +375,9 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   field, page widgets, and the **configurable (§8) vs hardcoded (§9)** inventory. Rules:
   - Do **not** add new hardcoded business values (thresholds, weights, keyword lists, status sets, labels). Put them
     in `ApplicationSettings` / `LookupValue` / a master table and expose them in the UI; read them server-side.
+    New numeric settings go in `Application/Common/SettingsCatalog.cs` (key · group · label · default · bounds) — it
+    seeds missing keys on startup, renders Configuration → **Operational thresholds**, and validates saves (incl. tier
+    ordering). Read defaults from the catalog, never inline literals.
   - Compute business rules **once on the server** and return them on the DTO (e.g. stage index, settled, effective
     GHCP level). Do **not** re-implement them in React pages.
   - When you change a rule, setting, table, or page, update `SYSTEM-REFERENCE.md` (move items from §9 to §8 as they

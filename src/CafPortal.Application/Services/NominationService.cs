@@ -368,8 +368,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
         var settings = await _db.ApplicationSettings.AsNoTracking()
             .Where(s => s.Key == "StaleWarnDays" || s.Key == "StaleEscalateDays" || s.Key == "StaleDeferDays")
             .ToDictionaryAsync(s => s.Key, s => s.Value, ct);
-        int Get(string k, int d) => settings.TryGetValue(k, out var v) && int.TryParse(v, out var n) ? n : d;
-        return (Get("StaleWarnDays", 3), Get("StaleEscalateDays", 5), Get("StaleDeferDays", 10));
+        int Get(string k) => settings.TryGetValue(k, out var v) && int.TryParse(v, out var n) ? n : int.Parse(SettingsCatalog.Find(k)!.Default);
+        return (Get("StaleWarnDays"), Get("StaleEscalateDays"), Get("StaleDeferDays"));
     }
 
     // Strategic-pilot time thresholds (A.13): 0–60 Green, 61–90 Amber, 91–120 Red, >120 Exec.
@@ -378,8 +378,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
         var settings = await _db.ApplicationSettings.AsNoTracking()
             .Where(s => s.Key == "StrategicGreenDays" || s.Key == "StrategicAmberDays" || s.Key == "StrategicRedDays")
             .ToDictionaryAsync(s => s.Key, s => s.Value, ct);
-        int Get(string k, int d) => settings.TryGetValue(k, out var v) && int.TryParse(v, out var n) ? n : d;
-        return (Get("StrategicGreenDays", 60), Get("StrategicAmberDays", 90), Get("StrategicRedDays", 120));
+        int Get(string k) => settings.TryGetValue(k, out var v) && int.TryParse(v, out var n) ? n : int.Parse(SettingsCatalog.Find(k)!.Default);
+        return (Get("StrategicGreenDays"), Get("StrategicAmberDays"), Get("StrategicRedDays"));
     }
 
     private static string StrategicTier(bool isStrategic, NominationStatusType status, int inFlightDays, int green, int amber, int red)

@@ -112,7 +112,7 @@ server reads the first header row and routes by signature in `DataRefreshService
 * **Wave links:** `Linked to` names are split on `;` and classified by keyword (🔒 `security`→Security,
   `sql|ossdb|database`→Db, `landing zone|alz`→LandingZone, `dispatch`→Dispatch; App/unknown skipped). Links with
   `Source="FDO"` are refreshed on every drop; links with `Source="Portal"` are preserved.
-* **History:** each run writes an `ImportRun` plus `ImportChange` rows (Added / Updated with field-level from→to / Withdrawn). History rows are pruned after **90 days** (🔒 `const HistoryRetentionDays` in `NominationImportService`. The seeded setting is not read, ⚠️).
+* **History:** each run writes an `ImportRun` plus `ImportChange` rows (Added / Updated with field-level from→to / Withdrawn). History rows are pruned after `HistoryRetentionDays` (⚙️ default 90).
 
 ### 2.2 Summary of All Offerings → offering enrichment
 
@@ -304,8 +304,8 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 ### 5.4 Strategic classification & time-threshold tier
 * `Classification = n.Classification ?? "Standard Factory"`; `IsStrategic = Classification ≠ "Standard Factory"` (🔒 string).
 * `DaysInFlight = today − (NominatedDate ?? OpenedDate)`.
-* Tier: ≤60 Green · ≤90 Amber · ≤120 Red · >120 Exec. Keys `StrategicGreenDays/AmberDays/RedDays` are **read** by
-  the code, but **those rows don't exist in the DB and the keys aren't editable in Configuration** → effectively 🔒.
+* Tier: ≤Green · ≤Amber · ≤Red · >Red = Exec, from `StrategicGreenDays/AmberDays/RedDays` (⚙️ 60/90/120, Configuration →
+  Operational thresholds, ordering-validated).
 
 ### 5.5 Migration Success Index (MSI)
 * **Where:** `MsiCalculator` (used identically by `NominationService` and `GovernanceService`).
@@ -327,7 +327,7 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 * **Limit precedence** (`ResolveCapacityLimitAsync`): `CapacityConfigurations[role]` (⚙️) → `Resource.CapacityLimit` if >0
   → `DefaultCapacityLimit` (⚙️ 5).
 * `Utilization% = AccountCount / Limit × 100`. Status: ≤`AvailableThreshold` (40) Available · ≤`PartiallyUtilizedThreshold` (80)
-  Partially · ≤`OverloadedThreshold` (100) Fully · >100 Overloaded (thresholds 🗄️: seeded but not in the Configuration UI).
+  Partially · ≤`OverloadedThreshold` (100) Fully · >100 Overloaded (all ⚙️ Configuration → Operational thresholds).
 * Heat colour (🔒): Available → Green · Partial/Full → Amber · Overloaded → Red.
 * **SA auto-link** (`LinkSolutionArchitectsAsync`): FDO SA name → resource via exact name / alias / fuzzy score ≥0.95 (🔒).
   Creates `NominationResource(Source="SA")` and learns the alias.
@@ -503,17 +503,16 @@ Client-side scorecard per PM/SA/CFTL (§5.14) · inline drill-down · CSV.
 
 | Setting / master | Where edited | Values (live) | Consumed by |
 |---|---|---|---|
-| `StaleWarnDays` / `StaleEscalateDays` / `StaleDeferDays` | Configuration → Operations | 3 / 5 / 10 | SLA tier |
-| `StageTargetDays1..4` | Configuration → Operations | 10 / 10 / 5 / 25 | **Nothing yet** (PV-01) |
-| `LeaveClashWindowDays` | Configuration → Operations | 30 | Leave clashes |
+| **Operational settings catalog** (`SettingsCatalog`, Application/Common) | Configuration → **Operational thresholds** (grouped, bounded, ordering-validated; capacity edits rebuild `CapacityFact`) | see rows below | — |
+|  SLA cadence: `StaleWarnDays` / `StaleEscalateDays` / `StaleDeferDays` | ⚙️ | 3 / 5 / 10 | SLA tier |
+|  Stage targets: `StageTargetDays1..4` | ⚙️ | 10 / 10 / 5 / 25 | **Nothing yet** (PV-01) |
+|  Strategic: `StrategicGreen/Amber/RedDays` | ⚙️ | 60 / 90 / 120 | Strategic tier |
+|  Capacity: `DefaultCapacityLimit`, `Available/PartiallyUtilized/OverloadedThreshold` | ⚙️ | 5 · 40 / 80 / 100 | Capacity limit + status |
+|  Resourcing: `LeaveClashWindowDays`, `PerformanceTrainingThreshold` | ⚙️ | 30 · 4 | Leave clashes, training flag |
+|  Retention: `HistoryRetentionDays` | ⚙️ | 90 | Import history prune |
 | `Acr*` rates (10 keys) + `AcrContainerCoreFloor` | Configuration → ACR rates | see §5.11 | ACR estimator, capture, recovery |
 | `AcrTarget<FY>` | Configuration → ACR targets | `AcrTarget2027 = 50,000,000` | Attainment |
 | `CapacityConfigurations` | Configuration → role capacity | App Architect / App Engineer / DevOps / SME = 7 · Architect Lead = 5 | Capacity limit |
-| `DefaultCapacityLimit` | 🗄️ DB only | 5 | Capacity fallback |
-| `Available/PartiallyUtilized/OverloadedThreshold` | 🗄️ DB only | 40 / 80 / 100 | Capacity status |
-| `PerformanceTrainingThreshold` | 🗄️ DB only | 4 | Training flag |
-| `StrategicGreen/Amber/RedDays` | 🔒 **not seeded, not editable** | defaults 60 / 90 / 120 | Strategic tier |
-| `HistoryRetentionDays` | 🔒 const in code | 90 | Import history prune |
 | `PageAccess:<key>` | User & Access | per page | Nav + route gating |
 | Lookups (BlockerCategory, BlockerOwner, Classification, VelocityImpact, Milestone) | Configuration → lookup master | 10 / 6 / 5 / 4 / 9 values | Workspace, Manage dialog, grid filters |
 | Gate template | Gate Template page | 8 gates / 54 items | Gates, readiness, MSI |
@@ -531,7 +530,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | H2 | "Settled" status set | `CapacityService`, `CapacityRebuildService`, `DashboardService`, `ReconciliationService`, `NameConsistencyService`, `AnalyticsService` (substring!), client `fy.tsx`, `EffectivenessPage` | Closed/Completed/Withdrawn/CustomerDeferred | **P1** |
 | H3 | MSI weights, band cutoffs, risk coefficients, GHCP divisor | `MsiCalculator` | 30/20/20/10/10/10 · 80/60 · −30/blocker, −20 clock-stop · /7 | **P1** |
 | H4 | Gate → MSI group mapping | `MsiCalculator.GroupFor` | by gate *key* G1..G8 | **P1** (breaks if gates are renamed or added) |
-| H5 | Strategic tier thresholds | `NominationService` (keys read, never seeded) | 60/90/120 | P1 |
+| H5 | ~~Strategic tier thresholds~~ — now ⚙️ (6A-4) | `SettingsCatalog` | 60/90/120 | done |
 | H6 | "Standard Factory" sentinel ⇒ not strategic | `NominationService`, `NominationDto`, `NominationsController` fallback, `LookupSeed` | string | P1 |
 | H7 | Withdraw guard / `MapStatus` / `IsActivelyExecuting` | `NominationImportService` | Declined→Withdrawn; executing/finalize | P1 |
 | H8 | FDO file detection signatures | `DataRefreshService.DetectFileKind` | header names + order | P2 |
@@ -548,7 +547,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | H19 | Team assign roles + role eligibility keywords | client `NominationsPage` (`ASSIGN_ROLES`) | SA / Migration Engineer / DevOps | P3 |
 | H20 | Adoption level labels 0–7 | client `adoption.ts` | 8 labels | P3 |
 | H21 | Approval default = `Approved` | client `NominationsPage` | string | P3 |
-| H22 | Import history retention | `NominationImportService` const | 90 days | P3 |
+| H22 | ~~Import history retention~~ — now ⚙️ (6A-4) | `SettingsCatalog` | 90 days | done |
 | H23 | Aging colours on Governance Board | client `GovernanceBoardPage` | 10 / 5 days | P3 |
 | H24 | `"Global View"` sentinel | `GovernanceService`, `region.tsx`, others | string | P3 |
 | H25 | Page-guide / help content | client `pageGuide.ts`, `HelpPage.tsx` | text | P3 |
@@ -563,9 +562,9 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | I2 | ~~Stage keyword logic copied 9×~~ — **fixed (6A-1/2)**: one `NominationRules.StageIndex`; DTO carries `stageIndex`/`stageLabel`; client copies removed (Manage-dialog draft mapping only) | — | Keywords still code → 6B-1 |
 | I3 | ~~"Settled" defined 8×~~ — **fixed (6A-1/2)**: `NominationRules.SettledStatuses`; DTO carries `isSettled`; client uses it | — | Status set still code → 6B-4 |
 | I4 | ~~Gate weights in AGENTS.md ≠ live template~~ — **fixed** (AGENTS.md now shows live 5/5/5/10/10/10/50/5) | — | Consider rendering weights on the Help page from the live template |
-| I5 | **Strategic threshold keys read but never seeded or exposed** | Admins think the thresholds are configurable when they are not | Seed the keys and add them to Configuration → Operations |
-| I6 | `HistoryRetentionDays` is a C# const; the seeded description says it's a setting | Misleading | Read it from `ApplicationSettings` |
-| I7 | Capacity thresholds / `DefaultCapacityLimit` / `PerformanceTrainingThreshold` are settings, but have no UI | Need a DB edit to change | Add them to Configuration → Operations |
+| I5 | ~~Strategic threshold keys read but never seeded/exposed~~ — **fixed (6A-4)** | — | — |
+| I6 | ~~`HistoryRetentionDays` was a C# const~~ — **fixed (6A-4)**: read from settings | — | — |
+| I7 | ~~Capacity thresholds / default limit / training threshold had no UI~~ — **fixed (6A-4)**: Configuration → Operational thresholds | — | — |
 | I8 | `StageTargetDays1..4` are editable but unused | Admins expect an effect | PV-01 decision: drive `StaleTier` from per-stage targets, or label them "informational" |
 | I9 | Two tool-usage stores: manual `NominationToolUsages` (5 rows) and imported `NominationToolUsageFacts` (61). The capability rollup now reads only the **imported** facts | Manual workspace captures don't show in the rollup | Union both sources (manual = authoritative activity; imported = inferred) |
 | I10 | Legacy tables still present: `Tools` (vs `MigrationTools`), `StrategicAccountConfigurations` (vs `Segment='Strategic'`), `RolePermissions` (not enforced), `ResourceAccounts` (not the capacity basis) | Confusion about which table is the source of truth | Mark as deprecated. Migrate or remove after review |

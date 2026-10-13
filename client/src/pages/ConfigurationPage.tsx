@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
-import type { RoleCapacity, AcrRates, AcrEstimate } from '../types'
+import type { RoleCapacity, AcrRates, AcrEstimate, OperationsSetting } from '../types'
 
 export function ConfigurationPage() {
   const { data, loading, error, reload } = useAsync(() => api.roleCapacity(), [])
@@ -575,35 +575,16 @@ function FiscalTargetsPanel() {
   )
 }
 
-const SETTING_LABELS: Record<string, string> = {
-  StaleWarnDays: 'Stale · Warn after (days)',
-  StaleEscalateDays: 'Stale · Escalate after (days)',
-  StaleDeferDays: 'Stale · Suggest Deferred after (days)',
-  StageTargetDays1: 'Stage 1 target · Validating (days)',
-  StageTargetDays2: 'Stage 2 target · Pre-Requisites (days)',
-  StageTargetDays3: 'Stage 3 target · Finalize Scope (days)',
-  StageTargetDays4: 'Stage 4 target · Executing Migration (days)',
-  LeaveClashWindowDays: 'Leave-clash window (days)',
-}
-const SETTING_ORDER = [
-  'StaleWarnDays',
-  'StaleEscalateDays',
-  'StaleDeferDays',
-  'StageTargetDays1',
-  'StageTargetDays2',
-  'StageTargetDays3',
-  'StageTargetDays4',
-  'LeaveClashWindowDays',
-]
-
+// Labels, grouping, bounds and order all come from the server SettingsCatalog — nothing hardcoded here.
 function OperationsSettingsPanel() {
   const { data, loading, error, reload } = useAsync(() => api.operationsSettings(), [])
   const [edits, setEdits] = useState<Record<string, number>>({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (data) setEdits(Object.fromEntries(data.map((s) => [s.key, Number(s.value) || 1])))
+    if (data) setEdits(Object.fromEntries(data.map((s) => [s.key, Number(s.value)])))
   }, [data])
 
   const dirty = useMemo(
@@ -614,6 +595,7 @@ function OperationsSettingsPanel() {
   const save = async () => {
     if (!data) return
     setSaving(true)
+    setSaveError(null)
     try {
       const updates = data
         .filter((s) => edits[s.key] !== Number(s.value))
@@ -621,15 +603,23 @@ function OperationsSettingsPanel() {
       await api.updateOperationsSettings(updates)
       setSaved(true)
       reload()
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: unknown } })?.response?.data
+      setSaveError(typeof msg === 'string' ? msg : 'Save failed.')
     } finally {
       setSaving(false)
     }
   }
 
-  const ordered = useMemo(
-    () => [...(data ?? [])].sort((a, b) => SETTING_ORDER.indexOf(a.key) - SETTING_ORDER.indexOf(b.key)),
-    [data],
-  )
+  const groups = useMemo(() => {
+    const m = new Map<string, OperationsSetting[]>()
+    for (const s of data ?? []) {
+      const arr = m.get(s.group) ?? []
+      arr.push(s)
+      m.set(s.group, arr)
+    }
+    return [...m.entries()]
+  }, [data])
 
   return (
     <Panel
@@ -654,41 +644,59 @@ function OperationsSettingsPanel() {
       ) : (
         <>
           <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
-            Drives nomination stale detection (Day 3/5/10 cadence) and the leave-clash alert window.
+            Rule-driving values read by the server (SLA cadence, strategic tiers, capacity bands, retention). Ordered
+            tiers are validated on save; capacity changes rebuild the capacity snapshot.
           </Text>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-            {ordered.map((s) => (
-              <div
-                key={s.key}
-                style={{
-                  border: `1px solid ${edits[s.key] !== Number(s.value) ? 'var(--colorBrandStroke1)' : 'var(--colorNeutralStroke2)'}`,
-                  borderRadius: 8,
-                  padding: 14,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                  background: 'var(--colorNeutralBackground1)',
-                }}
-              >
-                <Text weight="semibold">{SETTING_LABELS[s.key] ?? s.key}</Text>
-                {s.description && (
-                  <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
-                    {s.description}
-                  </Text>
-                )}
-                <SpinButton
-                  min={1}
-                  max={365}
-                  value={edits[s.key] ?? Number(s.value)}
-                  onChange={(_, d) => {
-                    setSaved(false)
-                    setEdits((e) => ({ ...e, [s.key]: Math.max(1, Math.round(d.value ?? Number(d.displayValue) ?? Number(s.value))) }))
-                  }}
-                  aria-label={SETTING_LABELS[s.key] ?? s.key}
-                />
+          {saveError && (
+            <Text size={300} style={{ color: 'var(--colorPaletteRedForeground1)', display: 'block', marginBottom: 12 }}>
+              {saveError}
+            </Text>
+          )}
+          {groups.map(([group, items]) => (
+            <div key={group} style={{ marginBottom: 16 }}>
+              <Text weight="semibold" size={300} style={{ display: 'block', marginBottom: 8 }}>{group}</Text>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+                {items.map((s) => (
+                  <div
+                    key={s.key}
+                    style={{
+                      border: `1px solid ${edits[s.key] !== Number(s.value) ? 'var(--colorBrandStroke1)' : 'var(--colorNeutralStroke2)'}`,
+                      borderRadius: 8,
+                      padding: 14,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      background: 'var(--colorNeutralBackground1)',
+                    }}
+                  >
+                    <Text weight="semibold">{s.label}</Text>
+                    {s.description && (
+                      <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+                        {s.description}
+                      </Text>
+                    )}
+                    <SpinButton
+                      min={s.min}
+                      max={s.max}
+                      step={s.integer ? 1 : 0.5}
+                      value={edits[s.key] ?? Number(s.value)}
+                      onChange={(_, d) => {
+                        setSaved(false)
+                        const raw = d.value ?? Number(d.displayValue)
+                        if (raw == null || Number.isNaN(raw)) return
+                        const v = Math.min(s.max, Math.max(s.min, s.integer ? Math.round(raw) : raw))
+                        setEdits((e) => ({ ...e, [s.key]: v }))
+                      }}
+                      aria-label={s.label}
+                    />
+                    <Text size={100} style={{ color: 'var(--colorNeutralForeground3)' }}>
+                      Default {s.default} · range {s.min}–{s.max}
+                    </Text>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </>
       )}
     </Panel>

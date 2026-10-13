@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Domain.Entities.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -262,32 +263,61 @@ public class ConfigurationController(
 
     public record LookupUpsert(string Category, string Value);
 
-    /// <summary>Editable operational thresholds (stale tiers, leave-clash window).</summary>
+    /// <summary>Editable operational settings, described by <see cref="SettingsCatalog"/> (label, group, bounds).</summary>
     [HttpGet("settings")]
     public async Task<IActionResult> GetSettings(CancellationToken ct)
     {
-        string[] keys = ["StaleWarnDays", "StaleEscalateDays", "StaleDeferDays",
-            "StageTargetDays1", "StageTargetDays2", "StageTargetDays3", "StageTargetDays4", "LeaveClashWindowDays"];
-        return Ok(await db.ApplicationSettings.AsNoTracking()
+        var keys = SettingsCatalog.All.Select(d => d.Key).ToList();
+        var stored = await db.ApplicationSettings.AsNoTracking()
             .Where(s => keys.Contains(s.Key))
-            .Select(s => new { s.Key, s.Value, s.Description })
-            .ToListAsync(ct));
+            .ToDictionaryAsync(s => s.Key, s => s.Value, ct);
+        return Ok(SettingsCatalog.All.Select(d => new
+        {
+            d.Key,
+            Value = stored.TryGetValue(d.Key, out var v) ? v : d.Default,
+            d.Description, d.Label, d.Group, d.Min, d.Max, d.Integer, d.Default,
+        }));
     }
 
     [HttpPut("settings")]
     public async Task<IActionResult> UpdateSettings([FromBody] IReadOnlyList<SettingUpsert> updates, CancellationToken ct)
     {
         if (updates is null || updates.Count == 0) return BadRequest("No settings supplied.");
-        string[] allowed = ["StaleWarnDays", "StaleEscalateDays", "StaleDeferDays",
-            "StageTargetDays1", "StageTargetDays2", "StageTargetDays3", "StageTargetDays4", "LeaveClashWindowDays"];
-        var rows = await db.ApplicationSettings.Where(s => allowed.Contains(s.Key)).ToListAsync(ct);
+        var keys = SettingsCatalog.All.Select(d => d.Key).ToList();
+        var rows = await db.ApplicationSettings.Where(s => keys.Contains(s.Key)).ToListAsync(ct);
+
+        // Validate the full candidate set (stored values merged with edits) so tier ordering is checked as a whole.
+        var candidate = SettingsCatalog.All.ToDictionary(
+            d => d.Key,
+            d => double.TryParse(rows.FirstOrDefault(r => r.Key == d.Key)?.Value ?? d.Default,
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var cur)
+                ? cur : double.Parse(d.Default, System.Globalization.CultureInfo.InvariantCulture));
         foreach (var u in updates)
         {
-            if (!allowed.Contains(u.Key) || !int.TryParse(u.Value, out var n) || n < 1) continue;
-            var row = rows.FirstOrDefault(r => r.Key == u.Key);
-            if (row is not null) row.Value = n.ToString();
+            if (SettingsCatalog.Find(u.Key) is null) return BadRequest($"Unknown setting '{u.Key}'.");
+            if (!double.TryParse(u.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var n))
+                return BadRequest($"'{u.Value}' is not a number.");
+            candidate[SettingsCatalog.Find(u.Key)!.Key] = n;
+        }
+        if (SettingsCatalog.Validate(candidate) is { } error) return BadRequest(error);
+
+        var capacityChanged = false;
+        foreach (var u in updates)
+        {
+            var def = SettingsCatalog.Find(u.Key)!;
+            var value = candidate[def.Key].ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var row = rows.FirstOrDefault(r => r.Key == def.Key);
+            if (row is null)
+                db.ApplicationSettings.Add(new ApplicationSetting { Key = def.Key, Value = value, Description = def.Description });
+            else if (row.Value != value)
+                row.Value = value;
+            else
+                continue;
+            if (def.Group == "Capacity") capacityChanged = true;
         }
         await db.SaveChangesAsync(ct);
+        // Capacity status/limits are materialized in CapacityFact — rebuild so every page reflects the new thresholds.
+        if (capacityChanged) await rebuild.RebuildAllAsync(ct);
         return await GetSettings(ct);
     }
 
