@@ -1,5 +1,7 @@
 import axios from 'axios'
 import type {
+  StatusRuleRow,
+  StatusRulesResponse,
   KeywordRuleInput,
   KeywordRulePreview,
   KeywordRulesResponse,
@@ -296,6 +298,10 @@ export const api = {
     http.delete<Governance>(`/api/nominations/${nominationId}/governance/tool-usages/${usageId}`).then((r) => r.data),
   capability: (region?: string) =>
     http.get<CapabilityUtilization>('/api/governance/capability', { params: { region } }).then((r) => r.data),
+  // Workflow status rules (settled / blocked / tone / selectable) + default approval filter.
+  statusRules: () => http.get<StatusRulesResponse>('/api/status-rules').then((r) => r.data),
+  saveStatusRules: (body: { rules: Omit<StatusRuleRow, 'label'>[]; defaultApproval?: string }) =>
+    http.put<StatusRulesResponse>('/api/status-rules', body).then((r) => r.data),
   // Classification rules (Admin) — data-driven keyword maps with impact preview.
   keywordRules: () =>
     http.get<KeywordRulesResponse>('/api/keyword-rules').then((r) => r.data),

@@ -69,6 +69,8 @@ public class NominationDto
     public int? StageIndex { get; set; }
     public string StageLabel { get; set; } = string.Empty;
     public bool IsSettled { get; set; }
+    public bool IsBlocked { get; set; }
+    public string StatusTone { get; set; } = "informative";
     public string HealthBucket { get; set; } = "Other";
     public DateOnly? NominatedDate { get; set; }
     public DateOnly? ApprovalDate { get; set; }

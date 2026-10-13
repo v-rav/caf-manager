@@ -186,6 +186,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 StageIndex = stage,
                 StageLabel = NominationRules.StageLabel(stage),
                 IsSettled = NominationRules.IsSettled(n.Status),
+                IsBlocked = StatusRules.IsBlocked(n.Status),
+                StatusTone = StatusRules.Tone(n.Status),
                 HealthBucket = NominationRules.HealthBucket(n.CurrentState),
                 NominatedDate = n.NominatedDate,
                 ApprovalDate = n.ApprovalDate,
@@ -408,8 +410,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
         return string.Empty;
     }
 
-    private static bool IsBlockedState(NominationStatusType s) =>
-        s is NominationStatusType.Blocked or NominationStatusType.WaitingForCustomerAction or NominationStatusType.WaitingOnFollowUp;
+    private static bool IsBlockedState(NominationStatusType s) => StatusRules.IsBlocked(s);
 
     private static bool TryParseStatus(string? value, out NominationStatusType status)
     {

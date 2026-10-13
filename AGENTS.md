@@ -385,6 +385,10 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
     Edited on Admin → **Classification Rules** (`/rules`, `KeywordRulesController` at `api/keyword-rules`) with an impact
     preview. `KeywordRules.Defaults` only seeds empty domains; the snapshot reloads at startup and after every edit. Never
     add `text.Contains("...")` classification in code — add a rule/domain instead.
+  - **Status behaviour is data**: `StatusRules` table (`Application/Common/StatusRules.cs`) decides settled / blocked /
+    badge tone / selectable per workflow status, plus the `DefaultApprovalFilter` setting — edited in Configuration →
+    **Workflow status rules** (settled edits rebuild capacity). Use `NominationRules.SettledStatuses` /
+    `StatusRules.IsBlocked` / DTO `isSettled`, `isBlocked`, `statusTone`; never hardcode status lists.
   - Compute business rules **once on the server** and return them on the DTO (e.g. stage index, settled, effective
     GHCP level). Do **not** re-implement them in React pages.
   - When you change a rule, setting, table, or page, update `SYSTEM-REFERENCE.md` (move items from §9 to §8 as they

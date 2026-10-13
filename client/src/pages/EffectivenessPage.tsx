@@ -147,15 +147,6 @@ function effExplain(r: ScoreRow, role: Role, m: EffModel): string {
 
 const stageNum = (n: Nomination): string => (n.stageIndex ? String(n.stageIndex) : '—')
 
-const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'informative'> = {
-  Completed: 'success',
-  Blocked: 'danger',
-  Withdrawn: 'danger',
-  'Customer Deferred': 'warning',
-  'Waiting for Customer Action': 'warning',
-  'Waiting on Follow-up': 'warning',
-}
-
 // Compact stat chip for the individual drill-down header.
 function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -307,7 +298,7 @@ export function EffectivenessPage() {
       key: 'status',
       header: 'Status',
       sortValue: (n) => n.status,
-      render: (n) => <Badge appearance="tint" color={STATUS_TONE[n.status] ?? 'informative'}>{n.status}</Badge>,
+      render: (n) => <Badge appearance="tint" color={n.statusTone ?? 'informative'}>{n.status}</Badge>,
     },
     { key: 'msi', header: 'MSI', align: 'end', sortValue: (n) => n.msiScore ?? 0, render: (n) => n.msiScore ?? '—' },
     {

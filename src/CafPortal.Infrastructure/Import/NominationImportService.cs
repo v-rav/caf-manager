@@ -193,8 +193,7 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
         var withdrawnCount = 0;
         foreach (var n in existing.Where(n => !string.IsNullOrWhiteSpace(n.ExternalTaskId)
             && !seenTaskIds.Contains(n.ExternalTaskId!)
-            && n.Status is not NominationStatusType.Withdrawn and not NominationStatusType.Closed
-            and not NominationStatusType.Completed and not NominationStatusType.CustomerDeferred
+            && !CafPortal.Application.Common.StatusRules.IsSettled(n.Status)
             && !IsActivelyExecuting(n)))
         {
             n.Status = NominationStatusType.Withdrawn;

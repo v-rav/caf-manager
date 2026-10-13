@@ -193,6 +193,7 @@ erDiagram
 | **Import** | `ImportRuns` / `ImportChanges` | 30 / 4,799 | System | Import audit + field-level deltas (90-day retention) |
 | **Config** | `ApplicationSettings` | 28 | ⚙️ partly | Key/value settings (§8) |
 | | `KeywordRules` | 50 | ⚙️ (Classification Rules page) | Data-driven keyword classification (Stage, Health, WaveType, ToolAlias, Activity, ContainerPath) |
+| | `StatusRules` | 9 | ⚙️ (Configuration → Workflow status rules) | Per-status behaviour: settled, blocked, tone, selectable, order |
 | | `LookupValues` | 34 | ⚙️ | Vocabularies (BlockerCategory, BlockerOwner, Classification, VelocityImpact, Milestone) |
 | | `CapacityConfigurations` | 5 | ⚙️ | Per-role capacity limit |
 | | `Regions` / `Segments` / `Skills` / `Tools` | 5 / 8 / 10 / 12 | ⚙️ (Segments, Skills, Tools) | Masters (`Tools` = legacy list, see `MigrationTools`) |
@@ -514,6 +515,7 @@ Client-side scorecard per PM/SA/CFTL (§5.14) · inline drill-down · CSV.
 |  Retention: `HistoryRetentionDays` | ⚙️ | 90 | Import history prune |
 | **Scoring models** (`SettingsCatalog` section *Scoring*) | Configuration → **Scoring models** (weight groups must total 100, bands ordered) | MSI 30/20/20/10/10/10 · bands 80/60 · risk 30/20 · Eff SA 30/25/25/20 · Eff PM/CFTL 30/30/25/15 · speed 45–180d · momentum 10–75d · tones 75/55 | MSI (grid + workspace), Ownership Effectiveness, Help page text |
 | Gate → MSI component (`GateDefinition.MsiGroup`) | Gate Template | G1–3 Readiness · G4–5 Scope · G6–7 Delivery · G8 Sign-off | MSI |
+| **Workflow status rules** (`StatusRules` table, `Application/Common/StatusRules.cs`) + `DefaultApprovalFilter` | Configuration → **Workflow status rules** (settled · blocked · tone · selectable · order; settled edits rebuild capacity) | Settled: Closed, Completed, Withdrawn, Customer Deferred · Blocked: Blocked, Waiting for Customer Action, Waiting on Follow-up · default approval: Approved | Capacity, in-flight KPIs, SLA/strategic tiers, FY anchoring, import withdraw guard, status badges, Manage-dialog options, Nominations default filter |
 | `Acr*` rates (10 keys) + `AcrContainerCoreFloor` | Configuration → ACR rates | see §5.11 | ACR estimator, capture, recovery |
 | `AcrTarget<FY>` | Configuration → ACR targets | `AcrTarget2027 = 50,000,000` | Attainment |
 | `CapacityConfigurations` | Configuration → role capacity | App Architect / App Engineer / DevOps / SME = 7 · Architect Lead = 5 | Capacity limit |
@@ -532,7 +534,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | # | Rule | Location | Value | Pri |
 |---|---|---|---|---|
 | H1 | ~~Stage keyword → 1–4~~ — now ⚙️ `KeywordRules` domain **Stage** (6B-1) | Classification Rules page | 6 rules | done |
-| H2 | "Settled" status set | `CapacityService`, `CapacityRebuildService`, `DashboardService`, `ReconciliationService`, `NameConsistencyService`, `AnalyticsService` (substring!), client `fy.tsx`, `EffectivenessPage` | Closed/Completed/Withdrawn/CustomerDeferred | **P1** |
+| H2 | ~~"Settled" status set~~ — now ⚙️ `StatusRules` (Configuration → Workflow status rules; also blocked/tone/selectable) (6B-4) | `StatusRules` table | Closed/Completed/Withdrawn/CustomerDeferred | done |
 | H3 | ~~MSI weights, band cutoffs, risk coefficients~~ — now ⚙️ Configuration → Scoring models (6B-2); GHCP divisor /7 stays (fixed 0–7 scale) | `SettingsCatalog` (Scoring) | 30/20/20/10/10/10 · 80/60 · 30/20 | done |
 | H4 | ~~Gate → MSI group by key~~ — now ⚙️ `GateDefinition.MsiGroup` (Gate Template page) (6B-3) | Gate Template | per gate | done |
 | H5 | ~~Strategic tier thresholds~~ — now ⚙️ (6A-4) | `SettingsCatalog` | 60/90/120 | done |
@@ -551,7 +553,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | H18 | Blocker suggestion regexes | client `NominationsPage.suggestBlocker` | access/LZ/approval/testing… | P3 |
 | H19 | Team assign roles + role eligibility keywords | client `NominationsPage` (`ASSIGN_ROLES`) | SA / Migration Engineer / DevOps | P3 |
 | H20 | Adoption level labels 0–7 | client `adoption.ts` | 8 labels | P3 |
-| H21 | Approval default = `Approved` | client `NominationsPage` | string | P3 |
+| H21 | ~~Approval default = `Approved`~~ — now ⚙️ `DefaultApprovalFilter` (Workflow status rules panel) | setting | Approved | done |
 | H22 | ~~Import history retention~~ — now ⚙️ (6A-4) | `SettingsCatalog` | 90 days | done |
 | H23 | Aging colours on Governance Board | client `GovernanceBoardPage` | 10 / 5 days | P3 |
 | H24 | `"Global View"` sentinel | `GovernanceService`, `region.tsx`, others | string | P3 |

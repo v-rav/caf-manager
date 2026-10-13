@@ -21,7 +21,7 @@ import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
 import { useAuth } from '../auth'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { Nomination, NominationUpdate } from '../types'
@@ -262,17 +262,6 @@ function stateColor(bucket?: string): 'success' | 'warning' | 'danger' | 'inform
   return 'informative'
 }
 
-const STATUS_OPTIONS = [
-  'Open',
-  'In Progress',
-  'Blocked',
-  'Waiting for Customer Action',
-  'Customer Deferred',
-  'Waiting on Follow-up',
-  'Completed',
-  'Closed',
-]
-
 const BLOCKER_OPTIONS = [
   'Waiting for Customer Action',
   'Approval Pending',
@@ -306,7 +295,6 @@ function eligibleForRole(assignRole: string, resourceRole?: string): boolean {
   }
 }
 
-const BLOCKED_STATES = ['Blocked', 'Waiting for Customer Action', 'Waiting on Follow-up']
 
 // Lightweight keyword → blocker-reason suggestion from free-text (no AI needed).
 function suggestBlocker(text?: string): string | undefined {
@@ -363,14 +351,23 @@ export function NominationsPage() {
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
   const { data: resourceList } = useAsync(() => api.resources({}), [])
   const { data: vocab } = useAsync(() => api.nominationVocab(), [])
+  // Workflow status behaviour + default approval filter (Configuration → Workflow status rules).
+  const { data: statusInfo } = useAsync(() => api.statusRules(), [])
   const [currentStateFilter, setCurrentStateFilter] = useState('')
   const [migrationFilter, setMigrationFilter] = useState('')
   const [slaFilter, setSlaFilter] = useState('')
   const [classFilter, setClassFilter] = useState('')
   const [linkFilter, setLinkFilter] = useState('')
   const [ghcpFilter, setGhcpFilter] = useState('')
-  // Default the pipeline to Approved nominations; a person drill-through widens to all approvals.
-  const [approvalFilter, setApprovalFilter] = useState(person ? '' : 'Approved')
+  // Default approval comes from configuration; a person drill-through widens to all approvals.
+  const [approvalFilter, setApprovalFilter] = useState('')
+  const approvalSeeded = useRef(false)
+  useEffect(() => {
+    if (statusInfo && !approvalSeeded.current) {
+      approvalSeeded.current = true
+      if (!person) setApprovalFilter(statusInfo.defaultApproval)
+    }
+  }, [statusInfo, person])
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounced(search)
 
@@ -414,7 +411,7 @@ export function NominationsPage() {
 
   const stageCount = (stage: number) => scoped.filter((n) => n.stageIndex === stage).length
 
-  const blockedTotal = scoped.filter((n) => BLOCKED_STATES.includes(n.status)).length
+  const blockedTotal = scoped.filter((n) => n.isBlocked).length
   const staleCount = (tier: string) => scoped.filter((n) => n.staleTier === tier).length
   const noWaveTotal = scoped.filter((n) => n.noWavesLinked).length
   const ghcpUsedTotal = scoped.filter((n) => (n.ghcpUsageCount ?? 0) > 0).length
@@ -487,7 +484,11 @@ export function NominationsPage() {
     setResourceTyping(false)
   }
 
-  const isBlocked = BLOCKED_STATES.includes(form.status)
+  const isBlocked = !!statusInfo?.rules.find((r) => r.label === form.status)?.isBlocked
+  const statusOptions = [
+    ...(statusInfo?.rules ?? []).filter((r) => r.selectable).map((r) => r.label),
+    ...(form.status && !(statusInfo?.rules ?? []).some((r) => r.selectable && r.label === form.status) ? [form.status] : []),
+  ]
 
   const saveManage = async () => {
     if (!editing) return
@@ -574,7 +575,7 @@ export function NominationsPage() {
         </div>
       )}
 
-      {loading ? (
+      {loading || !statusInfo ? (
         <Loading />
       ) : error ? (
         <ErrorText error={error} onRetry={reload} />
@@ -950,7 +951,7 @@ export function NominationsPage() {
               selectedOptions={[form.status]}
               onOptionSelect={(_, d) => setForm((f) => ({ ...f, status: d.optionValue ?? f.status }))}
             >
-              {STATUS_OPTIONS.map((s) => (
+              {statusOptions.map((s) => (
                 <Option key={s} value={s}>
                   {s}
                 </Option>

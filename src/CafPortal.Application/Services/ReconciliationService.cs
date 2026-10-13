@@ -17,7 +17,7 @@ public class ReconciliationService(IApplicationDbContext db) : IReconciliationSe
 {
     private readonly IApplicationDbContext _db = db;
 
-    private static readonly NominationStatusType[] Settled = NominationRules.SettledStatuses;
+    private static NominationStatusType[] Settled => NominationRules.SettledStatuses;
 
     public async Task<ReconciliationReportDto> GetAsync(string? region, CancellationToken ct = default)
     {

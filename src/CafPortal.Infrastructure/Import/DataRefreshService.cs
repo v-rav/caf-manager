@@ -734,9 +734,7 @@ public class DataRefreshService(
                     {
                         SetFields(nom, row);
                         // An in-flight row that now carries an end date has completed since our snapshot.
-                        if (nom.ActualEndDate is not null
-                            && nom.Status is not (NominationStatusType.Completed or NominationStatusType.Closed
-                                or NominationStatusType.Withdrawn or NominationStatusType.CustomerDeferred))
+                        if (nom.ActualEndDate is not null && !CafPortal.Application.Common.StatusRules.IsSettled(nom.Status))
                         {
                             nom.Status = NominationStatusType.Completed;
                             matchedCompleted++;

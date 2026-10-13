@@ -11,7 +11,7 @@ public class CapacityService(IApplicationDbContext db, ICapacityCalculationServi
     private readonly IApplicationDbContext _db = db;
     private readonly ICapacityCalculationService _calc = calc;
 
-    private static readonly NominationStatusType[] Settled = NominationRules.SettledStatuses;
+    private static NominationStatusType[] Settled => NominationRules.SettledStatuses;
 
     public async Task<IReadOnlyList<CapacityRowDto>> GetAsync(string? region, CancellationToken ct = default)
     {

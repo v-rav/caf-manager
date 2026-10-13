@@ -30,6 +30,7 @@ public interface IApplicationDbContext
     DbSet<SegmentConfiguration> Segments { get; }
     DbSet<LookupValue> LookupValues { get; }
     DbSet<KeywordRule> KeywordRules { get; }
+    DbSet<StatusRule> StatusRules { get; }
     DbSet<ToolConfiguration> Tools { get; }
     DbSet<SkillConfiguration> Skills { get; }
     DbSet<StrategicAccountConfiguration> StrategicAccountConfigurations { get; }

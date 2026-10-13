@@ -31,6 +31,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SegmentConfiguration> Segments => Set<SegmentConfiguration>();
     public DbSet<LookupValue> LookupValues => Set<LookupValue>();
     public DbSet<KeywordRule> KeywordRules => Set<KeywordRule>();
+    public DbSet<StatusRule> StatusRules => Set<StatusRule>();
     public DbSet<ToolConfiguration> Tools => Set<ToolConfiguration>();
     public DbSet<SkillConfiguration> Skills => Set<SkillConfiguration>();
     public DbSet<StrategicAccountConfiguration> StrategicAccountConfigurations => Set<StrategicAccountConfiguration>();

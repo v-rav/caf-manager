@@ -15,7 +15,7 @@ public class CapacityRebuildService(IApplicationDbContext db, ICapacityCalculati
     private readonly IApplicationDbContext _db = db;
     private readonly ICapacityCalculationService _capacity = capacity;
 
-    private static readonly NominationStatusType[] Settled = NominationRules.SettledStatuses;
+    private static NominationStatusType[] Settled => NominationRules.SettledStatuses;
 
     public async Task<int> RebuildAllAsync(CancellationToken ct = default)
     {

@@ -50,6 +50,18 @@ public class LookupValueMap : IEntityTypeConfiguration<LookupValue>
     }
 }
 
+public class StatusRuleMap : IEntityTypeConfiguration<StatusRule>
+{
+    public void Configure(EntityTypeBuilder<StatusRule> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Status).HasMaxLength(40).IsRequired();
+        builder.Property(x => x.Tone).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.UpdatedBy).HasMaxLength(120);
+        builder.HasIndex(x => x.Status).IsUnique();
+    }
+}
+
 public class KeywordRuleMap : IEntityTypeConfiguration<KeywordRule>
 {
     public void Configure(EntityTypeBuilder<KeywordRule> builder)

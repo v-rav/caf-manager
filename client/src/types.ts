@@ -274,6 +274,8 @@ export interface Nomination {
   stageIndex?: number | null
   stageLabel?: string
   isSettled?: boolean
+  isBlocked?: boolean
+  statusTone?: 'success' | 'warning' | 'danger' | 'informative' | 'brand' | 'subtle'
   healthBucket?: string
   nominatedDate?: string
   approvalDate?: string
@@ -523,6 +525,23 @@ export interface SegmentOption {
   id: number
   name: string
   sortOrder: number
+}
+
+export interface StatusRuleRow {
+  status: string
+  label: string
+  isSettled: boolean
+  isBlocked: boolean
+  tone: string
+  selectable: boolean
+  sortOrder: number
+}
+
+export interface StatusRulesResponse {
+  rules: StatusRuleRow[]
+  defaultApproval: string
+  approvalValues: string[]
+  tones: string[]
 }
 
 export interface RuleDomainInfo {

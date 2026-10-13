@@ -1,10 +1,10 @@
-import { Badge, Button, Dropdown, Input, Option, SpinButton, Text } from '@fluentui/react-components'
+import { Badge, Button, Checkbox, Dropdown, Input, Option, SpinButton, Text } from '@fluentui/react-components'
 import { AddRegular, CheckmarkCircleRegular, DeleteRegular, EditRegular, SaveRegular } from '@fluentui/react-icons'
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
-import type { RoleCapacity, AcrRates, AcrEstimate, OperationsSetting } from '../types'
+import type { RoleCapacity, AcrRates, AcrEstimate, OperationsSetting, StatusRuleRow } from '../types'
 
 export function ConfigurationPage() {
   const { data, loading, error, reload } = useAsync(() => api.roleCapacity(), [])
@@ -130,8 +130,98 @@ export function ConfigurationPage() {
         intro="Rule-driving values read by the server (SLA cadence, strategic tiers, capacity bands, retention). Ordered tiers are validated on save; capacity changes rebuild the capacity snapshot." />
       <OperationsSettingsPanel section="Scoring" title="Scoring models"
         intro="MSI and Ownership Effectiveness formulas. Each weight group must total 100%; band cut-offs must stay ordered. Changes apply on the next page load everywhere the score is shown." />
+      <StatusRulesPanel />
       <FiscalTargetsPanel />
     </div>
+  )
+}
+
+// Workflow status behaviour: which statuses are settled (leave in-flight, capacity and SLA), blocked, their badge tone,
+// and which can be chosen in the Manage dialog. The status set itself is fixed; behaviour is data.
+function StatusRulesPanel() {
+  const { data, loading, error, reload } = useAsync(() => api.statusRules(), [])
+  const [rows, setRows] = useState<StatusRuleRow[]>([])
+  const [approval, setApproval] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  useEffect(() => {
+    if (data) {
+      setRows(data.rules)
+      setApproval(data.defaultApproval)
+    }
+  }, [data])
+
+  const dirty = !!data && (approval !== data.defaultApproval || JSON.stringify(rows) !== JSON.stringify(data.rules))
+  const patch = (status: string, p: Partial<StatusRuleRow>) =>
+    setRows((rs) => rs.map((r) => (r.status === status ? { ...r, ...p } : r)))
+
+  const save = async () => {
+    setBusy(true)
+    setMsg(null)
+    try {
+      await api.saveStatusRules({
+        rules: rows.map(({ status, isSettled, isBlocked, tone, selectable, sortOrder }) => ({ status, isSettled, isBlocked, tone, selectable, sortOrder })),
+        defaultApproval: approval,
+      })
+      setMsg({ ok: true, text: 'Saved — capacity rebuilt if the settled set changed.' })
+      reload()
+    } catch (e: unknown) {
+      const d = (e as { response?: { data?: unknown } })?.response?.data
+      setMsg({ ok: false, text: typeof d === 'string' ? d : 'Save failed.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Panel
+      title="Workflow status rules"
+      action={<Button appearance="primary" icon={<SaveRegular />} onClick={save} disabled={!dirty || busy}>{busy ? 'Saving…' : 'Save changes'}</Button>}
+    >
+      {loading ? <Loading /> : error ? <ErrorText error={error} onRetry={reload} /> : data && (
+        <>
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
+            <b>Settled</b> statuses stop counting as in-flight (capacity, SLA tiers, active KPIs) and anchor the fiscal year on
+            the close date. <b>Blocked</b> statuses require a blocker reason and count in the Blocked/Waiting card. Tone sets
+            the status badge colour; Selectable controls the Manage-dialog options.
+          </Text>
+          {msg && <Text style={{ color: msg.ok ? 'var(--colorPaletteGreenForeground1)' : 'var(--colorPaletteRedForeground1)', display: 'block', marginBottom: 8 }}>{msg.text}</Text>}
+          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: 'left' }}>
+                {['Status', 'Settled', 'Blocked', 'Tone', 'Selectable', 'Order'].map((h) => (
+                  <th key={h} style={{ padding: '6px 8px', borderBottom: '2px solid var(--colorNeutralStroke2)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.status} style={{ borderBottom: '1px solid var(--colorNeutralStroke2)' }}>
+                  <td style={{ padding: '6px 8px' }}><Badge appearance="tint" color={r.tone as 'informative'}>{r.label}</Badge></td>
+                  <td style={{ padding: '6px 8px' }}><Checkbox checked={r.isSettled} onChange={(_, d) => patch(r.status, { isSettled: !!d.checked, isBlocked: d.checked ? false : r.isBlocked })} /></td>
+                  <td style={{ padding: '6px 8px' }}><Checkbox checked={r.isBlocked} disabled={r.isSettled} onChange={(_, d) => patch(r.status, { isBlocked: !!d.checked })} /></td>
+                  <td style={{ padding: '6px 8px' }}>
+                    <Dropdown size="small" value={r.tone} selectedOptions={[r.tone]} onOptionSelect={(_, d) => patch(r.status, { tone: d.optionValue ?? r.tone })} style={{ minWidth: 130 }}>
+                      {data.tones.map((t) => <Option key={t} value={t}>{t}</Option>)}
+                    </Dropdown>
+                  </td>
+                  <td style={{ padding: '6px 8px' }}><Checkbox checked={r.selectable} onChange={(_, d) => patch(r.status, { selectable: !!d.checked })} /></td>
+                  <td style={{ padding: '6px 8px' }}><SpinButton size="small" min={0} max={1000} step={10} value={r.sortOrder} onChange={(_, d) => patch(r.status, { sortOrder: Math.round(d.value ?? Number(d.displayValue) ?? r.sortOrder) })} style={{ width: 90 }} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+            <Text weight="semibold">Nominations default approval filter</Text>
+            <Dropdown value={approval || 'All'} selectedOptions={[approval]} onOptionSelect={(_, d) => setApproval(d.optionValue ?? '')} style={{ minWidth: 220 }}>
+              <Option value="">All</Option>
+              {data.approvalValues.map((a) => <Option key={a} value={a}>{a}</Option>)}
+            </Dropdown>
+          </div>
+        </>
+      )}
+    </Panel>
   )
 }
 

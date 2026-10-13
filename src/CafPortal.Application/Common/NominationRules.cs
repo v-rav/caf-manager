@@ -6,14 +6,10 @@ namespace CafPortal.Application.Common;
 /// Computed here once and surfaced on <c>NominationDto</c> so the client never re-derives them.</summary>
 public static class NominationRules
 {
-    /// <summary>States that stop a nomination counting as in-flight (capacity, SLA, KPIs).</summary>
-    public static readonly NominationStatusType[] SettledStatuses =
-    {
-        NominationStatusType.Closed, NominationStatusType.Completed,
-        NominationStatusType.Withdrawn, NominationStatusType.CustomerDeferred,
-    };
+    /// <summary>States that stop a nomination counting as in-flight (capacity, SLA, KPIs). Data: StatusRules.</summary>
+    public static NominationStatusType[] SettledStatuses => StatusRules.Settled;
 
-    public static bool IsSettled(NominationStatusType status) => SettledStatuses.Contains(status);
+    public static bool IsSettled(NominationStatusType status) => StatusRules.IsSettled(status);
 
     /// <summary>Classification that means "not strategic"; anything else is a strategic engagement.</summary>
     public const string StandardClassification = "Standard Factory";

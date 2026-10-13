@@ -73,6 +73,8 @@ public static class DbInitializer
         // Classification keyword rules: seed empty domains, then load the active snapshot before any import/rebuild.
         await KeywordRuleStore.SeedAsync(db, ct);
         await KeywordRuleStore.LoadAsync(db, ct);
+        await StatusRuleStore.SeedAsync(db, ct);
+        await StatusRuleStore.LoadAsync(db, ct);
 
         if (workbookExists && !hasResources)
         {

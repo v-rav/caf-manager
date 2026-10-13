@@ -10,7 +10,7 @@ public class DashboardService(IApplicationDbContext db) : IDashboardService
 {
     private readonly IApplicationDbContext _db = db;
 
-    private static readonly NominationStatusType[] Settled = NominationRules.SettledStatuses;
+    private static NominationStatusType[] Settled => NominationRules.SettledStatuses;
 
     public async Task<ExecutiveDashboardDto> GetExecutiveAsync(string? region, CancellationToken ct = default)
     {

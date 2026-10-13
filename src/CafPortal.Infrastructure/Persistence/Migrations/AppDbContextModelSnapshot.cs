@@ -636,6 +636,52 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.ToTable("Skills");
                 });
 
+            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.StatusRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsSettled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Selectable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("UpdatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status")
+                        .IsUnique();
+
+                    b.ToTable("StatusRules");
+                });
+
             modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.StrategicAccountConfiguration", b =>
                 {
                     b.Property<int>("Id")
