@@ -89,7 +89,7 @@ export function AdoptionPage() {
       const r = n.region || 'Unspecified'
       const e = m.get(r) ?? { total: 0, used: 0 }
       e.total++
-      if ((n.ghcpAdoptionLevel ?? 0) >= 5) e.used++
+      if ((n.ghcpUsageCount ?? 0) > 0) e.used++
       m.set(r, e)
     }
     return [...m.entries()].sort((a, b) => b[1].total - a[1].total)
@@ -151,7 +151,7 @@ export function AdoptionPage() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {byRegion.map(([r, e]) => (
             <Badge key={r} appearance="tint" color="informative">
-              {r} · {e.total} · used {e.total ? Math.round((e.used / e.total) * 100) : 0}%
+              {r} · {e.total} · reported {e.total ? Math.round((e.used / e.total) * 100) : 0}%
             </Badge>
           ))}
         </div>
@@ -210,8 +210,9 @@ function CapabilitySection({ cap }: { cap: ReturnType<typeof useAsync<Capability
       action={<Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportCsv} disabled={!data.totalUsages}>Export</Button>}
     >
       <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
-        Which migration capability was accelerated by GHCP / AppMod / accelerators / Azure tooling — counts are distinct nominations.
-        {data.totalUsages === 0 ? ' Capture tool usage in a nomination workspace to populate this.' : ` ${data.nominationsWithUsage} nomination(s) with logged usage.`}
+        Which migration capability was accelerated by which tool — tools aligned to the master taxonomy and the activity
+        inferred from the FDO usage notes; counts are distinct nominations.
+        {data.totalUsages === 0 ? ' Upload the Nomination Wize Tool Usage export to populate this.' : ` ${data.nominationsWithUsage} nomination(s) with reported usage.`}
       </Text>
       {data.totalUsages === 0 ? null : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>

@@ -186,32 +186,44 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
     public async Task<CapabilityUtilizationDto> GetCapabilityAsync(string? region, CancellationToken ct = default)
     {
         var scoped = !string.IsNullOrWhiteSpace(region) && !region.Equals("Global View", StringComparison.OrdinalIgnoreCase);
-        var rows = await (
-            from u in _db.NominationToolUsages.AsNoTracking()
+        // Source of truth is the imported FDO "Nomination Wize Tool Usage" facts (the real captured usage),
+        // not the sparse manual Tool × Activity junction. Tool names are aligned to the master; the activity is
+        // inferred from the raw name + free-text details (the export conflates tool + activity in one column).
+        var raw = await (
+            from u in _db.NominationToolUsageFacts.AsNoTracking()
+            where u.NominationId != null
             join n in _db.Nominations.AsNoTracking() on u.NominationId equals n.Id
-            join t in _db.MigrationTools.AsNoTracking() on u.ToolId equals t.Id
-            join a in _db.MigrationActivities.AsNoTracking() on u.ActivityId equals a.Id into aj
-            from a in aj.DefaultIfEmpty()
             where !scoped || n.Region == region
-            select new { u.NominationId, ToolName = t.Name, t.Category, ActivityName = a != null ? a.Name : null })
+            select new { NominationId = u.NominationId!.Value, u.ToolName, u.Details })
             .ToListAsync(ct);
 
-        var byTool = rows.GroupBy(r => r.ToolName)
+        var toolCategory = await _db.MigrationTools.AsNoTracking()
+            .ToDictionaryAsync(t => t.Name, t => t.Category, StringComparer.OrdinalIgnoreCase, ct);
+
+        var rows = raw.Select(r =>
+        {
+            var tool = ToolNameNormalizer.Canonical(r.ToolName) ?? "Unspecified";
+            var category = toolCategory.TryGetValue(tool, out var c) ? c : "GHCP";
+            return new { r.NominationId, Tool = tool, Category = category, Activities = ClassifyActivities(r.ToolName, r.Details) };
+        }).ToList();
+
+        var byTool = rows.GroupBy(r => r.Tool)
             .Select(g => new NameValueDto(g.Key, g.Select(x => x.NominationId).Distinct().Count()))
             .OrderByDescending(x => x.Value).ToArray();
         var byCategory = rows.GroupBy(r => r.Category)
             .Select(g => new NameValueDto(g.Key, g.Select(x => x.NominationId).Distinct().Count()))
             .OrderByDescending(x => x.Value).ToArray();
-        var byActivity = rows.Where(r => r.ActivityName != null).GroupBy(r => r.ActivityName!)
+
+        // Fan out each usage row across its inferred activities, then count distinct nominations per activity.
+        var activityRows = rows.SelectMany(r => r.Activities.Select(a => new { r.NominationId, Activity = a, r.Tool })).ToList();
+        var byActivity = activityRows.GroupBy(r => r.Activity)
             .Select(g => new NameValueDto(g.Key, g.Select(x => x.NominationId).Distinct().Count()))
             .OrderByDescending(x => x.Value).ToArray();
 
-        // Most-used tool per activity: for each activity, the tool with the most distinct nominations.
-        var mostUsed = rows.Where(r => r.ActivityName != null)
-            .GroupBy(r => r.ActivityName!)
+        var mostUsed = activityRows.GroupBy(r => r.Activity)
             .Select(g =>
             {
-                var top = g.GroupBy(x => x.ToolName)
+                var top = g.GroupBy(x => x.Tool)
                     .Select(tg => new { Tool = tg.Key, Count = tg.Select(x => x.NominationId).Distinct().Count() })
                     .OrderByDescending(x => x.Count).First();
                 return new CapabilityOutcomeDto(g.Key, top.Tool, top.Count);
@@ -222,6 +234,36 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             rows.Count,
             rows.Select(r => r.NominationId).Distinct().Count(),
             byTool, byCategory, byActivity, mostUsed);
+    }
+
+    // Keyword map for inferring the migration activity from the free-text usage note (and the raw tool name).
+    private static readonly (string Keyword, string Activity)[] ActivityKeywords =
+    {
+        ("iac", "IaC Generation"),
+        ("infrastructure as code", "IaC Generation"),
+        ("cd pipeline", "CD Pipeline"),
+        ("ci pipeline", "CI Pipeline"),
+        ("ci/cd", "CI Pipeline"),
+        ("pipeline", "CI Pipeline"),
+        ("container", "Containerization"),
+        ("remediat", "Code Remediation"),
+        ("assess", "Application Assessment"),
+        ("dependency", "Dependency Analysis"),
+        ("upgrade", "Version Upgrade"),
+        ("modern", "Modernization"),
+        ("document", "Documentation Generation"),
+        ("test", "Testing & Validation"),
+    };
+
+    // Infers the distinct activities a usage row touched; falls back to "Unclassified" when nothing matches.
+    private static IReadOnlyList<string> ClassifyActivities(string? toolName, string? details)
+    {
+        var text = ((toolName ?? string.Empty) + " " + (details ?? string.Empty)).ToLowerInvariant();
+        var hits = new List<string>();
+        foreach (var (keyword, activity) in ActivityKeywords)
+            if (text.Contains(keyword) && !hits.Contains(activity))
+                hits.Add(activity);
+        return hits.Count > 0 ? hits : new List<string> { "Unclassified" };
     }
 
     public async Task<NominationGovernanceDto?> AddToolUsageAsync(int nominationId, ToolUsageUpsert req, CancellationToken ct = default)
