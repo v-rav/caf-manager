@@ -1,8 +1,9 @@
-import { Badge, Button, Text } from '@fluentui/react-components'
-import { ArrowDownloadRegular } from '@fluentui/react-icons'
-import { useMemo, useState } from 'react'
+import { Badge, Button, Text, Tooltip } from '@fluentui/react-components'
+import { ArrowDownloadRegular, ArrowUploadRegular } from '@fluentui/react-icons'
+import { useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
+import { Modal } from '../components/Modal'
 import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
@@ -32,6 +33,32 @@ export function AdoptionPage() {
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
   const cap = useAsync(() => api.capability(region), [region])
   const [tool, setTool] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [uploadResult, setUploadResult] = useState<{ success: boolean; messages: string[] } | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  const runUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file
+    if (!file) return
+    setUploading(true)
+    try {
+      setUploadResult(await api.uploadAuto(file))
+    } catch {
+      setUploadResult({ success: false, messages: ['Upload failed. Ensure the file is the Nomination Wize Tool Usage .xlsx export.'] })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const closeUpload = () => {
+    const ok = uploadResult?.success
+    setUploadResult(null)
+    if (ok) {
+      reload()
+      cap.reload()
+    }
+  }
 
   const base = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !SETTLED.includes(n.status)), [data, fy])
   const rows = useMemo(
@@ -128,9 +155,30 @@ export function AdoptionPage() {
             onChange={setTool}
             options={['Tool attached', 'No tool']}
           />
+          <input ref={fileInput} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={runUpload} />
+          <Tooltip relationship="description" content="Upload the FDO Nomination Wize Tool Usage export (.xlsx). The file type is auto-detected and replaces the previous usage data.">
+            <Button appearance="primary" icon={<ArrowUploadRegular />} disabled={uploading} onClick={() => fileInput.current?.click()}>
+              {uploading ? 'Uploading…' : 'Upload'}
+            </Button>
+          </Tooltip>
           <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!rows.length}>Export</Button>
         </div>
       </div>
+
+      <Modal
+        open={!!uploadResult}
+        title={uploadResult?.success ? 'Upload processed' : 'Upload not processed'}
+        onClose={closeUpload}
+        onSubmit={closeUpload}
+        submitLabel={uploadResult?.success ? 'Refresh' : 'Close'}
+        maxWidth={620}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {(uploadResult?.messages ?? []).map((m, i) => (
+            <div key={i} style={{ fontSize: 13, fontWeight: /^(Detected|Records):/.test(m) ? 600 : 400 }}>{m}</div>
+          ))}
+        </div>
+      </Modal>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
         <KpiCard label="Licensed (L4+)" value={kpis.licensed} tone="success" />
