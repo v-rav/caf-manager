@@ -27,27 +27,14 @@ public static class NominationRules
     public static readonly string[] StageLabels =
         { "Validating", "Executing Pre-Requisites", "Finalize Scope", "Executing Migration" };
 
-    /// <summary>FDO Migration Status text → stage 1–4 (null when unrecognised).</summary>
-    public static int? StageIndex(string? migration)
-    {
-        var m = migration?.ToLowerInvariant() ?? string.Empty;
-        if (m.Contains("validating")) return 1;
-        if (m.Contains("pre-requisite") || m.Contains("pre requisite") || m.Contains("prerequisite")) return 2;
-        if (m.Contains("finalize")) return 3;
-        if (m.Contains("executing migration")) return 4;
-        return null;
-    }
+    /// <summary>FDO Migration Status text → stage 1–4 (null when unrecognised). Keywords: KeywordRules "Stage".</summary>
+    public static int? StageIndex(string? migration) =>
+        int.TryParse(KeywordRules.First(KeywordRules.Stage, migration), out var stage) ? stage : null;
 
     public static string StageLabel(int? stage) =>
         stage is >= 1 and <= 4 ? StageLabels[stage.Value - 1] : string.Empty;
 
-    /// <summary>FDO Current State text → health bucket: Blocked · Waiting · On Track · Other.</summary>
-    public static string HealthBucket(string? currentState)
-    {
-        var t = (currentState ?? string.Empty).ToLowerInvariant();
-        if (t.Contains("block")) return "Blocked";
-        if (t.Contains("waiting") || t.Contains("follow")) return "Waiting";
-        if (t.Contains("on track")) return "On Track";
-        return "Other";
-    }
+    /// <summary>FDO Current State text → health bucket. Keywords: KeywordRules "Health" (no match = Other).</summary>
+    public static string HealthBucket(string? currentState) =>
+        KeywordRules.First(KeywordRules.Health, currentState) ?? KeywordRules.FindDomain(KeywordRules.Health)!.Fallback!;
 }

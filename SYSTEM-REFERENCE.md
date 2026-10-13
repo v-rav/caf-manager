@@ -192,6 +192,7 @@ erDiagram
 | | `NominationToolUsageFacts` | 61 | FDO (wipe-and-reload) | Raw reported tool usage (1-to-many) |
 | **Import** | `ImportRuns` / `ImportChanges` | 30 / 4,799 | System | Import audit + field-level deltas (90-day retention) |
 | **Config** | `ApplicationSettings` | 28 | ⚙️ partly | Key/value settings (§8) |
+| | `KeywordRules` | 50 | ⚙️ (Classification Rules page) | Data-driven keyword classification (Stage, Health, WaveType, ToolAlias, Activity, ContainerPath) |
 | | `LookupValues` | 34 | ⚙️ | Vocabularies (BlockerCategory, BlockerOwner, Classification, VelocityImpact, Milestone) |
 | | `CapacityConfigurations` | 5 | ⚙️ | Per-role capacity limit |
 | | `Regions` / `Segments` / `Skills` / `Tools` | 5 / 8 / 10 / 12 | ⚙️ (Segments, Skills, Tools) | Masters (`Tools` = legacy list, see `MigrationTools`) |
@@ -284,7 +285,7 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 
 ### 5.1 Stage (1–4) from `MigrationStatus`
 * **Where:** `NominationRules.StageIndex` (Application/Common) — the single resolver used by every service, export and
-  import; surfaced as `NominationDto.StageIndex`/`StageLabel`. **Rule (🔒):** keyword match on lower-cased text:
+  import; surfaced as `NominationDto.StageIndex`/`StageLabel`. **Rule (⚙️ `KeywordRules` domain Stage, first match by priority):**
   `validating`→1 · `pre-requisite|prerequisite|pre requisite`→2 · `finalize`→3 · `executing migration`→4 · else 0.
 * **Labels (🔒):** 1 Validating · 2 Executing Pre-Requisites · 3 Finalize Scope · 4 Executing Migration.
 
@@ -336,7 +337,7 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 `DbLinked = Db` · `SecurityLinked = Security` · `AlzLinked = LandingZone ∪ Dispatch` · `WaveCount` ·
 `NoWavesLinked = WaveCount == 0`. Waves are **informational**; none are required.
 
-### 5.9 Tool name normalization (`ToolNameNormalizer`, 🔒 map)
+### 5.9 Tool name normalization (`ToolNameNormalizer` → ⚙️ `KeywordRules` domain ToolAlias, Exact match)
 | Raw FDO variants (case-/space-insensitive) | Canonical master tool |
 |---|---|
 | `GHCP`, `GHCP-CI`, `GHCP CI`, `GHCP - CI`, `GHCP CI SKILLS`, `GHCP-IaC`, `GHCP - IAC`, `GHCP IaC` | **GHCP-CI** |
@@ -345,7 +346,7 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 | `AppCat`, `AppCat Analysis` | **AppCAT** |
 | anything else | passes through trimmed (blank → "Unspecified" in the rollup) |
 
-### 5.10 Activity inference & effective GHCP level (`ToolActivityClassifier`, 🔒)
+### 5.10 Activity inference & effective GHCP level (`ToolActivityClassifier`; keywords ⚙️ domain Activity, level rule 🔒)
 * **Activity** = keyword hits in `ToolName + Details`: `iac|infrastructure as code`→IaC Generation · `cd pipeline`→CD Pipeline ·
   `ci pipeline|ci/cd|pipeline`→CI Pipeline · `container`→Containerization · `remediat`→Code Remediation ·
   `assess`→Application Assessment · `dependency`→Dependency Analysis · `upgrade`→Version Upgrade · `modern`→Modernization ·
@@ -514,6 +515,7 @@ Client-side scorecard per PM/SA/CFTL (§5.14) · inline drill-down · CSV.
 | `AcrTarget<FY>` | Configuration → ACR targets | `AcrTarget2027 = 50,000,000` | Attainment |
 | `CapacityConfigurations` | Configuration → role capacity | App Architect / App Engineer / DevOps / SME = 7 · Architect Lead = 5 | Capacity limit |
 | `PageAccess:<key>` | User & Access | per page | Nav + route gating |
+| **Classification rules** (`KeywordRules` table, engine `Application/Common/KeywordRules.cs`) | Admin → **Classification Rules** (`/rules`): add/edit/delete/deactivate per domain with an **impact preview** (which records change, from → to) before saving; `UpdatedBy` stamped | Stage 6 · Health 4 · WaveType 8 · ToolAlias 13 · Activity 14 · ContainerPath 5 | Stage index, health bucket, wave typing (import), tool canonicalization, activity inference → effective GHCP level & capability rollups, containerized ACR capture |
 | Lookups (BlockerCategory, BlockerOwner, Classification, VelocityImpact, Milestone) | Configuration → lookup master | 10 / 6 / 5 / 4 / 9 values | Workspace, Manage dialog, grid filters |
 | Gate template | Gate Template page | 8 gates / 54 items | Gates, readiness, MSI |
 | Migration tools / activities / mapping | Capability Masters page | 16 / 20 / 73 | Workspace picker, capability rollups |
@@ -526,7 +528,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 
 | # | Rule | Location | Value | Pri |
 |---|---|---|---|---|
-| H1 | Stage keyword → 1–4 + labels | `NominationService`, `AnalyticsService`, `GovernanceService`, `ExportService`, `NominationImportService`, client `NominationsPage`/`DashboardPage`/`FlowPage`/`EffectivenessPage` | `validating`/`pre-requisite`/`finalize`/`executing migration` | **P1** |
+| H1 | ~~Stage keyword → 1–4~~ — now ⚙️ `KeywordRules` domain **Stage** (6B-1) | Classification Rules page | 6 rules | done |
 | H2 | "Settled" status set | `CapacityService`, `CapacityRebuildService`, `DashboardService`, `ReconciliationService`, `NameConsistencyService`, `AnalyticsService` (substring!), client `fy.tsx`, `EffectivenessPage` | Closed/Completed/Withdrawn/CustomerDeferred | **P1** |
 | H3 | MSI weights, band cutoffs, risk coefficients, GHCP divisor | `MsiCalculator` | 30/20/20/10/10/10 · 80/60 · −30/blocker, −20 clock-stop · /7 | **P1** |
 | H4 | Gate → MSI group mapping | `MsiCalculator.GroupFor` | by gate *key* G1..G8 | **P1** (breaks if gates are renamed or added) |
@@ -534,11 +536,11 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | H6 | "Standard Factory" sentinel ⇒ not strategic | `NominationService`, `NominationDto`, `NominationsController` fallback, `LookupSeed` | string | P1 |
 | H7 | Withdraw guard / `MapStatus` / `IsActivelyExecuting` | `NominationImportService` | Declined→Withdrawn; executing/finalize | P1 |
 | H8 | FDO file detection signatures | `DataRefreshService.DetectFileKind` | header names + order | P2 |
-| H9 | Wave-type keyword classification | `NominationImportService` | security/sql/ossdb/database/alz/dispatch | P2 |
-| H10 | Tool-name normalization map | `ToolNameNormalizer` | 13 variants → 4 tools | **P1** (new FDO variants silently pass through) |
-| H11 | Activity keywords + assessment/execution sets + level derivation | `ToolActivityClassifier` | 14 keywords; 7/6/5/4 rule | P1 |
-| H12 | Containerized-path keywords + low-cores ≤16 | `AnalyticsService` | container/aks/aca/eks/ecs; 16 | P2 |
-| H13 | Health keywords (On Track/Waiting/Blocked) + `stateColor` | `AnalyticsService.Health`, client `NominationsPage` | block/waiting/follow/on track | P2 |
+| H9 | ~~Wave-type keyword classification~~ — now ⚙️ domain **WaveType** (applied on import) | Classification Rules page | 8 rules | done |
+| H10 | ~~Tool-name normalization map~~ — now ⚙️ domain **ToolAlias** (targets validated against the tool master) | Classification Rules page | 13 rules | done |
+| H11 | Activity keywords — now ⚙️ domain **Activity**; *remaining:* assessment/execution activity sets + 7/6/5/4 level derivation in `ToolActivityClassifier` | `ToolActivityClassifier` | 14 rules; level rule | P2 |
+| H12 | ~~Containerized-path keywords~~ — now ⚙️ domain **ContainerPath**; *remaining:* low-cores ≤16 | `AnalyticsService` | 5 rules; 16 | P2 |
+| H13 | ~~Health keywords~~ — now ⚙️ domain **Health** (client colours use the server bucket) | Classification Rules page | 4 rules | done |
 | H14 | Capacity heat-colour mapping | `CapacityCalculationService.ResolveHeatColor` | Green/Amber/Red | P3 |
 | H15 | SA auto-link fuzzy threshold | `NameConsistencyService.LinkSolutionArchitectsAsync` | 0.95 | P2 |
 | H16 | Effectiveness weights + speed/momentum targets + tones | client `EffectivenessPage` | §5.14 | **P1** (leadership scorecard, client-only) |

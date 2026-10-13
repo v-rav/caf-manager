@@ -37,6 +37,7 @@ public class AccessService(IApplicationDbContext db) : IAccessService
         ("configuration", "Configuration", AdminOnly),
         ("gates", "Gate Template", AdminOnly),
         ("capability", "Capability Masters", AdminOnly),
+        ("rules", "Classification Rules", AdminOnly),
         ("backup", "Backup & Restore", AdminOnly),
         ("access", "User & Access", AdminOnly),
     };

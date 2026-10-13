@@ -258,7 +258,7 @@ H1–H25, §10 inconsistencies I1–I13). **Progress metric:** items moving from
 
 | ID | Item | Replaces | Status |
 |----|------|----------|--------|
-| 6B-1 | `KeywordRule(Domain, Pattern, MatchType, Target, Priority, Active)` — domains: Stage, WaveType, ToolAlias, Activity, ContainerPath, Health, BlockerSuggest | H1, H9–H13, H18 | ☐ |
+| 6B-1 | `KeywordRule(Domain, Pattern, MatchType, Target, Priority, Active)` — domains: Stage, WaveType, ToolAlias, Activity, ContainerPath, Health, BlockerSuggest | H1, H9–H13, H18 | ✅ 6 domains (50 rules seeded from today's logic, parity verified) + **Classification Rules** admin page (`/rules`) with impact preview. Remaining: BlockerSuggest (client `suggestBlocker`, H18) |
 | 6B-2 | `ScoreModel` + `ScoreBand` — MSI weights/bands/risk coefficients, Effectiveness (PM/CFTL, SA) weights + speed/momentum targets, colour bands | H3, H14, H16, H23 | ☐ |
 | 6B-3 | `GateDefinition.MsiGroup` column (replace `GroupFor` by key) | H4 | ☐ |
 | 6B-4 | `StatusRule(Status, IsSettled, IsActive, IsBlocked, Colour)` — drives capacity, KPIs, badges, approval default | H2, H21 | ☐ |

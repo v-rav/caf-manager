@@ -1,5 +1,8 @@
 import axios from 'axios'
 import type {
+  KeywordRuleInput,
+  KeywordRulePreview,
+  KeywordRulesResponse,
   Account,
   AccountDetail,
   AccountUpsert,
@@ -293,6 +296,17 @@ export const api = {
     http.delete<Governance>(`/api/nominations/${nominationId}/governance/tool-usages/${usageId}`).then((r) => r.data),
   capability: (region?: string) =>
     http.get<CapabilityUtilization>('/api/governance/capability', { params: { region } }).then((r) => r.data),
+  // Classification rules (Admin) — data-driven keyword maps with impact preview.
+  keywordRules: () =>
+    http.get<KeywordRulesResponse>('/api/keyword-rules').then((r) => r.data),
+  createKeywordRule: (body: KeywordRuleInput) =>
+    http.post('/api/keyword-rules', body).then((r) => r.data),
+  updateKeywordRule: (id: number, body: KeywordRuleInput) =>
+    http.put(`/api/keyword-rules/${id}`, body).then((r) => r.data),
+  deleteKeywordRule: (id: number) =>
+    http.delete(`/api/keyword-rules/${id}`).then((r) => r.data),
+  previewKeywordRule: (body: { op: 'create' | 'update' | 'delete'; id?: number; rule?: KeywordRuleInput }) =>
+    http.post<KeywordRulePreview>('/api/keyword-rules/preview', body).then((r) => r.data),
   // Capability masters (Admin CRUD).
   capTools: () =>
     http.get<MigrationTool[]>('/api/capability-master/tools').then((r) => r.data),

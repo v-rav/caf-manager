@@ -357,16 +357,10 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             ? new List<string>()
             : s.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-    // Maps an FDO wave name to a hygiene wave type; App/self and unknown names return null (not tracked).
-    private static WaveType? ClassifyWave(string name)
-    {
-        var t = name.ToLowerInvariant();
-        if (t.Contains("security")) return WaveType.Security;
-        if (t.Contains("sql") || t.Contains("ossdb") || t.Contains("database") || t.Contains("db migration")) return WaveType.Db;
-        if (t.Contains("landing zone") || t.Contains("alz")) return WaveType.LandingZone;
-        if (t.Contains("dispatch")) return WaveType.Dispatch;
-        return null;
-    }
+    // Maps an FDO wave name to a hygiene wave type via KeywordRules "WaveType"; unmatched names are not tracked.
+    private static WaveType? ClassifyWave(string name) =>
+        Enum.TryParse<WaveType>(CafPortal.Application.Common.KeywordRules.First(CafPortal.Application.Common.KeywordRules.WaveType, name), out var wt)
+            ? wt : null;
 
     // Reconciles FDO-sourced wave links from the "Linked to" / "Linked to ID" columns; portal links are left as-is.
     private void SyncFdoWaveLinks(Nomination nom, int accountId, string? linkedNames, string? linkedIds)

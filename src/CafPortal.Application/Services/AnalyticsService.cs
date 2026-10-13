@@ -17,11 +17,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
 
     private const int DefaultContainerCoreFloor = 20;
 
-    private static bool IsContainerPath(string? p)
-    {
-        var s = (p ?? string.Empty).ToLowerInvariant();
-        return s.Contains("container") || s.Contains("aks") || s.Contains("aca") || s.Contains("eks") || s.Contains("ecs");
-    }
+    private static bool IsContainerPath(string? p) => KeywordRules.First(KeywordRules.ContainerPath, p) is not null;
 
     private static readonly string[] StageLabels =
         { "1 · Validating", "2 · Pre-Requisites", "3 · Finalize Scope", "4 · Executing Migration" };

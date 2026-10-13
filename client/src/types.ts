@@ -525,6 +525,51 @@ export interface SegmentOption {
   sortOrder: number
 }
 
+export interface RuleDomainInfo {
+  key: string
+  label: string
+  source: string
+  allMatches: boolean
+  fallback?: string | null
+  description: string
+  targets?: string[] | null
+}
+
+export interface KeywordRule {
+  id: number
+  domain: string
+  pattern: string
+  matchType: 'Contains' | 'Exact'
+  target: string
+  priority: number
+  active: boolean
+  updatedBy?: string | null
+  updatedUtc?: string | null
+}
+
+export interface KeywordRulesResponse {
+  domains: RuleDomainInfo[]
+  rules: KeywordRule[]
+}
+
+export interface KeywordRuleInput {
+  domain: string
+  pattern: string
+  matchType: 'Contains' | 'Exact'
+  target: string
+  priority: number
+  active?: boolean
+}
+
+export interface KeywordRulePreview {
+  domain: string
+  distinctValues: number
+  totalRecords: number
+  changedValues: number
+  changedRecords: number
+  samples: { text: string; count: number; from: string; to: string }[]
+}
+
 export interface OperationsSetting {
   key: string
   value: string

@@ -4,33 +4,11 @@ namespace CafPortal.Application.Common;
 /// activity in one column), and derives an effective GHCP adoption level (0–7) from reported usage.</summary>
 public static class ToolActivityClassifier
 {
-    // Keyword → canonical master activity. Order matters (more specific pipeline phrases before the generic one).
-    private static readonly (string Keyword, string Activity)[] Keywords =
-    {
-        ("iac", "IaC Generation"),
-        ("infrastructure as code", "IaC Generation"),
-        ("cd pipeline", "CD Pipeline"),
-        ("ci pipeline", "CI Pipeline"),
-        ("ci/cd", "CI Pipeline"),
-        ("pipeline", "CI Pipeline"),
-        ("container", "Containerization"),
-        ("remediat", "Code Remediation"),
-        ("assess", "Application Assessment"),
-        ("dependency", "Dependency Analysis"),
-        ("upgrade", "Version Upgrade"),
-        ("modern", "Modernization"),
-        ("document", "Documentation Generation"),
-        ("test", "Testing & Validation"),
-    };
-
+    // Activity keywords are data: KeywordRules domain "Activity" (edited on the Classification Rules page).
     public static IReadOnlyList<string> Classify(string? toolName, string? details)
     {
-        var text = ((toolName ?? string.Empty) + " " + (details ?? string.Empty)).ToLowerInvariant();
-        var hits = new List<string>();
-        foreach (var (keyword, activity) in Keywords)
-            if (text.Contains(keyword) && !hits.Contains(activity))
-                hits.Add(activity);
-        return hits.Count > 0 ? hits : new List<string> { "Unclassified" };
+        var hits = KeywordRules.All(KeywordRules.Activity, (toolName ?? string.Empty) + " " + (details ?? string.Empty));
+        return hits.Count > 0 ? hits : new List<string> { KeywordRules.FindDomain(KeywordRules.Activity)!.Fallback! };
     }
 
     private static readonly HashSet<string> Assessment = new(StringComparer.OrdinalIgnoreCase) { "Application Assessment", "Dependency Analysis" };

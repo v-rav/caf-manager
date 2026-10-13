@@ -70,6 +70,10 @@ public static class DbInitializer
         // Seed Migration Capability masters (tools + activities), idempotent.
         await MigrationCapabilitySeed.SeedAsync(db, ct);
 
+        // Classification keyword rules: seed empty domains, then load the active snapshot before any import/rebuild.
+        await KeywordRuleStore.SeedAsync(db, ct);
+        await KeywordRuleStore.LoadAsync(db, ct);
+
         if (workbookExists && !hasResources)
         {
             // Fresh database + real workbook present: run the one-time import automatically.
