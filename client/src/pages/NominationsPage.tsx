@@ -760,6 +760,29 @@ export function NominationsPage() {
                 { key: 'cftl', header: 'CFTL', sortValue: (n) => n.cftlPrimary ?? '', render: (n) => n.cftlPrimary ?? '—' },
                 { key: 'sa', header: 'SA', sortValue: (n) => n.solutionArchitect ?? '', render: (n) => n.solutionArchitect ?? '—' },
                 {
+                  key: 'ghcp',
+                  header: 'GHCP',
+                  sortValue: (n) => n.ghcpUsageCount ?? 0,
+                  render: (n) =>
+                    (n.ghcpToolsUsed?.length ?? 0) === 0 ? (
+                      <span style={{ color: 'var(--colorNeutralForeground3)' }}>—</span>
+                    ) : (
+                      <Tooltip
+                        relationship="description"
+                        content={`Reported tool usage (FDO): ${n.ghcpToolsUsed!.join(', ')}`}
+                      >
+                        <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
+                          {n.ghcpToolsUsed!.slice(0, 2).map((t) => (
+                            <Badge key={t} appearance="tint" color="success" size="small">{t}</Badge>
+                          ))}
+                          {n.ghcpToolsUsed!.length > 2 && (
+                            <Badge appearance="tint" color="success" size="small">+{n.ghcpToolsUsed!.length - 2}</Badge>
+                          )}
+                        </span>
+                      </Tooltip>
+                    ),
+                },
+                {
                   key: 'links',
                   header: 'Waves',
                   sortValue: (n) => n.waveCount,

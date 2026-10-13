@@ -43,6 +43,19 @@ public class NominationService(IApplicationDbContext db) : INominationService
             .ToDictionaryAsync(x => x.NominationId, x => x.Count, ct);
         var stopsByNom = stops.GroupBy(b => b.NominationId).ToDictionary(g => g.Key, g => g.ToList());
 
+        // Reported GHCP/tool usage (FDO "Nomination Wize Tool Usage" export) — distinct tools + row count per nomination.
+        var toolUsage = await _db.NominationToolUsageFacts.AsNoTracking()
+            .Where(u => u.NominationId != null && nomIds.Contains(u.NominationId!.Value))
+            .Select(u => new { NominationId = u.NominationId!.Value, u.ToolName })
+            .ToListAsync(ct);
+        var toolsByNom = toolUsage.GroupBy(u => u.NominationId).ToDictionary(
+            g => g.Key,
+            g => g.Where(x => !string.IsNullOrWhiteSpace(x.ToolName))
+                  .Select(x => x.ToolName!.Trim())
+                  .Distinct(StringComparer.OrdinalIgnoreCase)
+                  .OrderBy(x => x).ToList());
+        var usageCountByNom = toolUsage.GroupBy(u => u.NominationId).ToDictionary(g => g.Key, g => g.Count());
+
         // Gate state for MSI: which item-defs belong to each MSI group, and each nomination's item statuses.
         var gateDefs = await _db.GateDefinitions.AsNoTracking()
             .Where(g => g.Active)
@@ -157,6 +170,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 ModeOfAccess = n.ModeOfAccess,
                 TotalAcr = n.TotalAcr,
                 NnrAcr = n.NnrAcr,
+                GhcpToolsUsed = toolsByNom.TryGetValue(n.Id, out var tu) ? tu : new List<string>(),
+                GhcpUsageCount = usageCountByNom.TryGetValue(n.Id, out var uc) ? uc : 0,
                 NominatedDate = n.NominatedDate,
                 ApprovalDate = n.ApprovalDate,
                 ActualStartDate = n.ActualStartDate,

@@ -49,6 +49,7 @@ export function AdoptionPage() {
         { header: 'Adoption level', value: (n) => n.ghcpAdoptionLevel ?? 0 },
         { header: 'Tool attached', value: (n) => (n.isToolAttached == null ? '' : n.isToolAttached ? 'Yes' : 'No') },
         { header: 'Automation used', value: (n) => (n.isAutomationUsed == null ? '' : n.isAutomationUsed ? 'Yes' : 'No') },
+        { header: 'Reported tools (FDO)', value: (n) => (n.ghcpToolsUsed ?? []).join('; ') },
         { header: 'Status', value: (n) => n.status },
       ],
       rows,
@@ -94,6 +95,20 @@ export function AdoptionPage() {
     return [...m.entries()].sort((a, b) => b[1].total - a[1].total)
   }, [rows])
 
+  // Reported tool usage from the FDO "Nomination Wize Tool Usage" export (real captured usage, by tool).
+  const reported = useMemo(() => {
+    const withUsage = rows.filter((n) => (n.ghcpUsageCount ?? 0) > 0).length
+    const byTool = new Map<string, number>()
+    for (const n of rows) for (const t of n.ghcpToolsUsed ?? []) byTool.set(t, (byTool.get(t) ?? 0) + 1)
+    const tools = [...byTool.entries()].sort((a, b) => b[1] - a[1])
+    return {
+      withUsage,
+      pct: rows.length ? Math.round((withUsage / rows.length) * 100) : 0,
+      tools,
+      max: Math.max(1, ...tools.map((t) => t[1])),
+    }
+  }, [rows])
+
   if (loading && !data) return <Loading label="Loading adoption…" />
   if (error) return <ErrorText error={error} onRetry={reload} />
 
@@ -120,6 +135,7 @@ export function AdoptionPage() {
         <KpiCard label="Awaiting license (L1–3)" value={kpis.awaiting} tone={kpis.awaiting ? 'warning' : 'neutral'} />
         <KpiCard label="GHCP-used %" value={`${kpis.usedPct}%`} tone={kpis.usedPct >= 50 ? 'success' : 'brand'} />
         <KpiCard label="Tool-attached % (FDO)" value={`${kpis.toolPct}%`} tone="brand" />
+        <KpiCard label="Reported usage (FDO)" value={`${reported.withUsage} · ${reported.pct}%`} tone={reported.withUsage ? 'success' : 'neutral'} />
         <KpiCard label="GHCP-accelerated (usage)" value={`${ghcpAccelerated} · ${ghcpPct}%`} tone={ghcpAccelerated ? 'success' : 'neutral'} />
       </div>
 
@@ -139,6 +155,22 @@ export function AdoptionPage() {
             </Badge>
           ))}
         </div>
+      </Panel>
+
+      <Panel title="Reported GHCP tool usage (FDO)">
+        <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
+          Actual tool usage reported in the FDO “Nomination Wize Tool Usage” export — counts are nominations that
+          reported each tool. {reported.withUsage
+            ? `${reported.withUsage} nomination(s) reported usage.`
+            : 'No reported usage yet — upload the Tool Usage export to populate this.'}
+        </Text>
+        {reported.tools.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {reported.tools.map(([name, count]) => (
+              <Bar key={name} label={name} count={count} max={reported.max} />
+            ))}
+          </div>
+        )}
       </Panel>
 
       <CapabilitySection cap={cap} />

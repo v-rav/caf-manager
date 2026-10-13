@@ -58,6 +58,10 @@ public class NominationDto
     public string? ModeOfAccess { get; set; }
     public decimal? TotalAcr { get; set; }
     public decimal? NnrAcr { get; set; }
+
+    // Reported GHCP/tool usage from the FDO "Nomination Wize Tool Usage" export (raw, 1-to-many).
+    public List<string> GhcpToolsUsed { get; set; } = new();
+    public int GhcpUsageCount { get; set; }
     public DateOnly? NominatedDate { get; set; }
     public DateOnly? ApprovalDate { get; set; }
     public DateOnly? ActualStartDate { get; set; }

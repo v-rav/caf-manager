@@ -268,6 +268,8 @@ export interface Nomination {
   modeOfAccess?: string
   totalAcr?: number
   nnrAcr?: number
+  ghcpToolsUsed?: string[]
+  ghcpUsageCount?: number
   nominatedDate?: string
   approvalDate?: string
   actualStartDate?: string
