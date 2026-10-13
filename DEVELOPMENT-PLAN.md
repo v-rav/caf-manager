@@ -236,3 +236,47 @@ changeType, changed-fields JSON) to keep the audit tiny; prune beyond the retent
 > use wipe-and-rebuild on refresh. That's safe today (no portal edits on those, and no `LeaveCal.xlsx`
 > exists so leave isn't wiped), but if leave becomes portal-entered (P4-05) the `LeaveFacts` delete
 > must move to the same upsert-merge model before enabling it.
+
+## 9. Phase 6 — Logic-driven rules (no hardcoded business logic)
+
+**Goal.** Every business rule (thresholds, weights, keyword maps, status sets, labels) is **data, not code**:
+stored in config/master tables, edited in the UI, audited, and **computed once on the server** and returned on DTOs.
+Pages render; they do not re-derive. Baseline + full inventory: `SYSTEM-REFERENCE.md` (§8 configurable, §9 hardcoded
+H1–H25, §10 inconsistencies I1–I13). **Progress metric:** items moving from SYSTEM-REFERENCE §9 → §8.
+
+### 6A — Single source of truth (no behaviour change) — *active*
+
+| ID | Item | Fixes | Status |
+|----|------|-------|--------|
+| 6A-1 | Central `NominationRules` (Application/Common): stage resolver, settled set, strategic sentinel, health bucket — replace the 5 server copies | H1, H2, H6, H13, I2, I3 | ☐ |
+| 6A-2 | Return `StageIndex`, `StageLabel`, `IsSettled`, `HealthBucket` on `NominationDto`; delete client copies (`NominationsPage`, `DashboardPage`, `FlowPage`, `EffectivenessPage`, `fy.tsx`) | I2, I3 | ☐ |
+| 6A-3 | **Effective GHCP level everywhere** — MSI GHCP component, Dashboard (Leadership rate + GHCP tab), Effectiveness | I1 | ☐ |
+| 6A-4 | Seed + expose hidden settings in Configuration → Operations: `StrategicGreen/Amber/RedDays`, capacity thresholds, `DefaultCapacityLimit`, `PerformanceTrainingThreshold`, `HistoryRetentionDays` (read from settings, not const) | H5, H22, I5, I6, I7 | ☐ |
+| 6A-5 | Fix AGENTS.md gate weights to live template (5/5/5/10/10/10/50/5) | I4 | ✅ |
+
+### 6B — Rules as data (new config tables + UI, audited, preview-before-save)
+
+| ID | Item | Replaces | Status |
+|----|------|----------|--------|
+| 6B-1 | `KeywordRule(Domain, Pattern, MatchType, Target, Priority, Active)` — domains: Stage, WaveType, ToolAlias, Activity, ContainerPath, Health, BlockerSuggest | H1, H9–H13, H18 | ☐ |
+| 6B-2 | `ScoreModel` + `ScoreBand` — MSI weights/bands/risk coefficients, Effectiveness (PM/CFTL, SA) weights + speed/momentum targets, colour bands | H3, H14, H16, H23 | ☐ |
+| 6B-3 | `GateDefinition.MsiGroup` column (replace `GroupFor` by key) | H4 | ☐ |
+| 6B-4 | `StatusRule(Status, IsSettled, IsActive, IsBlocked, Colour)` — drives capacity, KPIs, badges, approval default | H2, H21 | ☐ |
+| 6B-5 | `ImportProfile` + `ImportColumnMap` — file detection signatures + per-import header candidates | H8 | ☐ |
+| 6B-6 | Move Effectiveness scoring server-side (`/api/effectiveness`) using 6B-2 models | H16 | ☐ |
+
+### 6C — Hardening
+
+| ID | Item | Fixes | Status |
+|----|------|-------|--------|
+| 6C-1 | `[Authorize]` on every controller; Admin/Lead on mutations + admin ops | I11 | ☐ |
+| 6C-2 | FY as a server-side `?fy=` filter on all nomination endpoints + exports | I13 | ☐ |
+| 6C-3 | Union manual `NominationToolUsages` + imported facts in the capability rollup | I9 | ☐ |
+| 6C-4 | Deprecate/retire legacy tables (`Tools`, `StrategicAccountConfigurations`, `RolePermissions`, `ResourceAccounts`) | I10 | ☐ |
+| 6C-5 | `ResourceAccounts`/`EngagementFacts` → upsert-merge | I12 | ☐ |
+| 6C-6 | Unit tests per rule domain + API smoke test pinning KPI parity across pages | — | ☐ |
+| 6C-7 | PV-01 decision: drive `StaleTier` from `StageTargetDays1..4` or label targets informational | I8 | ☐ |
+
+**Rules for this phase:** no behaviour change in 6A (numbers must match before/after except the I1 GHCP fix, which is
+intended); every new setting is seeded idempotently with today's value; update `SYSTEM-REFERENCE.md` §8/§9 and this
+tracker in the same commit as the change.

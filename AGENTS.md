@@ -52,7 +52,13 @@ import the **web app is the system of record**.
     → Account` (Approved + not settled), NOT the noisy `ResourceAccounts` links. Both the live `CapacityService`
     (Capacity page/export) and the materialized `CapacityFact` (Dashboard + Resources page) use this basis and the
     same `ResolveCapacityLimitAsync` limit engine, so all three agree. `CapacityRebuildService` rebuilds
-    `CapacityFact` on startup and after every import/merge/park.
+    `CapacityFact` on startup and after every import/merge/park and after alias/rename edits.
+  - **Limit precedence** (`ResolveCapacityLimitAsync`): **role config first** (`CapacityConfigurations` by exact
+    RoleName) → per-resource `CapacityLimit` (if >0) → `DefaultCapacityLimit` (5). Live: App Architect/App Engineer/
+    DevOps Engineer/SME = 7, Architect Lead = 5.
+  - **SA → capacity self-healing**: `NameConsistencyService.LinkSolutionArchitectsAsync` resolves each FDO SA name to
+    a roster resource (exact / alias / fuzzy ≥0.95), learns the alias, and rebuilds `Source="SA"` `NominationResource`
+    links; runs after every import (`DataRefreshService.RelinkAndRebuildCapacityAsync`).
 - **Nomination = migration tracking**. Two distinct tracking fields, keep them separate:
   - **Stage** (`Nomination.MigrationStatus`): which **phase** of the migration journey. Show as a
     **number 1–4**, not raw text. Mapping (keyword → stage) lives in `STAGES` +
@@ -170,15 +176,30 @@ import the **web app is the system of record**.
   hand-entered leave. ⚠ `ResourceAccounts`/`EngagementFacts` still wipe-and-rebuild — safe today.)
 - **Nominations are NEVER hard-deleted by imports.** Absent-from-drop rows are soft-set `Withdrawn`;
   hard delete is a manual, user-only action from the UI. Do not add auto-purge of nominations.
-- **Smart in-app upload** (Nominations page → **Upload**): `POST /api/admin/upload-auto` (multipart)
+- **Smart in-app upload** (Nominations page **and** GHCP Adoption page → **Upload**): `POST /api/admin/upload-auto` (multipart)
   buffers the workbook, sniffs its header row (`DataRefreshService.DetectFileKind`), and routes it to the
-  right importer — **Detail View** (stage day-counts / `Linked to ID` / `Nomination Approval Status` →
+  right importer — **Nomination Wize Tool Usage** (`Tool Name` + `Category` + `Created Date`/`Offering Name and Phase` →
+  `ToolUsageImportService`, wipe-and-reload of `NominationToolUsageFacts`), **Detail View** (stage day-counts / `Linked to ID` / `Nomination Approval Status` →
   nominations upsert-merge), **Summary of All Offerings** (`Factory Offering` + `Total ACR`/`Offering Id`/
   `Is Tool Attached` → offering enrichment), or **Nominations In-Flight** (`Segment`+`TPID`+`Customer Name`/
   `Account ID` → account master). A non-matching file returns a "not processed" message. The result dialog
   shows the detected type + a **Records** line (added · updated · withdrawn · unchanged, from the `ImportRun`)
-  + import summary; on success the page reloads. (Detection order: Offerings →
+  + import summary; on success the page reloads. (Detection order: Tool Usage → Offerings →
   Detail View → Account master, since Offerings/Account-master share TPID/Customer columns.)
+- **GHCP tool usage (FDO "Nomination Wize Tool Usage")**: `NominationToolUsageFact` (Account ID · TPID · Task Id ·
+  resolved `NominationId` · Details · Category · Tool Name · Created Date) — **1-to-many** per nomination, raw tool name
+  kept. Read-time alignment: `ToolNameNormalizer` (raw variants → master tool: `GHCP`/`GHCP-IaC`/`GHCP CI`/… → **GHCP-CI**,
+  `GHCP CLI` → **AppMod CLI**, `GHCP App Mod[ernization]` → **AppMod**, `AppCat Analysis` → **AppCAT**) and
+  `ToolActivityClassifier` (activity inferred from Details keywords; **effective GHCP level** = max(manual, derived:
+  7 assess+exec · 6 exec · 5 any usage · 4 tool-attached)). `NominationDto` carries `GhcpToolsUsed`, `GhcpUsageCount`,
+  `GhcpEffectiveLevel`. Surfaced as the Nominations **GHCP** column + **GHCP usage (FDO)** card/filter, and on the
+  GHCP Adoption page (KPIs + distribution use the effective level; Migration Capability Utilization is built from these facts).
+- **Name Consistency** (`/name-consistency`, Admin-only, `NameConsistencyController`): deterministic fuzzy matching
+  (`Application/Common/NameMatching.cs` — canonicalize + max(token-set, Levenshtein); strictness Strict 0.95 / Balanced
+  0.88 / Loose 0.82) with **no LLM**. Tabs: **Accounts** / **Resources** (union-find clusters; distinct TPID/PSID guard →
+  register aliases), **Performance** (review name vs roster → *Use roster name*), **Ownership** (FDO PM/CFTL/SA vs roster →
+  *Add alias* / *Fix roster name*, which keeps the old name as an alias). Nothing auto-applies; alias/rename edits trigger
+  SA relink + capacity rebuild.
 - **Import history** (Phase 5C): every upload/refresh records an `ImportRun` (+ `ImportChange` deltas:
   Added / Updated with field-level from→to / Withdrawn) via `NominationImportService`. Surfaced on the
   **Import History** page (`/history`, `GET /api/imports`, `GET /api/imports/{id}/changes`). History rows
@@ -243,8 +264,9 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
     work, matched by display name via `matchesPerson`); they can toggle it off to see all. **Page-level (role-based)
     route access is the next step** (not yet enforced — all signed-in users can reach every page).
 - **Gate engine (P1)** — 8-gate SA template (`GateDefinition` + `GateItemDefinition`, seeded idempotently by
-  `GateTemplateSeed`: G1 Discovery w10 · G2 Prerequisites w15 · G3 Assessment w15 · G4 Scope w20 · G5 Architecture
-  w10 · G6 Delivery Readiness w8 · G7 Delivery Governance w7 (17 items by SubStage) · G8 Closure w5). The template is
+  `GateTemplateSeed`; **live weights** G1 Discovery & Readiness 5 · G2 Prerequisites 5 · G3 Assessment 5 · G4 Scope
+  Governance 10 · G5 Architecture 10 · G6 Delivery Readiness 10 · **G7 Delivery Governance 50** (17 items by SubStage) ·
+  G8 Closure 5 — 54 items total). The template is
   **editable in the Admin-only Gate Template page** (`/gates`, `GateTemplateController` at `api/gate-template`):
   add/rename/reweight/reorder/activate-deactivate/delete gates and items; delete is blocked (409) once a nomination has
   captured progress on it (deactivate instead — deactivating hides it from new work). Per-nomination
@@ -265,8 +287,11 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   strategic **time-threshold tier** (A.13 60/90/120 → Green/Amber/Red/Exec on days-in-flight). Grid **Class** column
   + Classification filter; Manage-dialog fields. **Strategic Investment Register** at `/strategic` (tier KPIs,
   %-of-active-pipeline, by-classification, aging table). `isStrategic` = classification ≠ Standard Factory.
-- **GHCP adoption (P4)** — `Nomination.GhcpAdoptionLevel` (0–7, A.10), Manage-dialog dropdown. **GHCP Adoption**
-  page at `/adoption` (licensed L4+ · awaiting L1–3 · used% · tool-attached% · 0–7 distribution · by-region).
+- **GHCP adoption (P4)** — `Nomination.GhcpAdoptionLevel` (0–7, A.10, **manual**), Manage-dialog dropdown. **GHCP Adoption**
+  page at `/adoption` (licensed L4+ · awaiting L1–3 · used% · tool-attached% · reported usage (FDO) · 0–7 distribution ·
+  by-region reported% · reported tool usage · capability utilization · Upload). Levels shown are the **effective** level
+  (`GhcpEffectiveLevel`). ⚠ Dashboard GHCP tab, Effectiveness and the MSI GHCP component still read the manual level —
+  being unified in Phase 6A (see `DEVELOPMENT-PLAN.md` §9).
 - **MSI (P5a)** — **Migration Success Index** (`MsiCalculator` in `Application/Common`): `30% Readiness (G1–3) +
   20% Scope (G4–5) + 20% Delivery (G6–7) + 10% Risk (blockers) + 10% GHCP (level/7) + 10% Sign-off (G8)`, bands
   Green >80 / Amber 60–80 / Red <60. Grid **MSI** column (component tooltip) + workspace header card; computed in
@@ -346,9 +371,18 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
 - **FOS data is portal-owned** — governance/gates/blockers/milestones/classification/adoption/short-name are edited
   in the portal and must **never** be overwritten by FDO/offering imports. Verify authenticated APIs via a browser
   `page.evaluate(fetch(...))` (carries the auth cookie); Fluent form-submit clicks can time out under Playwright.
+- **Logic-driven, not hardcoded.** `SYSTEM-REFERENCE.md` is the reference for schema, data flow, every computed
+  field, page widgets, and the **configurable (§8) vs hardcoded (§9)** inventory. Rules:
+  - Do **not** add new hardcoded business values (thresholds, weights, keyword lists, status sets, labels). Put them
+    in `ApplicationSettings` / `LookupValue` / a master table and expose them in the UI; read them server-side.
+  - Compute business rules **once on the server** and return them on the DTO (e.g. stage index, settled, effective
+    GHCP level). Do **not** re-implement them in React pages.
+  - When you change a rule, setting, table, or page, update `SYSTEM-REFERENCE.md` (move items from §9 to §8 as they
+    become configurable) and the §9 tracker in `DEVELOPMENT-PLAN.md`.
 
 ## Roadmap
-See `DEVELOPMENT-PLAN.md` and `FACTORY-OPERATING-SYSTEM.md`. **Shipped:** data-freshness banner, filter-aware
+See `DEVELOPMENT-PLAN.md` (§9 = **Phase 6 — logic-driven rules**, the active track), `SYSTEM-REFERENCE.md`, and
+`FACTORY-OPERATING-SYSTEM.md`. **Shipped:** data-freshness banner, filter-aware
 Excel exports (+ Analysis sheet), dashboard drill-through, capacity heat-band, Nominations restructure, approval
 default-Approved, DB backup/restore, Migration Analytics + Trends + FY filter, Attainment, and the full **Factory
 Operating System P1–P5** (custom auth · 8-gate engine + SA Workspace · blockers + clock-aware SLA · audit timeline ·
