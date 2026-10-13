@@ -62,6 +62,8 @@ public class NominationDto
     // Reported GHCP/tool usage from the FDO "Nomination Wize Tool Usage" export (raw, 1-to-many).
     public List<string> GhcpToolsUsed { get; set; } = new();
     public int GhcpUsageCount { get; set; }
+    // Effective 0–7 level: manual GhcpAdoptionLevel, raised by evidence of reported GHCP usage (5–7) / tool-attached (4).
+    public int GhcpEffectiveLevel { get; set; }
     public DateOnly? NominatedDate { get; set; }
     public DateOnly? ApprovalDate { get; set; }
     public DateOnly? ActualStartDate { get; set; }

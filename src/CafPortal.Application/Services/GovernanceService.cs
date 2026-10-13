@@ -204,7 +204,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         {
             var tool = ToolNameNormalizer.Canonical(r.ToolName) ?? "Unspecified";
             var category = toolCategory.TryGetValue(tool, out var c) ? c : "GHCP";
-            return new { r.NominationId, Tool = tool, Category = category, Activities = ClassifyActivities(r.ToolName, r.Details) };
+            return new { r.NominationId, Tool = tool, Category = category, Activities = ToolActivityClassifier.Classify(r.ToolName, r.Details) };
         }).ToList();
 
         var byTool = rows.GroupBy(r => r.Tool)
@@ -234,36 +234,6 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             rows.Count,
             rows.Select(r => r.NominationId).Distinct().Count(),
             byTool, byCategory, byActivity, mostUsed);
-    }
-
-    // Keyword map for inferring the migration activity from the free-text usage note (and the raw tool name).
-    private static readonly (string Keyword, string Activity)[] ActivityKeywords =
-    {
-        ("iac", "IaC Generation"),
-        ("infrastructure as code", "IaC Generation"),
-        ("cd pipeline", "CD Pipeline"),
-        ("ci pipeline", "CI Pipeline"),
-        ("ci/cd", "CI Pipeline"),
-        ("pipeline", "CI Pipeline"),
-        ("container", "Containerization"),
-        ("remediat", "Code Remediation"),
-        ("assess", "Application Assessment"),
-        ("dependency", "Dependency Analysis"),
-        ("upgrade", "Version Upgrade"),
-        ("modern", "Modernization"),
-        ("document", "Documentation Generation"),
-        ("test", "Testing & Validation"),
-    };
-
-    // Infers the distinct activities a usage row touched; falls back to "Unclassified" when nothing matches.
-    private static IReadOnlyList<string> ClassifyActivities(string? toolName, string? details)
-    {
-        var text = ((toolName ?? string.Empty) + " " + (details ?? string.Empty)).ToLowerInvariant();
-        var hits = new List<string>();
-        foreach (var (keyword, activity) in ActivityKeywords)
-            if (text.Contains(keyword) && !hits.Contains(activity))
-                hits.Add(activity);
-        return hits.Count > 0 ? hits : new List<string> { "Unclassified" };
     }
 
     public async Task<NominationGovernanceDto?> AddToolUsageAsync(int nominationId, ToolUsageUpsert req, CancellationToken ct = default)

@@ -270,6 +270,7 @@ export interface Nomination {
   nnrAcr?: number
   ghcpToolsUsed?: string[]
   ghcpUsageCount?: number
+  ghcpEffectiveLevel?: number
   nominatedDate?: string
   approvalDate?: string
   actualStartDate?: string

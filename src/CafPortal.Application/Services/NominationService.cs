@@ -46,7 +46,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
         // Reported GHCP/tool usage (FDO "Nomination Wize Tool Usage" export) — distinct tools + row count per nomination.
         var toolUsage = await _db.NominationToolUsageFacts.AsNoTracking()
             .Where(u => u.NominationId != null && nomIds.Contains(u.NominationId!.Value))
-            .Select(u => new { NominationId = u.NominationId!.Value, u.ToolName })
+            .Select(u => new { NominationId = u.NominationId!.Value, u.ToolName, u.Details })
             .ToListAsync(ct);
         var toolsByNom = toolUsage.GroupBy(u => u.NominationId).ToDictionary(
             g => g.Key,
@@ -56,6 +56,10 @@ public class NominationService(IApplicationDbContext db) : INominationService
                   .Distinct(StringComparer.OrdinalIgnoreCase)
                   .OrderBy(x => x).ToList());
         var usageCountByNom = toolUsage.GroupBy(u => u.NominationId).ToDictionary(g => g.Key, g => g.Count());
+        // Distinct inferred activities per nomination, for the effective GHCP adoption level (levels 5–7).
+        var activitiesByNom = toolUsage.GroupBy(u => u.NominationId).ToDictionary(
+            g => g.Key,
+            g => g.SelectMany(x => ToolActivityClassifier.Classify(x.ToolName, x.Details)).Distinct().ToList());
 
         // Gate state for MSI: which item-defs belong to each MSI group, and each nomination's item statuses.
         var gateDefs = await _db.GateDefinitions.AsNoTracking()
@@ -173,6 +177,9 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 NnrAcr = n.NnrAcr,
                 GhcpToolsUsed = toolsByNom.TryGetValue(n.Id, out var tu) ? tu : new List<string>(),
                 GhcpUsageCount = usageCountByNom.TryGetValue(n.Id, out var uc) ? uc : 0,
+                GhcpEffectiveLevel = ToolActivityClassifier.EffectiveLevel(
+                    n.GhcpAdoptionLevel, n.IsToolAttached,
+                    activitiesByNom.TryGetValue(n.Id, out var acts) ? acts : System.Array.Empty<string>()),
                 NominatedDate = n.NominatedDate,
                 ApprovalDate = n.ApprovalDate,
                 ActualStartDate = n.ActualStartDate,

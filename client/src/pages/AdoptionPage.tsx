@@ -46,7 +46,8 @@ export function AdoptionPage() {
         { header: 'Account', value: (n) => n.accountName ?? '' },
         { header: 'TPID', value: (n) => n.tpid ?? '' },
         { header: 'Region', value: (n) => n.region },
-        { header: 'Adoption level', value: (n) => n.ghcpAdoptionLevel ?? 0 },
+        { header: 'Adoption level (manual)', value: (n) => n.ghcpAdoptionLevel ?? 0 },
+        { header: 'Effective level', value: (n) => n.ghcpEffectiveLevel ?? n.ghcpAdoptionLevel ?? 0 },
         { header: 'Tool attached', value: (n) => (n.isToolAttached == null ? '' : n.isToolAttached ? 'Yes' : 'No') },
         { header: 'Automation used', value: (n) => (n.isAutomationUsed == null ? '' : n.isAutomationUsed ? 'Yes' : 'No') },
         { header: 'Reported tools (FDO)', value: (n) => (n.ghcpToolsUsed ?? []).join('; ') },
@@ -57,7 +58,8 @@ export function AdoptionPage() {
 
   const kpis = useMemo(() => {
     const total = rows.length
-    const lvl = (n: Nomination) => n.ghcpAdoptionLevel ?? 0
+    // Effective 0–7: manual level raised by reported-usage / tool-attached evidence (levels 1–3 can't be derived).
+    const lvl = (n: Nomination) => n.ghcpEffectiveLevel ?? n.ghcpAdoptionLevel ?? 0
     const licensed = rows.filter((n) => lvl(n) >= 4).length
     const awaiting = rows.filter((n) => lvl(n) >= 1 && lvl(n) <= 3).length
     const used = rows.filter((n) => lvl(n) >= 5).length
@@ -74,7 +76,7 @@ export function AdoptionPage() {
 
   const dist = useMemo(() => {
     const counts = new Array(8).fill(0)
-    for (const n of rows) counts[Math.min(7, Math.max(0, n.ghcpAdoptionLevel ?? 0))]++
+    for (const n of rows) counts[Math.min(7, Math.max(0, n.ghcpEffectiveLevel ?? n.ghcpAdoptionLevel ?? 0))]++
     const max = Math.max(1, ...counts)
     return { counts, max }
   }, [rows])
@@ -140,6 +142,10 @@ export function AdoptionPage() {
       </div>
 
       <Panel title="Adoption-level distribution (0–7)">
+        <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 8 }}>
+          Effective level: a manually-set level is kept; otherwise levels 5–7 are evidenced by reported GHCP usage and
+          level 4 by tool-attached. Levels 1–3 (commercial) can't be inferred, so uncaptured nominations stay at 0.
+        </Text>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {ADOPTION_LEVELS.map((a) => (
             <Bar key={a.level} label={`${a.level} · ${a.label}`} count={dist.counts[a.level]} max={dist.max} />
