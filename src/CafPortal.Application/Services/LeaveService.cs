@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Application.Dtos;
 using CafPortal.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -54,11 +55,21 @@ public class LeaveService(IApplicationDbContext db) : ILeaveService
             return Array.Empty<LeaveClashDto>();
 
         var ids = leaves.Select(l => l.ResourceId).Distinct().ToList();
-        var activeAccounts = await _db.ResourceAccounts.AsNoTracking()
-            .Where(ra => ids.Contains(ra.ResourceId))
-            .GroupBy(ra => ra.ResourceId)
-            .Select(g => new { ResourceId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.ResourceId, x => x.Count, ct);
+        // Same basis as Capacity: distinct accounts on Approved, in-flight, started nominations (not ResourceAccounts links).
+        var settled = NominationRules.SettledStatuses;
+        var cutoff = await NominationRules.StartCutoffAsync(_db, ct);
+        var activeAccounts = (await _db.NominationResources.AsNoTracking()
+                .Where(nr => ids.Contains(nr.ResourceId)
+                          && nr.Nomination!.AccountId != null
+                          && nr.Nomination.ApprovalStatus == "Approved"
+                          && !settled.Contains(nr.Nomination.Status)
+                          && ((nr.Nomination.ActualStartDate ?? nr.Nomination.PlannedStartDate) == null
+                              || (nr.Nomination.ActualStartDate ?? nr.Nomination.PlannedStartDate) <= cutoff))
+                .Select(nr => new { nr.ResourceId, AccountId = nr.Nomination!.AccountId!.Value })
+                .Distinct()
+                .ToListAsync(ct))
+            .GroupBy(x => x.ResourceId)
+            .ToDictionary(g => g.Key, g => g.Count());
 
         return leaves
             .GroupBy(l => new { l.ResourceId, l.Name, l.Region })

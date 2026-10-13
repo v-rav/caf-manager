@@ -491,7 +491,7 @@ Client-side scorecard per PM/SA/CFTL (§5.14) · inline drill-down · CSV.
 * **Accounts:** master + ownership. *Import master* (`kind=accounts`).
 * **Capacity:** `CapacityService` (live; same basis as `CapacityFact`) · KPIs (overloaded, leave clashes, free slots, bench) ·
   band filter · heat rows · assigned-accounts hover · `?person=` drill to Nominations · xlsx export.
-* **Leave:** portal-owned additive leave · window · clash list (`LeaveClashWindowDays` ⚙️ 30).
+* **Leave:** portal-owned additive leave · window · clash list (`LeaveClashWindowDays` ⚙️ 30). A clash's "Active accounts" uses the capacity basis (distinct accounts on Approved, in-flight, started nominations), not `ResourceAccounts` links.
 * **Reconciliation:** resource↔account link quality · seed / cleanup (preview → apply).
 * **Performance:** reviews linked to the roster (`ResourceId`) · Role dropdown · Reporting Manager combobox · training flag
   (`PerformanceTrainingThreshold` 🗄️ 4).
