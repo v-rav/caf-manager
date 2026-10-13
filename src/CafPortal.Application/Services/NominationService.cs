@@ -50,8 +50,9 @@ public class NominationService(IApplicationDbContext db) : INominationService
             .ToListAsync(ct);
         var toolsByNom = toolUsage.GroupBy(u => u.NominationId).ToDictionary(
             g => g.Key,
-            g => g.Where(x => !string.IsNullOrWhiteSpace(x.ToolName))
-                  .Select(x => x.ToolName!.Trim())
+            g => g.Select(x => ToolNameNormalizer.Canonical(x.ToolName))
+                  .Where(x => !string.IsNullOrWhiteSpace(x))
+                  .Select(x => x!)
                   .Distinct(StringComparer.OrdinalIgnoreCase)
                   .OrderBy(x => x).ToList());
         var usageCountByNom = toolUsage.GroupBy(u => u.NominationId).ToDictionary(g => g.Key, g => g.Count());

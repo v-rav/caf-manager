@@ -18,6 +18,7 @@ public static class MigrationCapabilitySeed
         ("AppMod .NET", "GHCP", "Microsoft"),
         ("AppMod Java", "GHCP", "Microsoft"),
         ("AppMod CLI", "GHCP", "Microsoft"),
+        ("AppMod", "GHCP", "Microsoft"),
         ("Upgrade Assistant", "GHCP", "Microsoft"),
         ("AKS Accelerator", "Accelerator", "Microsoft"),
         ("ACA Accelerator", "Accelerator", "Microsoft"),
@@ -78,6 +79,7 @@ public static class MigrationCapabilitySeed
         ("AppMod .NET", new[] { "Modernization", "Version Upgrade", "Code Remediation", "Containerization" }),
         ("AppMod Java", new[] { "Modernization", "Version Upgrade", "Code Remediation", "Containerization" }),
         ("AppMod CLI", new[] { "Modernization", "Version Upgrade", "Code Remediation", "Containerization" }),
+        ("AppMod", new[] { "Modernization", "Version Upgrade", "Code Remediation", "Containerization" }),
         ("Upgrade Assistant", new[] { "Version Upgrade", "Modernization", "Code Remediation" }),
         ("AKS Accelerator", new[] { "Target Architecture", "IaC Generation", "AKS Migration", "CI Pipeline", "CD Pipeline", "Deployment Automation" }),
         ("ACA Accelerator", new[] { "Target Architecture", "IaC Generation", "ACA Migration", "CI Pipeline", "CD Pipeline", "Deployment Automation" }),
@@ -104,6 +106,21 @@ public static class MigrationCapabilitySeed
                     Vendor = string.IsNullOrEmpty(Tools[i].Vendor) ? null : Tools[i].Vendor,
                     SortOrder = i + 1,
                 });
+        await db.SaveChangesAsync(ct);
+
+        // Additive top-up: ensure every canonical tool exists by name even when captured usage blocks a full reconcile.
+        var presentTools = new HashSet<string>(await db.MigrationTools.Select(t => t.Name).ToListAsync(ct), StringComparer.OrdinalIgnoreCase);
+        var nextOrder = await db.MigrationTools.AnyAsync(ct) ? await db.MigrationTools.MaxAsync(t => t.SortOrder, ct) : 0;
+        foreach (var (name, category, vendor) in Tools)
+            if (!presentTools.Contains(name))
+                db.MigrationTools.Add(new MigrationTool
+                {
+                    Name = name,
+                    Category = category,
+                    Vendor = string.IsNullOrEmpty(vendor) ? null : vendor,
+                    SortOrder = ++nextOrder,
+                });
+        await db.SaveChangesAsync(ct);
 
         var actNames = await db.MigrationActivities.Select(a => a.Name).ToListAsync(ct);
         if (!hasUsage && !SameSet(actNames, Activities.Select(a => a.Name)))
