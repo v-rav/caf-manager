@@ -17,7 +17,7 @@ export function StatusBadge({ status }: { status: string }) {
     Closed: 'success',
   }
   return (
-    <Badge appearance="filled" color={map[status] ?? 'informative'}>
+    <Badge appearance="filled" color={map[status] ?? 'informative'} style={{ whiteSpace: 'nowrap' }}>
       {status}
     </Badge>
   )

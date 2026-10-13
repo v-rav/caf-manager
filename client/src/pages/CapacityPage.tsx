@@ -218,7 +218,7 @@ export function CapacityPage() {
               { key: 'limit', header: 'Limit', align: 'center', sortValue: (c) => c.capacityLimit },
               { key: 'headroom', header: 'Headroom', align: 'center', sortValue: (c) => c.capacityLimit - c.accountCount, render: headroomCell },
               { key: 'utilization', header: 'Utilization', minWidth: 140, sortValue: (c) => c.utilizationPercent, render: (c) => <UtilizationBar percent={c.utilizationPercent} /> },
-              { key: 'status', header: 'Status', sortValue: (c) => c.capacityStatus, render: (c) => <StatusBadge status={c.capacityStatus} /> },
+              { key: 'status', header: 'Status', minWidth: 130, sortValue: (c) => c.capacityStatus, render: (c) => <StatusBadge status={c.capacityStatus} /> },
               { key: 'leave', header: 'Leave', align: 'center', sortValue: (c) => (clashById.has(c.resourceId) ? 1 : 0), render: (c) => {
                 const cl = clashById.get(c.resourceId)
                 return cl ? (
