@@ -33,6 +33,8 @@ import the **web app is the system of record**.
 - **Backend build**: `dotnet build src/CafPortal.Api/CafPortal.Api.csproj -v q --nologo`
 - **Run API**: `dotnet run --project src/CafPortal.Api --urls http://localhost:5080 --no-launch-profile [--no-build]`
 - **Frontend build** (outputs into `src/CafPortal.Api/wwwroot`): `cd client; npm run build`
+- **Unit tests** (rule engines, no DB): `dotnet test tests/CafPortal.Tests/CafPortal.Tests.csproj --nologo` — run after
+  changing anything in `Application/Common` (rules, scoring, FY, settings validation) and add a case for new rules.
 - A **frontend-only** change needs just `npm run build` + browser reload — no API restart.
 - A **backend** change needs an API rebuild/restart.
 
