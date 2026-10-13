@@ -67,6 +67,7 @@ function NominationDetail({ n }: { n: Nomination }) {
       <ReadField label="NNR ACR">{roUsd(n.nnrAcr)}</ReadField>
       <ReadField label="Tool attached">{roYesNo(n.isToolAttached)}</ReadField>
       <ReadField label="Automation used">{roYesNo(n.isAutomationUsed)}</ReadField>
+      <ReadField label="GHCP tools (FDO)">{n.ghcpToolsUsed?.length ? n.ghcpToolsUsed.join(' · ') : '—'}</ReadField>
       <ReadField label="Nominated">{roDash(n.nominatedDate)}</ReadField>
       <ReadField label="Approval date">{roDash(n.approvalDate)}</ReadField>
       <ReadField label="Planned start · end">{`${roDash(n.plannedStartDate)} · ${roDash(n.plannedEndDate)}`}</ReadField>
@@ -368,6 +369,7 @@ export function NominationsPage() {
   const [slaFilter, setSlaFilter] = useState('')
   const [classFilter, setClassFilter] = useState('')
   const [linkFilter, setLinkFilter] = useState('')
+  const [ghcpFilter, setGhcpFilter] = useState('')
   // Default the pipeline to Approved nominations; a person drill-through widens to all approvals.
   const [approvalFilter, setApprovalFilter] = useState(person ? '' : 'Approved')
   const [search, setSearch] = useState('')
@@ -395,11 +397,11 @@ export function NominationsPage() {
     if (!file) return
     setUploading(true)
     try {
-      // Server auto-detects Detail View / Summary of Offerings / Nominations In-Flight from the columns.
+      // Server auto-detects Detail View / Summary of Offerings / Nominations In-Flight / Tool Usage from the columns.
       const res = await api.uploadAuto(file)
       setUploadResult(res)
     } catch {
-      setUploadResult({ success: false, messages: ['Upload failed. Ensure the file is a valid .xlsx export (Detail View, Summary of Offerings, or Nominations In-Flight).'] })
+      setUploadResult({ success: false, messages: ['Upload failed. Ensure the file is a valid .xlsx export (Detail View, Summary of Offerings, Nominations In-Flight, or Nomination Wize Tool Usage).'] })
     } finally {
       setUploading(false)
     }
@@ -417,6 +419,7 @@ export function NominationsPage() {
   const blockedTotal = scoped.filter((n) => BLOCKED_STATES.includes(n.status)).length
   const staleCount = (tier: string) => scoped.filter((n) => n.staleTier === tier).length
   const noWaveTotal = scoped.filter((n) => n.noWavesLinked).length
+  const ghcpUsedTotal = scoped.filter((n) => (n.ghcpUsageCount ?? 0) > 0).length
   // Approval counts span ALL nominations (not the approval-scoped set) so the card shows the full split.
   const approvalCount = (s: string) => (data ?? []).filter((n) => (n.approvalStatus ?? '') === s).length
   const toggleApproval = (s: string) => setApprovalFilter(approvalFilter === s ? '' : s)
@@ -448,10 +451,12 @@ export function NominationsPage() {
             (linkFilter === 'Has any waves' && !n.noWavesLinked) ||
             (linkFilter === 'Has DB' && n.dbLinked) ||
             (linkFilter === 'Has Security' && n.securityLinked)) &&
+          (!ghcpFilter ||
+            (ghcpFilter === 'Reported' ? (n.ghcpUsageCount ?? 0) > 0 : (n.ghcpUsageCount ?? 0) === 0)) &&
           (!effectivePerson || matchesPerson(n, effectivePerson)) &&
           (!debouncedSearch || matchesText(n, debouncedSearch)),
       ),
-    [scoped, currentStateFilter, migrationFilter, slaFilter, classFilter, linkFilter, effectivePerson, debouncedSearch],
+    [scoped, currentStateFilter, migrationFilter, slaFilter, classFilter, linkFilter, ghcpFilter, effectivePerson, debouncedSearch],
   )
 
   const openManage = (n: Nomination) => {
@@ -607,6 +612,13 @@ export function NominationsPage() {
                 { label: 'Has waves', value: scoped.length - noWaveTotal, tone: 'success', active: linkFilter === 'Has any waves', onClick: () => setLinkFilter(linkFilter === 'Has any waves' ? '' : 'Has any waves') },
               ]}
             />
+            <SummaryCard
+              title="GHCP usage (FDO)"
+              items={[
+                { label: 'Reported', value: ghcpUsedTotal, tone: 'success', active: ghcpFilter === 'Reported', onClick: () => setGhcpFilter(ghcpFilter === 'Reported' ? '' : 'Reported') },
+                { label: 'None', value: scoped.length - ghcpUsedTotal, tone: 'neutral', active: ghcpFilter === 'None', onClick: () => setGhcpFilter(ghcpFilter === 'None' ? '' : 'None') },
+              ]}
+            />
           </div>
 
           <Panel
@@ -628,6 +640,7 @@ export function NominationsPage() {
                 <FilterSelect label="SLA breach" value={slaFilter} options={['Warn', 'Escalate', 'Defer']} onChange={setSlaFilter} minWidth={150} />
                 <FilterSelect label="Classification" value={classFilter} options={['Strategic (all)', ...(vocab?.classifications ?? [])]} onChange={setClassFilter} minWidth={170} />
                 <FilterSelect label="Links" value={linkFilter} options={LINK_FILTERS} onChange={setLinkFilter} minWidth={150} />
+                <FilterSelect label="GHCP usage" value={ghcpFilter} options={['Reported', 'None']} onChange={setGhcpFilter} minWidth={140} />
                 <input
                   ref={fileInput}
                   type="file"
@@ -637,7 +650,7 @@ export function NominationsPage() {
                 />
                 <Tooltip
                   relationship="description"
-                  content="Upload any of the 3 workbooks — Detail View (pipeline), Summary of All Offerings (enrichment), or Nominations In-Flight (account master). The type is auto-detected."
+                  content="Upload any of the 4 workbooks — Detail View (pipeline), Summary of All Offerings (enrichment), Nominations In-Flight (account master), or Nomination Wize Tool Usage (GHCP usage). The type is auto-detected."
                 >
                   <Button
                     appearance="primary"
