@@ -11,12 +11,7 @@ public class CapacityService(IApplicationDbContext db, ICapacityCalculationServi
     private readonly IApplicationDbContext _db = db;
     private readonly ICapacityCalculationService _calc = calc;
 
-    // A nomination stops consuming capacity once it reaches a settled state.
-    private static readonly NominationStatusType[] Settled =
-    {
-        NominationStatusType.Closed, NominationStatusType.Completed,
-        NominationStatusType.Withdrawn, NominationStatusType.CustomerDeferred
-    };
+    private static readonly NominationStatusType[] Settled = NominationRules.SettledStatuses;
 
     public async Task<IReadOnlyList<CapacityRowDto>> GetAsync(string? region, CancellationToken ct = default)
     {

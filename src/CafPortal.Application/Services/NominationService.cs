@@ -122,16 +122,20 @@ public class NominationService(IApplicationDbContext db) : INominationService
                     if (w.ResolvedUtc is null) clockStopped = true;
                 }
             var effectiveDays = Math.Max(0, days - Math.Min(days, clockStoppedDays));
-            var classification = string.IsNullOrWhiteSpace(n.Classification) ? "Standard Factory" : n.Classification!;
-            var isStrategic = !classification.Equals("Standard Factory", StringComparison.OrdinalIgnoreCase);
+            var classification = NominationRules.ClassificationOrDefault(n.Classification);
+            var isStrategic = NominationRules.IsStrategic(classification);
             var inFlightDays = Math.Max(0, today.DayNumber - (n.NominatedDate ?? n.OpenedDate).DayNumber);
             var strategicTier = StrategicTier(isStrategic, n.Status, inFlightDays, green, amber, red);
+            var stage = NominationRules.StageIndex(n.MigrationStatus);
+            var effectiveGhcp = ToolActivityClassifier.EffectiveLevel(
+                n.GhcpAdoptionLevel, n.IsToolAttached,
+                activitiesByNom.TryGetValue(n.Id, out var acts) ? acts : System.Array.Empty<string>());
 
             var openBlk = openCounts.TryGetValue(n.Id, out var oc) ? oc : 0;
             var st = stateByNom.TryGetValue(n.Id, out var s2) ? s2 : null;
             var msi = MsiCalculator.Compute(
                 GroupPct(st, groupDefs["Readiness"]), GroupPct(st, groupDefs["Scope"]), GroupPct(st, groupDefs["Delivery"]),
-                MsiCalculator.RiskHealth(openBlk, clockStopped), MsiCalculator.GhcpScore(n.GhcpAdoptionLevel),
+                MsiCalculator.RiskHealth(openBlk, clockStopped), MsiCalculator.GhcpScore(effectiveGhcp),
                 GroupPct(st, groupDefs["Signoff"]));
             // Wave links are informational (no required type); surface presence so empty records can be found.
             var waveTypes = n.WaveLinks.Select(w => w.WaveType).ToHashSet();
@@ -177,9 +181,11 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 NnrAcr = n.NnrAcr,
                 GhcpToolsUsed = toolsByNom.TryGetValue(n.Id, out var tu) ? tu : new List<string>(),
                 GhcpUsageCount = usageCountByNom.TryGetValue(n.Id, out var uc) ? uc : 0,
-                GhcpEffectiveLevel = ToolActivityClassifier.EffectiveLevel(
-                    n.GhcpAdoptionLevel, n.IsToolAttached,
-                    activitiesByNom.TryGetValue(n.Id, out var acts) ? acts : System.Array.Empty<string>()),
+                GhcpEffectiveLevel = effectiveGhcp,
+                StageIndex = stage,
+                StageLabel = NominationRules.StageLabel(stage),
+                IsSettled = NominationRules.IsSettled(n.Status),
+                HealthBucket = NominationRules.HealthBucket(n.CurrentState),
                 NominatedDate = n.NominatedDate,
                 ApprovalDate = n.ApprovalDate,
                 ActualStartDate = n.ActualStartDate,
@@ -199,7 +205,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 MsiRisk = msi.Risk,
                 MsiGhcp = msi.Ghcp,
                 MsiSignoff = msi.Signoff,
-                StaleTier = StaleTier(n.Status, StageIndex(n.MigrationStatus), effectiveDays, warn, escalate, defer),
+                StaleTier = StaleTier(n.Status, stage, effectiveDays, warn, escalate, defer),
                 DbLinked = dbLinked,
                 AlzLinked = alzLinked,
                 SecurityLinked = securityLinked,
@@ -380,7 +386,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
     {
         if (!isStrategic) return string.Empty;
         // Settled pilots are no longer actively governed against the running clock.
-        if (status is NominationStatusType.Completed or NominationStatusType.Closed or NominationStatusType.CustomerDeferred or NominationStatusType.Withdrawn)
+        if (NominationRules.IsSettled(status))
             return string.Empty;
         if (inFlightDays > red) return "Exec";
         if (inFlightDays > amber) return "Red";
@@ -388,24 +394,12 @@ public class NominationService(IApplicationDbContext db) : INominationService
         return "Green";
     }
 
-    // Migration Status text → numeric stage (1–4). The SLA cadence applies to execution stages 2–4.
-    private static int? StageIndex(string? migration)
-    {
-        var m = migration?.ToLowerInvariant() ?? string.Empty;
-        if (m.Contains("validating")) return 1;
-        if (m.Contains("pre-requisite") || m.Contains("pre requisite") || m.Contains("prerequisite")) return 2;
-        if (m.Contains("finalize")) return 3;
-        if (m.Contains("executing migration")) return 4;
-        return null;
-    }
-
     private static string StaleTier(NominationStatusType status, int? stage, int days, int warn, int escalate, int defer)
     {
         // Documented cadence applies to execution stages 2–4 only (not initial validation/scoping).
         if (stage is null or < 2)
             return string.Empty;
-        // Completed/closed/deferred/withdrawn items are settled — not chased.
-        if (status is NominationStatusType.Completed or NominationStatusType.Closed or NominationStatusType.CustomerDeferred or NominationStatusType.Withdrawn)
+        if (NominationRules.IsSettled(status))
             return string.Empty;
         if (days >= defer) return "Defer";
         if (days >= escalate) return "Escalate";

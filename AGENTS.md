@@ -61,8 +61,9 @@ import the **web app is the system of record**.
     links; runs after every import (`DataRefreshService.RelinkAndRebuildCapacityAsync`).
 - **Nomination = migration tracking**. Two distinct tracking fields, keep them separate:
   - **Stage** (`Nomination.MigrationStatus`): which **phase** of the migration journey. Show as a
-    **number 1–4**, not raw text. Mapping (keyword → stage) lives in `STAGES` +
-    `migrationStage()` in `NominationsPage.tsx`:
+    **number 1–4**, not raw text. Resolved once on the server by `NominationRules.StageIndex`
+    (Application/Common) and returned as `NominationDto.StageIndex`/`StageLabel` (plus `IsSettled`, `HealthBucket`);
+    pages must use these, not re-derive them:
     1 Validating · 2 Executing Pre-Requisites · 3 Finalize Scope · 4 Executing Migration.
   - **Status** (`Nomination.CurrentState`): whether work is **on track or blocked**. Colour via
     `stateColor()`: On Track = success, Waiting/follow-up = warning, Blocked* = danger.
@@ -290,8 +291,7 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
 - **GHCP adoption (P4)** — `Nomination.GhcpAdoptionLevel` (0–7, A.10, **manual**), Manage-dialog dropdown. **GHCP Adoption**
   page at `/adoption` (licensed L4+ · awaiting L1–3 · used% · tool-attached% · reported usage (FDO) · 0–7 distribution ·
   by-region reported% · reported tool usage · capability utilization · Upload). Levels shown are the **effective** level
-  (`GhcpEffectiveLevel`). ⚠ Dashboard GHCP tab, Effectiveness and the MSI GHCP component still read the manual level —
-  being unified in Phase 6A (see `DEVELOPMENT-PLAN.md` §9).
+  (`GhcpEffectiveLevel`). Dashboard, Effectiveness and MSI (grid + workspace) use the same effective level (Phase 6A-3).
 - **MSI (P5a)** — **Migration Success Index** (`MsiCalculator` in `Application/Common`): `30% Readiness (G1–3) +
   20% Scope (G4–5) + 20% Delivery (G6–7) + 10% Risk (blockers) + 10% GHCP (level/7) + 10% Sign-off (G8)`, bands
   Green >80 / Amber 60–80 / Red <60. Grid **MSI** column (component tooltip) + workspace header card; computed in

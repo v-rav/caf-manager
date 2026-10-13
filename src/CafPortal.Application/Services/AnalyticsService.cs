@@ -26,24 +26,9 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
     private static readonly string[] StageLabels =
         { "1 · Validating", "2 · Pre-Requisites", "3 · Finalize Scope", "4 · Executing Migration" };
 
-    private static int? StageIndex(string? migration)
-    {
-        var m = migration?.ToLowerInvariant() ?? string.Empty;
-        if (m.Contains("validating")) return 1;
-        if (m.Contains("pre-requisite") || m.Contains("pre requisite") || m.Contains("prerequisite")) return 2;
-        if (m.Contains("finalize")) return 3;
-        if (m.Contains("executing migration")) return 4;
-        return null;
-    }
+    private static int? StageIndex(string? migration) => NominationRules.StageIndex(migration);
 
-    private static string Health(string? currentState)
-    {
-        var t = (currentState ?? string.Empty).ToLowerInvariant();
-        if (t.Contains("block")) return "Blocked";
-        if (t.Contains("waiting") || t.Contains("follow")) return "Waiting";
-        if (t.Contains("on track")) return "On Track";
-        return "Other";
-    }
+    private static string Health(string? currentState) => NominationRules.HealthBucket(currentState);
 
     public async Task<AnalyticsDto> GetAsync(string? region, CancellationToken ct = default)
     {
@@ -59,11 +44,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         string Seg(int? id) => id != null && segByAccount.TryGetValue(id.Value, out var s) && !string.IsNullOrWhiteSpace(s) ? s! : "Unspecified";
         string Reg(string? r) => string.IsNullOrWhiteSpace(r) ? "Unspecified" : r!;
 
-        static bool IsSettled(NominationDto n)
-        {
-            var s = (n.Status ?? string.Empty).ToLowerInvariant();
-            return s.Contains("complete") || s.Contains("closed") || s.Contains("withdraw") || s.Contains("defer");
-        }
+        static bool IsSettled(NominationDto n) => n.IsSettled;
 
         List<NameValueDto> Count(IEnumerable<IGrouping<string, NominationDto>> groups) =>
             groups.Select(g => new NameValueDto(g.Key, g.Count())).OrderByDescending(x => x.Value).ToList();

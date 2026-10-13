@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Application.Dtos;
 using CafPortal.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -9,12 +10,7 @@ public class DashboardService(IApplicationDbContext db) : IDashboardService
 {
     private readonly IApplicationDbContext _db = db;
 
-    // A nomination stops counting as in-flight once settled (matches CapacityService).
-    private static readonly NominationStatusType[] Settled =
-    {
-        NominationStatusType.Closed, NominationStatusType.Completed,
-        NominationStatusType.Withdrawn, NominationStatusType.CustomerDeferred
-    };
+    private static readonly NominationStatusType[] Settled = NominationRules.SettledStatuses;
 
     public async Task<ExecutiveDashboardDto> GetExecutiveAsync(string? region, CancellationToken ct = default)
     {

@@ -64,6 +64,12 @@ public class NominationDto
     public int GhcpUsageCount { get; set; }
     // Effective 0–7 level: manual GhcpAdoptionLevel, raised by evidence of reported GHCP usage (5–7) / tool-attached (4).
     public int GhcpEffectiveLevel { get; set; }
+
+    // Server-computed rules (NominationRules) — pages render these instead of re-deriving them.
+    public int? StageIndex { get; set; }
+    public string StageLabel { get; set; } = string.Empty;
+    public bool IsSettled { get; set; }
+    public string HealthBucket { get; set; } = "Other";
     public DateOnly? NominatedDate { get; set; }
     public DateOnly? ApprovalDate { get; set; }
     public DateOnly? ActualStartDate { get; set; }

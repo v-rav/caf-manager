@@ -288,16 +288,7 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
         && ((n.MigrationStatus?.Contains("executing", StringComparison.OrdinalIgnoreCase) ?? false)
             || (n.MigrationStatus?.Contains("finalize", StringComparison.OrdinalIgnoreCase) ?? false));
 
-    // Migration Status text → numeric stage (1–4) of the migration journey.
-    private static int? StageIndex(string? migration)
-    {
-        var m = migration?.ToLowerInvariant() ?? string.Empty;
-        if (m.Contains("validating")) return 1;
-        if (m.Contains("pre-requisite") || m.Contains("pre requisite") || m.Contains("prerequisite")) return 2;
-        if (m.Contains("finalize")) return 3;
-        if (m.Contains("executing migration")) return 4;
-        return null;
-    }
+    private static int? StageIndex(string? migration) => CafPortal.Application.Common.NominationRules.StageIndex(migration);
 
     // Parses a leading integer out of a "N days" stage cell.
     private static int? ParseDays(string? text)

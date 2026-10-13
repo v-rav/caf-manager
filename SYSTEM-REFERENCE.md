@@ -283,7 +283,8 @@ erDiagram
 Each rule lists **where it is computed**, **its inputs**, **its formula**, and **its configurability**.
 
 ### 5.1 Stage (1–4) from `MigrationStatus`
-* **Where:** `NominationService.StageIndex` (+ copies, ⚠️ §10). **Rule (🔒):** keyword match on lower-cased text:
+* **Where:** `NominationRules.StageIndex` (Application/Common) — the single resolver used by every service, export and
+  import; surfaced as `NominationDto.StageIndex`/`StageLabel`. **Rule (🔒):** keyword match on lower-cased text:
   `validating`→1 · `pre-requisite|prerequisite|pre requisite`→2 · `finalize`→3 · `executing migration`→4 · else 0.
 * **Labels (🔒):** 1 Validating · 2 Executing Pre-Requisites · 3 Finalize Scope · 4 Executing Migration.
 
@@ -311,7 +312,7 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 * **Gate group completion %** per MSI component: `done ÷ (items − N/A)` over active items. Gate → group (🔒
   `GroupFor`): G1–G3 Readiness · G4–G5 Scope · G6–G7 Delivery · G8 Sign-off.
 * `Risk = max(0, 100 − 30 × openBlockers − (clockStopped ? 20 : 0))` (🔒)
-* `GHCP = round(level / 7 × 100)` using the **manual** `GhcpAdoptionLevel` (⚠️ not the effective level)
+* `GHCP = round(level / 7 × 100)` using the **effective** level (`GhcpEffectiveLevel`, §5.10) — same in grid and workspace
 * `MSI = round(0.30·Readiness + 0.20·Scope + 0.20·Delivery + 0.10·Risk + 0.10·GHCP + 0.10·Sign-off)` (🔒 weights)
 * Band: **>80 Green · ≥60 Amber · <60 Red** (🔒).
 
@@ -416,12 +417,12 @@ Every page honours **Region** (server-side) and, where noted, **FY** (client-sid
 ### 7.1 Executive Dashboard (`/`, `DashboardPage.tsx`)
 Data: `api.dashboard`, `api.nominations` (FY-scoped client-side), `api.openBlockers`. Four tabs:
 * **Leadership:** totals · Active (= Approved & not settled) · Blocked · Completed · ACR influenced (Σ `totalAcr`
-  Approved) · **GHCP adoption rate (manual level ≥5 ⚠️)** · Avg MSI + band roll-up · Strategic accounts (`Segment='Strategic'`) ·
+  Approved) · **GHCP adoption rate (effective level ≥5)** · Avg MSI + band roll-up · Strategic accounts (`Segment='Strategic'`) ·
   region doughnut · strategic coverage.
-* **Operational:** active by stage (client `stageIdx` ⚠️ duplicate) · SLA Warn/Escalate/Defer (**Standard only**) · open
+* **Operational:** active by stage (server `stageIndex`) · SLA Warn/Escalate/Defer (**Standard only**) · open
   blockers · avg effective age · capacity doughnut (heat colours) · top-8 SA load.
-* **GHCP Adoption:** Licensed/Awaiting/Used %/Tool-attached % + 0–7 distribution. All of these use the **manual level ⚠️**,
-  which disagrees with the GHCP Adoption page.
+* **GHCP Adoption:** Licensed/Awaiting/Used %/Tool-attached % + 0–7 distribution, on the **effective level** (matches
+  the GHCP Adoption page).
 * **Factory Productivity:** completed · ACR realized · cores · tool/automation adoption %.
 * Export: `/api/export/summary`.
 
@@ -463,7 +464,7 @@ aging table · tier filter · CSV.
 
 ### 7.8 Migration Flow (`/flow`)
 Client-side: funnel Received → Approved → S1..S4 → Completed (conversion %) · stage bottleneck (count × avg age) · blockers by
-category · SA workload · by path · path filter · CSV. Uses its own `stageIdx` copy ⚠️.
+category · SA workload · by path · path filter · CSV. Uses server `stageIndex`.
 
 ### 7.9 GHCP Adoption (`/adoption`)
 Data: `api.nominations` (FY-scoped, excluding Withdrawn) + `api.capability`.
@@ -558,9 +559,9 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 
 | # | Issue | Impact | Suggested fix |
 |---|---|---|---|
-| I1 | **GHCP level source differs by page.** The GHCP Adoption page uses the *effective* level. Dashboard (Leadership "adoption rate", GHCP tab), Effectiveness "Avg GHCP" and **MSI's GHCP component** use the *manual* level. | Same metric shows different numbers; MSI under-credits GHCP-using nominations | Use `ghcpEffectiveLevel` everywhere (server: pass the effective level into `MsiCalculator.GhcpScore`) |
-| I2 | **Stage keyword logic copied 9×** (5 server, 4 client) with slightly different keyword order | Divergence risk when the FDO text changes | One server `StageResolver` driven by config. Return `stageIndex` on the DTO and drop the client copies |
-| I3 | **"Settled" defined 8×**. `AnalyticsService` uses *substring* matching on the display text | Silent drift; "Deferred" vs "CustomerDeferred" | One `NominationStatusRules.IsSettled(status)`. Expose `isSettled` on the DTO |
+| I1 | ~~GHCP level source differs by page~~ — **fixed (6A-3)**: GHCP Adoption, Dashboard, Effectiveness and MSI (grid + workspace) all use `GhcpEffectiveLevel` | — | — |
+| I2 | ~~Stage keyword logic copied 9×~~ — **fixed (6A-1/2)**: one `NominationRules.StageIndex`; DTO carries `stageIndex`/`stageLabel`; client copies removed (Manage-dialog draft mapping only) | — | Keywords still code → 6B-1 |
+| I3 | ~~"Settled" defined 8×~~ — **fixed (6A-1/2)**: `NominationRules.SettledStatuses`; DTO carries `isSettled`; client uses it | — | Status set still code → 6B-4 |
 | I4 | ~~Gate weights in AGENTS.md ≠ live template~~ — **fixed** (AGENTS.md now shows live 5/5/5/10/10/10/50/5) | — | Consider rendering weights on the Help page from the live template |
 | I5 | **Strategic threshold keys read but never seeded or exposed** | Admins think the thresholds are configurable when they are not | Seed the keys and add them to Configuration → Operations |
 | I6 | `HistoryRetentionDays` is a C# const; the seeded description says it's a setting | Misleading | Read it from `ApplicationSettings` |

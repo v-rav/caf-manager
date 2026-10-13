@@ -49,7 +49,7 @@ function NominationDetail({ n }: { n: Nomination }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px 16px' }}>
       <ReadField label="Task Id">{roDash(n.externalTaskId)}</ReadField>
-      <ReadField label="Current State">{n.currentState ? <Badge appearance="tint" color={stateColor(n.currentState)}>{n.currentState}</Badge> : '—'}</ReadField>
+      <ReadField label="Current State">{n.currentState ? <Badge appearance="tint" color={stateColor(n.healthBucket)}>{n.currentState}</Badge> : '—'}</ReadField>
       <ReadField label="Age in stage">{roDays(n.stageAgeDays)}</ReadField>
       <ReadField label="Short name">{roDash(n.shortName)}</ReadField>
       <ReadField label="Approval status">{roDash(n.approvalStatus)}</ReadField>
@@ -247,19 +247,18 @@ const STAGES = [
   { n: 4, label: 'Executing Migration', match: 'executing migration', tone: 'brand' as const },
 ]
 
-// Migration Status text → numeric stage of the migration journey (1–4).
+// Draft-only mapping for the Manage dialog's editable Stage value; the grid uses server `stageIndex`.
 function migrationStage(migrationStatus?: string): { n: number; label: string } | null {
   const t = (migrationStatus ?? '').toLowerCase()
   const s = STAGES.find((x) => t.includes(x.match))
   return s ? { n: s.n, label: s.label } : null
 }
 
-// Current State text → Badge colour (on track / waiting / blocked).
-function stateColor(cs?: string): 'success' | 'warning' | 'danger' | 'informative' {
-  const t = (cs ?? '').toLowerCase()
-  if (t.includes('block')) return 'danger'
-  if (t.includes('waiting') || t.includes('follow')) return 'warning'
-  if (t.includes('on track')) return 'success'
+// Server health bucket → Badge colour.
+function stateColor(bucket?: string): 'success' | 'warning' | 'danger' | 'informative' {
+  if (bucket === 'Blocked') return 'danger'
+  if (bucket === 'Waiting') return 'warning'
+  if (bucket === 'On Track') return 'success'
   return 'informative'
 }
 
@@ -413,8 +412,7 @@ export function NominationsPage() {
     [data, approvalFilter, fy],
   )
 
-  const stageCount = (match: string) =>
-    scoped.filter((n) => (n.migrationStatus ?? '').toLowerCase().includes(match)).length
+  const stageCount = (stage: number) => scoped.filter((n) => n.stageIndex === stage).length
 
   const blockedTotal = scoped.filter((n) => BLOCKED_STATES.includes(n.status)).length
   const staleCount = (tier: string) => scoped.filter((n) => n.staleTier === tier).length
@@ -594,7 +592,7 @@ export function NominationsPage() {
             />
             <SummaryCard
               title="Migration stage"
-              items={STAGES.map((s) => ({ label: `${s.n} · ${s.label}`, value: stageCount(s.match), tone: s.tone }))}
+              items={STAGES.map((s) => ({ label: `${s.n} · ${s.label}`, value: stageCount(s.n), tone: s.tone }))}
             />
             <SummaryCard
               title="Health"
@@ -695,14 +693,13 @@ export function NominationsPage() {
                   key: 'stage',
                   header: 'Stage',
                   align: 'center',
-                  sortValue: (n) => migrationStage(n.migrationStatus)?.n ?? 0,
+                  sortValue: (n) => n.stageIndex ?? 0,
                   render: (n) => {
-                    const s = migrationStage(n.migrationStatus)
-                    if (!s) return <span style={{ color: 'var(--colorNeutralForeground3)' }}>—</span>
+                    if (!n.stageIndex) return <span style={{ color: 'var(--colorNeutralForeground3)' }}>—</span>
                     return (
-                      <Tooltip relationship="description" content={`Stage ${s.n}: ${s.label} — ${n.migrationStatus}`}>
+                      <Tooltip relationship="description" content={`Stage ${n.stageIndex}: ${n.stageLabel} — ${n.migrationStatus}`}>
                         <Badge appearance="tint" color="brand" size="medium">
-                          {s.n}
+                          {n.stageIndex}
                         </Badge>
                       </Tooltip>
                     )
@@ -714,7 +711,7 @@ export function NominationsPage() {
                   sortValue: (n) => n.currentState ?? '',
                   render: (n) =>
                     n.currentState ? (
-                      <Badge appearance="tint" color={stateColor(n.currentState)} size="small">
+                      <Badge appearance="tint" color={stateColor(n.healthBucket)} size="small">
                         {n.currentState}
                       </Badge>
                     ) : (
@@ -908,7 +905,7 @@ export function NominationsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
               <ReadField label="Current State">
                 {editing.currentState ? (
-                  <Badge appearance="tint" color={stateColor(editing.currentState)}>
+                  <Badge appearance="tint" color={stateColor(editing.healthBucket)}>
                     {editing.currentState}
                   </Badge>
                 ) : (

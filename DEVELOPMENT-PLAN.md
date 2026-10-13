@@ -248,9 +248,9 @@ H1–H25, §10 inconsistencies I1–I13). **Progress metric:** items moving from
 
 | ID | Item | Fixes | Status |
 |----|------|-------|--------|
-| 6A-1 | Central `NominationRules` (Application/Common): stage resolver, settled set, strategic sentinel, health bucket — replace the 5 server copies | H1, H2, H6, H13, I2, I3 | ☐ |
-| 6A-2 | Return `StageIndex`, `StageLabel`, `IsSettled`, `HealthBucket` on `NominationDto`; delete client copies (`NominationsPage`, `DashboardPage`, `FlowPage`, `EffectivenessPage`, `fy.tsx`) | I2, I3 | ☐ |
-| 6A-3 | **Effective GHCP level everywhere** — MSI GHCP component, Dashboard (Leadership rate + GHCP tab), Effectiveness | I1 | ☐ |
+| 6A-1 | Central `NominationRules` (Application/Common): stage resolver, settled set, strategic sentinel, health bucket — replace the 5 server copies | H1, H2, H6, H13, I2, I3 | ✅ |
+| 6A-2 | Return `StageIndex`, `StageLabel`, `IsSettled`, `HealthBucket` on `NominationDto`; delete client copies (`NominationsPage`, `DashboardPage`, `FlowPage`, `EffectivenessPage`, `fy.tsx`) | I2, I3 | ✅ (parity verified: 0 mismatches across 1,112 nominations) |
+| 6A-3 | **Effective GHCP level everywhere** — MSI GHCP component, Dashboard (Leadership rate + GHCP tab), Effectiveness | I1 | ✅ (grid MSI = workspace MSI) |
 | 6A-4 | Seed + expose hidden settings in Configuration → Operations: `StrategicGreen/Amber/RedDays`, capacity thresholds, `DefaultCapacityLimit`, `PerformanceTrainingThreshold`, `HistoryRetentionDays` (read from settings, not const) | H5, H22, I5, I6, I7 | ☐ |
 | 6A-5 | Fix AGENTS.md gate weights to live template (5/5/5/10/10/10/50/5) | I4 | ✅ |
 

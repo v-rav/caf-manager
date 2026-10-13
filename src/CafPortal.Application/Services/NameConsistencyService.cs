@@ -297,11 +297,7 @@ public class NameConsistencyService(IApplicationDbContext db) : INameConsistency
     public async Task<OwnershipLinkResultDto> LinkSolutionArchitectsAsync(bool apply, CancellationToken ct = default)
     {
         const double autoThreshold = 0.95;
-        var settled = new[]
-        {
-            NominationStatusType.Closed, NominationStatusType.Completed,
-            NominationStatusType.Withdrawn, NominationStatusType.CustomerDeferred,
-        };
+        var settled = NominationRules.SettledStatuses;
 
         var resources = await db.Resources.AsNoTracking()
             .Select(r => new { r.ResourceId, r.Name, r.Aliases })

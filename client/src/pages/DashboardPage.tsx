@@ -13,17 +13,10 @@ import { ADOPTION_LEVELS } from '../adoption'
 import type { ExecutiveDashboard, Nomination } from '../types'
 
 const CAPACITY_COLORS = ['#107c10', '#eaa300', '#ca5010', '#c50f1f']
-const SETTLED = ['Completed', 'Closed', 'Customer Deferred', 'Withdrawn']
 const STAGE_LABELS = ['—', 'Validating', 'Prerequisites', 'Finalize Scope', 'Executing Migration']
 
-function stageIdx(n: Nomination): number {
-  const t = (n.migrationStatus ?? '').toLowerCase()
-  if (t.includes('executing migration')) return 4
-  if (t.includes('finalize')) return 3
-  if (t.includes('pre-requisite') || t.includes('prerequisite') || t.includes('pre requisite')) return 2
-  if (t.includes('validating')) return 1
-  return 0
-}
+const stageIdx = (n: Nomination): number => n.stageIndex ?? 0
+const ghcpLevel = (n: Nomination): number => n.ghcpEffectiveLevel ?? n.ghcpAdoptionLevel ?? 0
 function money(n: number): string {
   return n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${Math.round(n)}`
 }
@@ -66,7 +59,7 @@ export function DashboardPage() {
   const m: M = useMemo(() => {
     const all = (noms.data ?? []).filter((n) => nominationInFy(n, fy))
     const approved = all.filter((n) => (n.approvalStatus ?? '') === 'Approved')
-    const active = approved.filter((n) => !SETTLED.includes(n.status))
+    const active = approved.filter((n) => !n.isSettled)
     const completed = approved.filter((n) => n.status === 'Completed')
     const blocked = active.filter((n) => n.openBlockerCount > 0)
     const sum = (xs: Nomination[], f: (n: Nomination) => number | undefined) => xs.reduce((s, n) => s + (f(n) ?? 0), 0)
@@ -102,7 +95,7 @@ export function DashboardPage() {
 
 function Leadership({ d, m, region, navigate }: { d: ExecutiveDashboard; m: M; region?: string; navigate: (p: string) => void }) {
   const acr = m.sum(m.approved, (n) => n.totalAcr)
-  const usedRate = m.active.length ? Math.round((m.active.filter((n) => (n.ghcpAdoptionLevel ?? 0) >= 5).length / m.active.length) * 100) : 0
+  const usedRate = m.active.length ? Math.round((m.active.filter((n) => ghcpLevel(n) >= 5).length / m.active.length) * 100) : 0
   const bands = msiBands(m.active)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -180,7 +173,7 @@ function Operational({ d, m, blk, navigate }: { d: ExecutiveDashboard; m: M; blk
 
 function Adoption({ m, navigate }: { m: M; navigate: (p: string) => void }) {
   const active = m.active
-  const lvl = (n: Nomination) => n.ghcpAdoptionLevel ?? 0
+  const lvl = ghcpLevel
   const licensed = active.filter((n) => lvl(n) >= 4).length
   const awaiting = active.filter((n) => lvl(n) >= 1 && lvl(n) <= 3).length
   const usedPct = active.length ? Math.round((active.filter((n) => lvl(n) >= 5).length / active.length) * 100) : 0

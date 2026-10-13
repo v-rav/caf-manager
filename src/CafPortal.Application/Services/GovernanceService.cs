@@ -17,7 +17,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             .Where(n => n.Id == nominationId)
             .Select(n => new
             {
-                n.Id, n.AccountName, Tpid = n.Account != null ? n.Account.Tpid : null, n.GhcpAdoptionLevel,
+                n.Id, n.AccountName, Tpid = n.Account != null ? n.Account.Tpid : null, n.GhcpAdoptionLevel, n.IsToolAttached,
                 n.Classification, n.MigrationStatus, n.StageAgeDays, n.ProjectCoordinator, n.CftlPrimary, n.SolutionArchitect, n.ShortName,
             })
             .FirstOrDefaultAsync(ct);
@@ -60,7 +60,16 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
                 u.Stage, u.UsedOn, u.UsedBy, u.Notes))
             .ToListAsync(ct);
 
-        return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, nom.GhcpAdoptionLevel) with
+        // Same effective GHCP level as the grid (manual raised by reported FDO usage), so both MSIs agree.
+        var reported = await _db.NominationToolUsageFacts.AsNoTracking()
+            .Where(u => u.NominationId == nominationId)
+            .Select(u => new { u.ToolName, u.Details })
+            .ToListAsync(ct);
+        var effectiveGhcp = ToolActivityClassifier.EffectiveLevel(
+            nom.GhcpAdoptionLevel, nom.IsToolAttached,
+            reported.SelectMany(r => ToolActivityClassifier.Classify(r.ToolName, r.Details)).Distinct().ToList());
+
+        return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, effectiveGhcp) with
         {
             Classification = nom.Classification,
             Stage = StageNum(nom.MigrationStatus),
@@ -75,15 +84,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         };
     }
 
-    private static int? StageNum(string? migration)
-    {
-        var m = migration?.ToLowerInvariant() ?? string.Empty;
-        if (m.Contains("executing migration")) return 4;
-        if (m.Contains("finalize")) return 3;
-        if (m.Contains("pre-requisite") || m.Contains("prerequisite") || m.Contains("pre requisite")) return 2;
-        if (m.Contains("validating")) return 1;
-        return null;
-    }
+    private static int? StageNum(string? migration) => NominationRules.StageIndex(migration);
 
     public static IReadOnlyList<string> BlockerCategories { get; } = new[]
     {

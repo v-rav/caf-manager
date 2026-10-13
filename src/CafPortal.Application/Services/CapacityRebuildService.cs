@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Domain.Entities;
 using CafPortal.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -14,12 +15,7 @@ public class CapacityRebuildService(IApplicationDbContext db, ICapacityCalculati
     private readonly IApplicationDbContext _db = db;
     private readonly ICapacityCalculationService _capacity = capacity;
 
-    // A nomination stops consuming capacity once it reaches a settled state (matches CapacityService).
-    private static readonly NominationStatusType[] Settled =
-    {
-        NominationStatusType.Closed, NominationStatusType.Completed,
-        NominationStatusType.Withdrawn, NominationStatusType.CustomerDeferred
-    };
+    private static readonly NominationStatusType[] Settled = NominationRules.SettledStatuses;
 
     public async Task<int> RebuildAllAsync(CancellationToken ct = default)
     {

@@ -10,14 +10,7 @@ import { useFy, nominationInFy } from '../fy'
 import { downloadCsv } from '../export'
 import type { Blocker, Nomination } from '../types'
 
-function stageIdx(n: Nomination): number {
-  const m = (n.migrationStatus ?? '').toLowerCase()
-  if (m.includes('executing migration')) return 4
-  if (m.includes('finalize')) return 3
-  if (m.includes('pre-requisite') || m.includes('prerequisite') || m.includes('pre requisite')) return 2
-  if (m.includes('validating')) return 1
-  return 0
-}
+const stageIdx = (n: Nomination): number => n.stageIndex ?? 0
 const STAGE_LABELS = ['—', 'Validating', 'Prerequisites', 'Finalize Scope', 'Executing Migration']
 
 function FunnelBar({ label, count, top, prev }: { label: string; count: number; top: number; prev?: number }) {

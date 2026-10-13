@@ -14,9 +14,6 @@ import type { Nomination } from '../types'
 
 type Role = 'PM' | 'SA' | 'CFTL'
 
-// In-flight statuses (not yet settled) — used for the "active" and on-track cuts.
-const ACTIVE = new Set(['Open', 'In Progress', 'Blocked', 'Waiting for Customer Action', 'Waiting on Follow-up'])
-
 const ROLE_LABEL: Record<Role, string> = { PM: 'PM (Project Coordinator)', SA: 'SA (Solution Architect)', CFTL: 'CFTL' }
 
 function ownerOf(n: Nomination, role: Role): string | undefined {
@@ -67,7 +64,7 @@ function buildRows(noms: Nomination[], role: Role): ScoreRow[] {
   const rows: ScoreRow[] = []
   for (const [name, list] of groups) {
     const assigned = list.length
-    const activeList = list.filter((n) => ACTIVE.has(n.status))
+    const activeList = list.filter((n) => !n.isSettled)
     const active = activeList.length
     const delivered = list.filter((n) => n.status === 'Completed').length
     const withdrawn = list.filter((n) => n.status === 'Withdrawn').length
@@ -82,7 +79,7 @@ function buildRows(noms: Nomination[], role: Role): ScoreRow[] {
     const avgMsi = Math.round(list.reduce((a, n) => a + (n.msiScore ?? 0), 0) / assigned)
     const onTrackPct = active ? Math.round((activeList.filter((n) => !n.staleTier).length / active) * 100) : null
     const slaBreaches = activeList.filter((n) => !!n.staleTier).length
-    const ghcps = list.map((n) => n.ghcpAdoptionLevel).filter((v): v is number => v != null)
+    const ghcps = list.map((n) => n.ghcpEffectiveLevel ?? n.ghcpAdoptionLevel).filter((v): v is number => v != null)
     const avgGhcp = ghcps.length ? Math.round((ghcps.reduce((a, b) => a + b, 0) / ghcps.length) * 10) / 10 : null
     const acrDelivered = list.filter((n) => n.status === 'Completed').reduce((a, n) => a + (n.totalAcr ?? 0), 0)
 
@@ -141,15 +138,7 @@ function effExplain(r: ScoreRow, role: Role): string {
   return `${role === 'SA' ? 'Quality-led' : 'Flow-led'}: ${bits.join(' · ')} (weighted, renormalised)`
 }
 
-// Migration stage number from the raw status text (matches the grid's 1–4 encoding).
-function stageNum(n: Nomination): string {
-  const m = (n.migrationStatus ?? '').toLowerCase()
-  if (m.includes('executing migration')) return '4'
-  if (m.includes('finalize')) return '3'
-  if (m.includes('pre-requisite') || m.includes('prerequisite') || m.includes('pre requisite')) return '2'
-  if (m.includes('validating')) return '1'
-  return '—'
-}
+const stageNum = (n: Nomination): string => (n.stageIndex ? String(n.stageIndex) : '—')
 
 const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'informative'> = {
   Completed: 'success',
@@ -203,7 +192,7 @@ export function EffectivenessPage() {
     const roleNoms = scoped.filter((n) => ownerOf(n, role))
     const assigned = roleNoms.length
     const delivered = roleNoms.filter((n) => n.status === 'Completed').length
-    const activeList = roleNoms.filter((n) => ACTIVE.has(n.status))
+    const activeList = roleNoms.filter((n) => !n.isSettled)
     const active = activeList.length
     const deliveredPct = assigned ? Math.round((delivered / assigned) * 100) : 0
     const durs = roleNoms.filter((n) => n.status === 'Completed').map(deliveryDays).filter((d): d is number => d != null)

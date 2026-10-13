@@ -125,16 +125,7 @@ public class ExportService(
         return Finish(wb, ws, headers.Length);
     }
 
-    // Migration Status text → 1–4 stage number (matches the grid), or null when no stage is recognised.
-    private static int? StageNumber(string? migration)
-    {
-        var t = (migration ?? "").ToLowerInvariant();
-        if (t.Contains("validating")) return 1;
-        if (t.Contains("pre-requisite")) return 2;
-        if (t.Contains("finalize")) return 3;
-        if (t.Contains("executing migration")) return 4;
-        return null;
-    }
+    private static int? StageNumber(string? migration) => CafPortal.Application.Common.NominationRules.StageIndex(migration);
 
     private static bool MatchLinks(NominationDto x, string? links) => links switch
     {

@@ -12,7 +12,6 @@ import { useFy, nominationInFy } from '../fy'
 import { downloadCsv } from '../export'
 import type { Nomination } from '../types'
 
-const SETTLED = ['Completed', 'Closed', 'Customer Deferred', 'Withdrawn']
 
 function tierTone(t: string): 'success' | 'warning' | 'danger' | 'brand' {
   return t === 'Exec' || t === 'Red' ? 'danger' : t === 'Amber' ? 'warning' : t === 'Green' ? 'success' : 'brand'
@@ -30,7 +29,7 @@ export function StrategicRegisterPage() {
 
   const strategic = useMemo(() => (data ?? []).filter((n) => n.isStrategic && nominationInFy(n, fy)), [data, fy])
   const rows = useMemo(() => (tier ? strategic.filter((n) => n.strategicTier === tier) : strategic), [strategic, tier])
-  const activeAll = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !SETTLED.includes(n.status)), [data, fy])
+  const activeAll = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !n.isSettled), [data, fy])
 
   const exportRows = () =>
     downloadCsv<Nomination>(
@@ -50,7 +49,7 @@ export function StrategicRegisterPage() {
     )
 
   const kpis = useMemo(() => {
-    const active = strategic.filter((n) => !SETTLED.includes(n.status))
+    const active = strategic.filter((n) => !n.isSettled)
     const tier = (t: string) => active.filter((n) => n.strategicTier === t).length
     const pct = activeAll.length ? Math.round((active.length / activeAll.length) * 100) : 0
     return { total: strategic.length, active: active.length, pct, green: tier('Green'), amber: tier('Amber'), red: tier('Red'), exec: tier('Exec') }

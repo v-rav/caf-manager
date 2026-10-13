@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Application.Dtos;
 using CafPortal.Domain.Entities;
 using CafPortal.Domain.Enums;
@@ -16,13 +17,7 @@ public class ReconciliationService(IApplicationDbContext db) : IReconciliationSe
 {
     private readonly IApplicationDbContext _db = db;
 
-    private static readonly NominationStatusType[] Settled =
-    {
-        NominationStatusType.Closed,
-        NominationStatusType.Completed,
-        NominationStatusType.Withdrawn,
-        NominationStatusType.CustomerDeferred
-    };
+    private static readonly NominationStatusType[] Settled = NominationRules.SettledStatuses;
 
     public async Task<ReconciliationReportDto> GetAsync(string? region, CancellationToken ct = default)
     {

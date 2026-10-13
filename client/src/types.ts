@@ -271,6 +271,10 @@ export interface Nomination {
   ghcpToolsUsed?: string[]
   ghcpUsageCount?: number
   ghcpEffectiveLevel?: number
+  stageIndex?: number | null
+  stageLabel?: string
+  isSettled?: boolean
+  healthBucket?: string
   nominatedDate?: string
   approvalDate?: string
   actualStartDate?: string
