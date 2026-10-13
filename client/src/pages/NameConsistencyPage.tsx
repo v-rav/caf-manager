@@ -1,6 +1,6 @@
 import { Badge, Button, Checkbox, Dropdown, Option, Tab, TabList, Text, Tooltip } from '@fluentui/react-components'
 import { ArrowClockwiseRegular, CheckmarkRegular } from '@fluentui/react-icons'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
 import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
@@ -241,32 +241,46 @@ export function NameConsistencyPage() {
 
           {data.suggestions.length > 0 && (
             <Panel title="Review names vs roster">
-              <div style={{ display: 'grid', gap: 10 }}>
+              <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+                These performance-review names are spelled differently from the roster. “Use roster name” updates
+                the review(s) to match the roster.
+              </Text>
+              <div
+                style={{
+                  marginTop: 10,
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(150px, 1fr) minmax(150px, 1fr) auto auto',
+                  gap: '8px 16px',
+                  alignItems: 'center',
+                }}
+              >
+                <Text size={200} weight="semibold" style={{ color: 'var(--colorNeutralForeground3)' }}>Name in review (other)</Text>
+                <Text size={200} weight="semibold" style={{ color: 'var(--colorNeutralForeground3)' }}>Name in roster</Text>
+                <Text size={200} weight="semibold" style={{ color: 'var(--colorNeutralForeground3)' }}>Match</Text>
+                <Text size={200} weight="semibold" style={{ color: 'var(--colorNeutralForeground3)' }}>Suggested</Text>
                 {data.suggestions.map((s: PerformanceNameSuggestion) => {
                   const msg = perfDone[s.currentName]
                   return (
-                    <div
-                      key={s.currentName}
-                      style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', opacity: msg ? 0.6 : 1 }}
-                    >
-                      <Text weight="semibold" style={{ minWidth: 150 }}>
-                        {s.currentName}
-                      </Text>
-                      <Text style={{ color: 'var(--colorNeutralForeground3)' }}>→</Text>
-                      <Text weight="semibold">{s.rosterName}</Text>
-                      {s.psid && (
-                        <Badge appearance="outline" size="small">
-                          PSID {s.psid}
-                        </Badge>
-                      )}
+                    <Fragment key={s.currentName}>
+                      <div style={{ opacity: msg ? 0.6 : 1 }}>
+                        <Text weight="semibold">{s.currentName}</Text>
+                        <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+                          {' '}· {s.reviewCount} review{s.reviewCount === 1 ? '' : 's'}
+                        </Text>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: msg ? 0.6 : 1 }}>
+                        <Text weight="semibold">{s.rosterName}</Text>
+                        {s.psid && (
+                          <Badge appearance="outline" size="small">
+                            PSID {s.psid}
+                          </Badge>
+                        )}
+                      </div>
                       <Tooltip content="Similarity to the roster name" relationship="label">
                         <Badge appearance="tint" color={scoreColor(s.score)} size="small">
                           {Math.round(s.score * 100)}%
                         </Badge>
                       </Tooltip>
-                      <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
-                        {s.reviewCount} review{s.reviewCount === 1 ? '' : 's'}
-                      </Text>
                       {msg ? (
                         <Badge appearance="tint" color="success" icon={<CheckmarkRegular />}>
                           {msg}
@@ -278,10 +292,10 @@ export function NameConsistencyPage() {
                           disabled={perfBusy === s.currentName}
                           onClick={() => applyPerf(s)}
                         >
-                          Rename to roster
+                          Use roster name
                         </Button>
                       )}
-                    </div>
+                    </Fragment>
                   )
                 })}
               </div>
