@@ -25,6 +25,7 @@ public class DataRefreshService(
     IEngagementImportService engagementImport,
     INominationImportService nominationImport,
     IAccountMasterImportService accountMasterImport,
+    IToolUsageImportService toolUsageImport,
     ICapacityRebuildService capacityRebuild,
     INameConsistencyService nameConsistency,
     IAcrRecoveryService acrRecovery,
@@ -38,6 +39,7 @@ public class DataRefreshService(
     private readonly IEngagementImportService _engagementImport = engagementImport;
     private readonly INominationImportService _nominationImport = nominationImport;
     private readonly IAccountMasterImportService _accountMasterImport = accountMasterImport;
+    private readonly IToolUsageImportService _toolUsageImport = toolUsageImport;
     private readonly ICapacityRebuildService _capacityRebuild = capacityRebuild;
     private readonly INameConsistencyService _nameConsistency = nameConsistency;
     private readonly IAcrRecoveryService _acrRecovery = acrRecovery;
@@ -208,13 +210,17 @@ public class DataRefreshService(
                 label = "Nominations In-Flight — account master enrichment";
                 result = await UploadAndRefreshAsync("accounts", new MemoryStream(bytes), fileName, ct);
                 break;
+            case "toolusage":
+                label = "Nomination Wize Tool Usage — per-nomination tool usage";
+                result = await ImportToolUsageAsync(new MemoryStream(bytes), ct);
+                break;
             default:
                 return new DataRefreshResultDto
                 {
                     StartedUtc = DateTimeOffset.UtcNow,
                     CompletedUtc = DateTimeOffset.UtcNow,
                     Success = false,
-                    Messages = { $"Unrecognised workbook '{fileName}'. Expected the FDO Detail View, Summary of All Offerings, or Nominations In-Flight export." },
+                    Messages = { $"Unrecognised workbook '{fileName}'. Expected the FDO Detail View, Summary of All Offerings, Nominations In-Flight, or Nomination Wize Tool Usage export." },
                 };
         }
         // Surface the add/update/withdraw breakdown from the import run this upload just produced.
@@ -241,6 +247,9 @@ public class DataRefreshService(
     // Signature match on distinctive columns (order matters: Offerings & Account master share TPID/Customer).
     private static string DetectFileKind(HashSet<string> h)
     {
+        // Nomination Wize Tool Usage — raw per-nomination tool-usage rows (Category + Tool Name + Created Date).
+        if (h.Contains("Tool Name") && h.Contains("Category") && (h.Contains("Created Date") || h.Contains("Offering Name and Phase")))
+            return "toolusage";
         // Summary of All Offerings — the ~100-col value/enrichment workbook.
         if (h.Contains("Factory Offering") && (h.Contains("Total ACR") || h.Contains("Offering Id") || h.Contains("Is Tool Attached")))
             return "offerings";
@@ -251,6 +260,28 @@ public class DataRefreshService(
         if (h.Contains("Segment") && h.Contains("TPID") && (h.Contains("Customer Name") || h.Contains("Account ID")))
             return "accounts";
         return "unknown";
+    }
+
+    // Loads the Nomination Wize Tool Usage export (wipe-and-reload of the raw per-nomination usage rows).
+    private async Task<DataRefreshResultDto> ImportToolUsageAsync(Stream content, CancellationToken ct)
+    {
+        var result = new DataRefreshResultDto { StartedUtc = DateTimeOffset.UtcNow };
+        try
+        {
+            var rows = await _toolUsageImport.ImportAsync(content, ct);
+            result.Messages.Add($"Tool usage loaded: {rows} row(s).");
+            result.Success = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Tool-usage import failed");
+            result.Success = false;
+            result.Messages.Add($"Tool-usage import failed: {ex.Message}");
+        }
+        result.CompletedUtc = DateTimeOffset.UtcNow;
+        if (result.Success)
+            await StampRefreshAsync(result.CompletedUtc, ct);
+        return result;
     }
 
     // Imports an uploaded resources workbook directly (upsert), then rebuilds capacity. Not staged into

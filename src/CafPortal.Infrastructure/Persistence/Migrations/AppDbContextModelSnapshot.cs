@@ -1117,6 +1117,51 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.ToTable("NominationToolUsages");
                 });
 
+            modelBuilder.Entity("CafPortal.Domain.Entities.Governance.NominationToolUsageFact", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalAccountId")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("NominationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TaskId")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ToolName")
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tpid")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NominationId");
+
+                    b.HasIndex("TaskId");
+
+                    b.ToTable("NominationToolUsageFacts");
+                });
+
             modelBuilder.Entity("CafPortal.Domain.Entities.ImportChange", b =>
                 {
                     b.Property<int>("Id")
@@ -1836,6 +1881,16 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("ItemDefinition");
+                });
+
+            modelBuilder.Entity("CafPortal.Domain.Entities.Governance.NominationToolUsageFact", b =>
+                {
+                    b.HasOne("CafPortal.Domain.Entities.Nomination", "Nomination")
+                        .WithMany()
+                        .HasForeignKey("NominationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Nomination");
                 });
 
             modelBuilder.Entity("CafPortal.Domain.Entities.ImportChange", b =>

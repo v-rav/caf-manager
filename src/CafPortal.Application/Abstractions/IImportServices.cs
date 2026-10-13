@@ -30,6 +30,13 @@ public interface IAccountMasterImportService
     Task<int> ImportAsync(Stream workbook, CancellationToken ct = default);
 }
 
+/// <summary>Loads the FDO "Nomination Wize Tool Usage" export — raw 1-to-many tool-usage rows per nomination
+/// (Account ID, TPID, Task Id, Details, Category, Tool Name, Created Date). Wipe-and-reload.</summary>
+public interface IToolUsageImportService
+{
+    Task<int> ImportAsync(Stream workbook, CancellationToken ct = default);
+}
+
 /// <summary>Orchestrates the nightly pipeline: load sources, transform, rebuild capacity facts.</summary>
 public interface IDataRefreshService
 {

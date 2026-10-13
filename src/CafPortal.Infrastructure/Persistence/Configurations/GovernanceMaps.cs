@@ -101,6 +101,23 @@ public class NominationToolUsageMap : IEntityTypeConfiguration<NominationToolUsa
     }
 }
 
+public class NominationToolUsageFactMap : IEntityTypeConfiguration<NominationToolUsageFact>
+{
+    public void Configure(EntityTypeBuilder<NominationToolUsageFact> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.ExternalAccountId).HasMaxLength(40);
+        builder.Property(x => x.Tpid).HasMaxLength(40);
+        builder.Property(x => x.TaskId).HasMaxLength(40);
+        builder.Property(x => x.Category).HasMaxLength(120);
+        builder.Property(x => x.ToolName).HasMaxLength(120);
+        builder.Property(x => x.Details).HasMaxLength(2000);
+        builder.HasOne(x => x.Nomination).WithMany().HasForeignKey(x => x.NominationId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(x => x.TaskId);
+        builder.HasIndex(x => x.NominationId);
+    }
+}
+
 public class AcrRecoveryEntryMap : IEntityTypeConfiguration<AcrRecoveryEntry>
 {
     public void Configure(EntityTypeBuilder<AcrRecoveryEntry> builder)

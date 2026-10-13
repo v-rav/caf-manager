@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IEngagementImportService, EngagementImportService>();
         services.AddScoped<INominationImportService, NominationImportService>();
         services.AddScoped<IAccountMasterImportService, AccountMasterImportService>();
+        services.AddScoped<IToolUsageImportService, ToolUsageImportService>();
         services.AddScoped<IDataRefreshService, DataRefreshService>();
         services.AddScoped<IExportService, Export.ExportService>();
         services.AddScoped<IBackupService, Backup.BackupService>();
