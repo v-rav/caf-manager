@@ -268,8 +268,9 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
 
     private static NominationStatusType MapStatus(string? migration, string? approval)
     {
+        // FDO-declined nominations are not proceeding — treat as Withdrawn (settled), not the synthetic Closed.
         if (string.Equals(approval, "Declined", StringComparison.OrdinalIgnoreCase))
-            return NominationStatusType.Closed;
+            return NominationStatusType.Withdrawn;
 
         var m = migration?.ToLowerInvariant() ?? string.Empty;
         if (m.Contains("executing") || m.Contains("finalize"))
