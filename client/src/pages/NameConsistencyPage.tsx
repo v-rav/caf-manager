@@ -1,11 +1,11 @@
-import { Badge, Button, Checkbox, Tab, TabList, Text, Tooltip } from '@fluentui/react-components'
+import { Badge, Button, Checkbox, Dropdown, Option, Tab, TabList, Text, Tooltip } from '@fluentui/react-components'
 import { ArrowClockwiseRegular, CheckmarkRegular } from '@fluentui/react-icons'
 import { useState } from 'react'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
 import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
-import type { NameSuggestion, PerformanceNameSuggestion } from '../types'
+import type { NameSuggestion, PerformanceNameSuggestion, OwnershipSuggestion } from '../types'
 
 const THRESHOLDS: Record<string, number> = {
   'Strict (0.95)': 0.95,
@@ -18,7 +18,7 @@ function scoreColor(s: number): 'success' | 'brand' | 'warning' {
 }
 
 export function NameConsistencyPage() {
-  const [tab, setTab] = useState<'accounts' | 'resources' | 'performance'>('accounts')
+  const [tab, setTab] = useState<'accounts' | 'resources' | 'performance' | 'ownership'>('accounts')
   const [strictness, setStrictness] = useState('Balanced (0.88)')
   const t = THRESHOLDS[strictness] ?? 0.88
   const { data, loading, error, reload } = useAsync<any>(
@@ -27,7 +27,9 @@ export function NameConsistencyPage() {
         ? api.nameConsistencyAccounts(t)
         : tab === 'resources'
           ? api.nameConsistencyResources(t)
-          : api.nameConsistencyPerformance(t),
+          : tab === 'performance'
+            ? api.nameConsistencyPerformance(t)
+            : api.nameConsistencyOwnership(t),
     [tab, strictness],
   )
 
@@ -47,6 +49,34 @@ export function NameConsistencyPage() {
       setPerfDone((d) => ({ ...d, [s.currentName]: res.message }))
     } finally {
       setPerfBusy(null)
+    }
+  }
+
+  // Ownership tab: per owner-name chosen candidate + apply state.
+  const [ownPick, setOwnPick] = useState<Record<string, number>>({})
+  const [ownDone, setOwnDone] = useState<Record<string, string>>({})
+  const [ownBusy, setOwnBusy] = useState<string | null>(null)
+  const pickOf = (s: OwnershipSuggestion) => ownPick[s.ownerName] ?? s.candidates[0]?.resourceId ?? 0
+  const addOwnAlias = async (s: OwnershipSuggestion) => {
+    const rid = pickOf(s)
+    if (!rid) return
+    setOwnBusy(s.ownerName)
+    try {
+      const res = await api.applyResourceAliases({ resourceId: rid, aliases: [s.ownerName] })
+      setOwnDone((d) => ({ ...d, [s.ownerName]: res.message }))
+    } finally {
+      setOwnBusy(null)
+    }
+  }
+  const fixRosterName = async (s: OwnershipSuggestion) => {
+    const rid = pickOf(s)
+    if (!rid) return
+    setOwnBusy(s.ownerName)
+    try {
+      const res = await api.renameResource({ resourceId: rid, newName: s.ownerName })
+      setOwnDone((d) => ({ ...d, [s.ownerName]: res.message }))
+    } finally {
+      setOwnBusy(null)
     }
   }
 
@@ -101,16 +131,17 @@ export function NameConsistencyPage() {
         </div>
       </div>
 
-      <TabList selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as 'accounts' | 'resources' | 'performance')}>
+      <TabList selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as 'accounts' | 'resources' | 'performance' | 'ownership')}>
         <Tab value="accounts">Accounts</Tab>
         <Tab value="resources">Resources</Tab>
         <Tab value="performance">Performance</Tab>
+        <Tab value="ownership">Ownership</Tab>
       </TabList>
 
       {loading && <Loading />}
       {error && <ErrorText error={error} />}
 
-      {data && !loading && tab !== 'performance' && data.groups && (
+      {data && !loading && tab !== 'performance' && tab !== 'ownership' && data.groups && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
             <KpiCard label="Suggested groups" value={data.groupCount} tone="brand" />
@@ -195,7 +226,7 @@ export function NameConsistencyPage() {
         </>
       )}
 
-      {data && !loading && tab === 'performance' && data.suggestions && (
+      {data && !loading && tab === 'performance' && data.suggestions && data.matchedCount === undefined && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
             <KpiCard label="Suggested corrections" value={data.count} tone="brand" />
@@ -256,6 +287,92 @@ export function NameConsistencyPage() {
               </div>
             </Panel>
           )}
+        </>
+      )}
+
+      {data && !loading && tab === 'ownership' && data.matchedCount !== undefined && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+            <KpiCard label="Unmatched owners" value={data.count} tone="warning" />
+            <KpiCard label="Already matched" value={data.matchedCount} tone="success" />
+          </div>
+
+          <Panel title="FDO ownership (SA / CFTL / PM) vs roster">
+            <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+              These ownership names don't exactly match a roster person. Verify the candidate by email, then
+              either add the FDO name as an alias, or fix the roster name to match. No roster candidate = add
+              the person on the Resource Hub.
+            </Text>
+            <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+              {data.suggestions.map((s: OwnershipSuggestion) => {
+                const msg = ownDone[s.ownerName]
+                const chosenId = pickOf(s)
+                const chosen = s.candidates.find((c) => c.resourceId === chosenId)
+                const noMatch = s.candidates.length === 0
+                return (
+                  <div
+                    key={s.ownerName}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', opacity: msg ? 0.6 : 1 }}
+                  >
+                    <Text weight="semibold" style={{ minWidth: 160 }}>
+                      {s.ownerName}
+                    </Text>
+                    {s.roles.map((r) => (
+                      <Badge key={r} appearance="tint" color="brand" size="small">
+                        {r}
+                      </Badge>
+                    ))}
+                    <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>
+                      {s.nominationCount} nom{s.nominationCount === 1 ? '' : 's'}
+                    </Text>
+                    <Text style={{ color: 'var(--colorNeutralForeground3)' }}>→</Text>
+                    {noMatch ? (
+                      <Badge appearance="tint" color="danger">
+                        No roster match — add on Resource Hub
+                      </Badge>
+                    ) : (
+                      <>
+                        <Dropdown
+                          size="small"
+                          style={{ minWidth: 260 }}
+                          value={chosen ? `${chosen.resourceName} · ${Math.round(chosen.score * 100)}%` : ''}
+                          selectedOptions={chosenId ? [String(chosenId)] : []}
+                          onOptionSelect={(_, d) => setOwnPick((p) => ({ ...p, [s.ownerName]: Number(d.optionValue) }))}
+                        >
+                          {s.candidates.map((c) => (
+                            <Option key={c.resourceId} value={String(c.resourceId)} text={c.resourceName}>
+                              {c.resourceName} · {c.email ?? 'no email'} · {Math.round(c.score * 100)}%
+                            </Option>
+                          ))}
+                        </Dropdown>
+                        <Tooltip content="Best-candidate similarity" relationship="label">
+                          <Badge appearance="tint" color={scoreColor(s.bestScore)} size="small">
+                            {Math.round(s.bestScore * 100)}%
+                          </Badge>
+                        </Tooltip>
+                      </>
+                    )}
+                    {msg ? (
+                      <Badge appearance="tint" color="success" icon={<CheckmarkRegular />}>
+                        {msg}
+                      </Badge>
+                    ) : (
+                      !noMatch && (
+                        <>
+                          <Button size="small" appearance="primary" disabled={ownBusy === s.ownerName} onClick={() => addOwnAlias(s)}>
+                            Add alias
+                          </Button>
+                          <Button size="small" appearance="secondary" disabled={ownBusy === s.ownerName} onClick={() => fixRosterName(s)}>
+                            Fix roster name
+                          </Button>
+                        </>
+                      )
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </Panel>
         </>
       )}
     </div>

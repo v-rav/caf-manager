@@ -36,6 +36,7 @@ import type {
   NameConsistencyReport,
   NameConsistencyApplyResult,
   PerformanceNameReport,
+  OwnershipReport,
   LeaveUpsert,
   LeaveWindow,
   Nomination,
@@ -120,6 +121,10 @@ export const api = {
     http.get<PerformanceNameReport>('/api/name-consistency/performance', { params: { threshold } }).then((r) => r.data),
   applyPerformanceName: (body: { currentName: string; rosterName: string }) =>
     http.post<NameConsistencyApplyResult>('/api/name-consistency/performance/apply', body).then((r) => r.data),
+  nameConsistencyOwnership: (threshold?: number) =>
+    http.get<OwnershipReport>('/api/name-consistency/ownership', { params: { threshold } }).then((r) => r.data),
+  renameResource: (body: { resourceId: number; newName: string }) =>
+    http.post<NameConsistencyApplyResult>('/api/name-consistency/resources/rename', body).then((r) => r.data),
 
   exportUrl: (
     what: 'resources' | 'capacity' | 'nominations' | 'performance' | 'summary' | 'analytics' | 'reconciliation',

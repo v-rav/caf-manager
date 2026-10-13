@@ -35,4 +35,12 @@ public class NameConsistencyController(INameConsistencyService service) : Contro
     [HttpPost("performance/apply")]
     public async Task<IActionResult> ApplyPerformance([FromBody] ApplyPerformanceNameRequest request, CancellationToken ct)
         => Ok(await service.ApplyPerformanceNameAsync(request, ct));
+
+    [HttpGet("ownership")]
+    public async Task<IActionResult> Ownership([FromQuery] double threshold, CancellationToken ct)
+        => Ok(await service.GetOwnershipSuggestionsAsync(threshold <= 0 ? 0.80 : threshold, ct));
+
+    [HttpPost("resources/rename")]
+    public async Task<IActionResult> RenameResource([FromBody] RenameResourceRequest request, CancellationToken ct)
+        => Ok(await service.RenameResourceAsync(request, ct));
 }

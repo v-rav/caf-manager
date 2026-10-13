@@ -25,4 +25,10 @@ public interface INameConsistencyService
 
     /// <summary>Renames every performance review carrying CurrentName to the roster RosterName.</summary>
     Task<NameConsistencyApplyResultDto> ApplyPerformanceNameAsync(ApplyPerformanceNameRequest request, CancellationToken ct = default);
+
+    /// <summary>Matches free-text FDO ownership names (SA/PM/CFTL) against the roster; flags gaps with candidate suggestions. Read-only.</summary>
+    Task<OwnershipReportDto> GetOwnershipSuggestionsAsync(double threshold, CancellationToken ct = default);
+
+    /// <summary>Renames a roster resource, preserving the old name as an alias.</summary>
+    Task<NameConsistencyApplyResultDto> RenameResourceAsync(RenameResourceRequest request, CancellationToken ct = default);
 }

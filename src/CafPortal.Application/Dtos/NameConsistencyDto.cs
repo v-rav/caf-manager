@@ -33,3 +33,16 @@ public record PerformanceNameSuggestionDto(
 public record PerformanceNameReportDto(double Threshold, int Count, IReadOnlyList<PerformanceNameSuggestionDto> Suggestions);
 
 public record ApplyPerformanceNameRequest(string CurrentName, string RosterName);
+
+/// <summary>A roster resource that may be the person behind a free-text FDO ownership name.</summary>
+public record OwnershipCandidateDto(int ResourceId, string ResourceName, string? Email, string? Psid, double Score);
+
+/// <summary>An FDO ownership name (SA/PM/CFTL) that has no exact roster match, with its best roster candidates.</summary>
+public record OwnershipSuggestionDto(
+    string OwnerName, IReadOnlyList<string> Roles, int NominationCount, double BestScore,
+    IReadOnlyList<OwnershipCandidateDto> Candidates);
+
+public record OwnershipReportDto(double Threshold, int Count, int MatchedCount, IReadOnlyList<OwnershipSuggestionDto> Suggestions);
+
+/// <summary>Rename a roster resource (keeps the old name as an alias).</summary>
+public record RenameResourceRequest(int ResourceId, string NewName);

@@ -438,6 +438,29 @@ export interface PerformanceNameReport {
   suggestions: PerformanceNameSuggestion[]
 }
 
+export interface OwnershipCandidate {
+  resourceId: number
+  resourceName: string
+  email?: string
+  psid?: string
+  score: number
+}
+
+export interface OwnershipSuggestion {
+  ownerName: string
+  roles: string[]
+  nominationCount: number
+  bestScore: number
+  candidates: OwnershipCandidate[]
+}
+
+export interface OwnershipReport {
+  threshold: number
+  count: number
+  matchedCount: number
+  suggestions: OwnershipSuggestion[]
+}
+
 export interface WaveLink {
   id: number
   waveType: string

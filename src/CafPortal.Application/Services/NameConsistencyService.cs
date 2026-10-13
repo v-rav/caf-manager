@@ -197,6 +197,102 @@ public class NameConsistencyService(IApplicationDbContext db) : INameConsistency
             rows.Count > 0 ? $"Renamed {rows.Count} review(s) to \"{roster}\"." : "No matching reviews.");
     }
 
+    public async Task<OwnershipReportDto> GetOwnershipSuggestionsAsync(double threshold, CancellationToken ct = default)
+    {
+        threshold = Clamp(threshold, 0.70);
+
+        // Distinct FDO ownership names (SA/PM/CFTL) with the roles they appear as and nomination counts.
+        var noms = await db.Nominations.AsNoTracking()
+            .Select(n => new { n.Id, n.SolutionArchitect, n.CftlPrimary, n.ProjectCoordinator })
+            .ToListAsync(ct);
+        var owners = new Dictionary<string, (HashSet<string> Roles, HashSet<int> Noms)>(StringComparer.OrdinalIgnoreCase);
+        void Add(string? name, string role, int nid)
+        {
+            var n = (name ?? string.Empty).Trim();
+            if (n.Length == 0) return;
+            if (!owners.TryGetValue(n, out var e)) owners[n] = e = (new(StringComparer.OrdinalIgnoreCase), new());
+            e.Roles.Add(role);
+            e.Noms.Add(nid);
+        }
+        foreach (var n in noms)
+        {
+            Add(n.SolutionArchitect, "SA", n.Id);
+            Add(n.CftlPrimary, "CFTL", n.Id);
+            Add(n.ProjectCoordinator, "PM", n.Id);
+        }
+
+        var resources = await db.Resources.AsNoTracking()
+            .Select(r => new { r.ResourceId, r.Name, r.Email, r.Psid, r.Aliases })
+            .ToListAsync(ct);
+        // Match targets: roster name + each alias, pointing back at the resource's primary name/email.
+        var targets = new List<(int Id, string Primary, string? Email, string? Psid, string Canon, string Seq)>();
+        var exact = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var r in resources)
+        {
+            var name = r.Name ?? string.Empty;
+            var canon = NameMatching.Canonicalize(name);
+            exact.Add(canon);
+            targets.Add((r.ResourceId, name, r.Email, r.Psid, canon, NameMatching.Sequence(name)));
+            foreach (var al in SplitAliases(r.Aliases))
+            {
+                var ac = NameMatching.Canonicalize(al);
+                exact.Add(ac);
+                targets.Add((r.ResourceId, name, r.Email, r.Psid, ac, NameMatching.Sequence(al)));
+            }
+        }
+
+        var suggestions = new List<OwnershipSuggestionDto>();
+        var matched = 0;
+        foreach (var kv in owners)
+        {
+            var canon = NameMatching.Canonicalize(kv.Key);
+            if (canon.Length == 0) continue;
+            if (exact.Contains(canon)) { matched++; continue; } // already resolves to a roster person
+
+            var seq = NameMatching.Sequence(kv.Key);
+            var byRes = new Dictionary<int, (string Name, string? Email, string? Psid, double Score)>();
+            foreach (var t in targets)
+            {
+                if (t.Canon.Length == 0) continue;
+                var s = NameMatching.Score(canon, seq, t.Canon, t.Seq);
+                if (!byRes.TryGetValue(t.Id, out var cur) || s > cur.Score) byRes[t.Id] = (t.Primary, t.Email, t.Psid, s);
+            }
+            var cands = byRes
+                .Select(b => new OwnershipCandidateDto(b.Key, b.Value.Name, b.Value.Email, b.Value.Psid, Math.Round(b.Value.Score, 3)))
+                .OrderByDescending(c => c.Score)
+                .Take(3)
+                .ToList();
+            suggestions.Add(new OwnershipSuggestionDto(
+                kv.Key, kv.Value.Roles.OrderBy(x => x).ToList(), kv.Value.Noms.Count,
+                cands.Count > 0 ? cands[0].Score : 0, cands));
+        }
+
+        suggestions = suggestions
+            .OrderByDescending(s => s.BestScore)
+            .ThenByDescending(s => s.NominationCount)
+            .Take(MaxGroups)
+            .ToList();
+        return new OwnershipReportDto(threshold, suggestions.Count, matched, suggestions);
+    }
+
+    public async Task<NameConsistencyApplyResultDto> RenameResourceAsync(RenameResourceRequest request, CancellationToken ct = default)
+    {
+        var newName = (request.NewName ?? string.Empty).Trim();
+        if (newName.Length == 0) return new NameConsistencyApplyResultDto(0, "New name is required.");
+        var r = await db.Resources.FirstOrDefaultAsync(x => x.ResourceId == request.ResourceId, ct);
+        if (r is null) return new NameConsistencyApplyResultDto(0, "Resource not found.");
+        var old = r.Name ?? string.Empty;
+        if (string.Equals(old, newName, StringComparison.OrdinalIgnoreCase)) return new NameConsistencyApplyResultDto(0, "Name unchanged.");
+
+        // Keep the old spelling as an alias so existing references still resolve.
+        var aliases = SplitAliases(r.Aliases);
+        if (old.Length > 0 && !aliases.Contains(old, StringComparer.OrdinalIgnoreCase)) aliases.Add(old);
+        r.Name = newName;
+        r.Aliases = aliases.Count > 0 ? string.Join("; ", aliases) : r.Aliases;
+        await db.SaveChangesAsync(ct);
+        return new NameConsistencyApplyResultDto(1, $"Renamed roster resource to \"{newName}\" (kept \"{old}\" as alias).");
+    }
+
     // ---- clustering ----
 
     private sealed record Node(int Id, string Name, string? Tpid, string Canon, string Seq, int Linked);
