@@ -172,6 +172,27 @@ export function ResourcesPage() {
               { key: 'grade', header: 'Grade', sortValue: (r) => r.grade ?? '', render: (r) => r.grade ?? '—' },
               { key: 'skill', header: 'Primary Skill', sortValue: (r) => r.primarySkill ?? '', render: (r) => r.primarySkill ?? '—' },
               {
+                key: 'aliases',
+                header: 'Aliases',
+                sortValue: (r) => r.aliases ?? '',
+                render: (r) =>
+                  r.aliases ? (
+                    <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
+                      {r.aliases
+                        .split(';')
+                        .map((a) => a.trim())
+                        .filter(Boolean)
+                        .map((a) => (
+                          <Badge key={a} appearance="tint" color="informative" size="small">
+                            {a}
+                          </Badge>
+                        ))}
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--colorNeutralForeground3)' }}>—</span>
+                  ),
+              },
+              {
                 key: 'active',
                 header: 'Active',
                 align: 'center',
