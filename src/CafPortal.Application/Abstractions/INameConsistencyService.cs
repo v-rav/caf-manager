@@ -31,4 +31,11 @@ public interface INameConsistencyService
 
     /// <summary>Renames a roster resource, preserving the old name as an alias.</summary>
     Task<NameConsistencyApplyResultDto> RenameResourceAsync(RenameResourceRequest request, CancellationToken ct = default);
+
+    /// <summary>
+    /// Auto-resolves each Approved+in-flight nomination's SA to a roster resource (exact / alias / high-confidence
+    /// fuzzy), learns the alias, and rebuilds the SA-derived assignment links so capacity follows the SA.
+    /// Idempotent and reassignment-safe. apply=false previews. (SA only; CFTL/PM excluded for now.)
+    /// </summary>
+    Task<OwnershipLinkResultDto> LinkSolutionArchitectsAsync(bool apply, CancellationToken ct = default);
 }

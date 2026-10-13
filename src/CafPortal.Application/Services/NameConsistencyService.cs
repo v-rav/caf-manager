@@ -2,6 +2,7 @@ using CafPortal.Application.Abstractions;
 using CafPortal.Application.Common;
 using CafPortal.Application.Dtos;
 using CafPortal.Domain.Entities;
+using CafPortal.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace CafPortal.Application.Services;
@@ -291,6 +292,115 @@ public class NameConsistencyService(IApplicationDbContext db) : INameConsistency
         r.Aliases = aliases.Count > 0 ? string.Join("; ", aliases) : r.Aliases;
         await db.SaveChangesAsync(ct);
         return new NameConsistencyApplyResultDto(1, $"Renamed roster resource to \"{newName}\" (kept \"{old}\" as alias).");
+    }
+
+    public async Task<OwnershipLinkResultDto> LinkSolutionArchitectsAsync(bool apply, CancellationToken ct = default)
+    {
+        const double autoThreshold = 0.95;
+        var settled = new[]
+        {
+            NominationStatusType.Closed, NominationStatusType.Completed,
+            NominationStatusType.Withdrawn, NominationStatusType.CustomerDeferred,
+        };
+
+        var resources = await db.Resources.AsNoTracking()
+            .Select(r => new { r.ResourceId, r.Name, r.Aliases })
+            .ToListAsync(ct);
+        // Exact canon → resource, plus fuzzy match targets (roster name + aliases).
+        var exactMap = new Dictionary<string, int>(StringComparer.Ordinal);
+        var targets = new List<(int Id, string Canon, string Seq)>();
+        foreach (var r in resources)
+        {
+            var name = r.Name ?? string.Empty;
+            var canon = NameMatching.Canonicalize(name);
+            if (canon.Length > 0) { exactMap.TryAdd(canon, r.ResourceId); targets.Add((r.ResourceId, canon, NameMatching.Sequence(name))); }
+            foreach (var al in SplitAliases(r.Aliases))
+            {
+                var ac = NameMatching.Canonicalize(al);
+                if (ac.Length > 0) { exactMap.TryAdd(ac, r.ResourceId); targets.Add((r.ResourceId, ac, NameMatching.Sequence(al))); }
+            }
+        }
+
+        var noms = await db.Nominations.AsNoTracking()
+            .Where(n => n.AccountId != null && n.ApprovalStatus == "Approved"
+                     && !settled.Contains(n.Status)
+                     && n.SolutionArchitect != null && n.SolutionArchitect != "")
+            .Select(n => new { n.Id, n.SolutionArchitect })
+            .ToListAsync(ct);
+
+        var toLink = new List<(int NomId, int ResId)>();
+        var aliasLearn = new Dictionary<int, HashSet<string>>();
+        var resolved = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase);
+        var unresolved = 0;
+        foreach (var n in noms)
+        {
+            var sa = n.SolutionArchitect!.Trim();
+            if (!resolved.TryGetValue(sa, out var rid))
+            {
+                var canon = NameMatching.Canonicalize(sa);
+                if (canon.Length == 0) rid = null;
+                else if (exactMap.TryGetValue(canon, out var ex)) rid = ex;
+                else
+                {
+                    var seq = NameMatching.Sequence(sa);
+                    int? best = null;
+                    double bestScore = 0;
+                    foreach (var tgt in targets)
+                    {
+                        var s = NameMatching.Score(canon, seq, tgt.Canon, tgt.Seq);
+                        if (s > bestScore) { bestScore = s; best = tgt.Id; }
+                    }
+                    if (best is int b && bestScore >= autoThreshold)
+                    {
+                        rid = b;
+                        if (!aliasLearn.TryGetValue(b, out var set)) aliasLearn[b] = set = new(StringComparer.OrdinalIgnoreCase);
+                        set.Add(sa); // remember so the next drop is an instant exact-alias hit
+                    }
+                    else rid = null;
+                }
+                resolved[sa] = rid;
+            }
+            if (rid is int res) toLink.Add((n.Id, res));
+            else unresolved++;
+        }
+
+        var distinctLinks = toLink.Distinct().ToList();
+        var created = 0;
+        if (apply)
+        {
+            // Rebuild SA-derived links so they always reflect the current FDO SA. Seed/Portal links are preserved.
+            await db.NominationResources.Where(nr => nr.Source == "SA").ExecuteDeleteAsync(ct);
+
+            // The (NominationId, ResourceId) pair is unique; don't duplicate a pair already linked (Seed/Portal).
+            var existingPairs = await db.NominationResources.AsNoTracking()
+                .Select(nr => new { nr.NominationId, nr.ResourceId })
+                .ToListAsync(ct);
+            var pairSet = existingPairs.Select(p => (p.NominationId, p.ResourceId)).ToHashSet();
+
+            foreach (var (nomId, resId) in distinctLinks)
+                if (pairSet.Add((nomId, resId)))
+                {
+                    db.NominationResources.Add(new NominationResource { NominationId = nomId, ResourceId = resId, Role = "Solution Architect", Source = "SA" });
+                    created++;
+                }
+
+            var learnIds = aliasLearn.Keys.ToList();
+            if (learnIds.Count > 0)
+            {
+                var learnResources = await db.Resources.Where(r => learnIds.Contains(r.ResourceId)).ToListAsync(ct);
+                foreach (var res in learnResources)
+                {
+                    var list = SplitAliases(res.Aliases);
+                    foreach (var nm in aliasLearn[res.ResourceId])
+                        if (!list.Contains(nm, StringComparer.OrdinalIgnoreCase) && !string.Equals(nm, res.Name, StringComparison.OrdinalIgnoreCase))
+                            list.Add(nm);
+                    res.Aliases = list.Count > 0 ? string.Join("; ", list) : res.Aliases;
+                }
+            }
+            await db.SaveChangesAsync(ct);
+        }
+
+        return new OwnershipLinkResultDto(apply, noms.Count, apply ? created : distinctLinks.Count, aliasLearn.Values.Sum(s => s.Count), unresolved);
     }
 
     // ---- clustering ----

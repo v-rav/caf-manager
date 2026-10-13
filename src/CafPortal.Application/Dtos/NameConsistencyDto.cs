@@ -46,3 +46,6 @@ public record OwnershipReportDto(double Threshold, int Count, int MatchedCount, 
 
 /// <summary>Rename a roster resource (keeps the old name as an alias).</summary>
 public record RenameResourceRequest(int ResourceId, string NewName);
+
+/// <summary>Outcome of auto-linking Approved+in-flight nominations' SA to roster resources (for capacity).</summary>
+public record OwnershipLinkResultDto(bool Applied, int InFlightConsidered, int Linked, int AliasesLearned, int Unresolved);

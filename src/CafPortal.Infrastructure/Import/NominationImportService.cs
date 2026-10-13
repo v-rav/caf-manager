@@ -188,11 +188,14 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
         await _db.SaveChangesAsync(ct);
 
         // Missing from this drop → soft-withdraw (preserve history + waves; never hard-delete).
+        // But never withdraw FDO-approved work that is actively executing — a partial drop would otherwise
+        // falsely withdraw live migrations (and drop them out of capacity). Those stay until FDO settles them.
         var withdrawnCount = 0;
         foreach (var n in existing.Where(n => !string.IsNullOrWhiteSpace(n.ExternalTaskId)
             && !seenTaskIds.Contains(n.ExternalTaskId!)
             && n.Status is not NominationStatusType.Withdrawn and not NominationStatusType.Closed
-            and not NominationStatusType.Completed and not NominationStatusType.CustomerDeferred))
+            and not NominationStatusType.Completed and not NominationStatusType.CustomerDeferred
+            && !IsActivelyExecuting(n)))
         {
             n.Status = NominationStatusType.Withdrawn;
             run.Changes.Add(new ImportChange { ExternalKey = n.ExternalTaskId, Label = n.AccountName, ChangeType = "Withdrawn" });
@@ -277,6 +280,13 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             return NominationStatusType.InProgress;
         return NominationStatusType.Open;
     }
+
+    // FDO-approved work in an active migration stage (no end date) must not be auto-withdrawn on absence.
+    private static bool IsActivelyExecuting(Nomination n) =>
+        string.Equals(n.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)
+        && n.ActualEndDate is null
+        && ((n.MigrationStatus?.Contains("executing", StringComparison.OrdinalIgnoreCase) ?? false)
+            || (n.MigrationStatus?.Contains("finalize", StringComparison.OrdinalIgnoreCase) ?? false));
 
     // Migration Status text → numeric stage (1–4) of the migration journey.
     private static int? StageIndex(string? migration)

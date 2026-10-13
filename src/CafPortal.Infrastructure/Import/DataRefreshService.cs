@@ -26,6 +26,7 @@ public class DataRefreshService(
     INominationImportService nominationImport,
     IAccountMasterImportService accountMasterImport,
     ICapacityRebuildService capacityRebuild,
+    INameConsistencyService nameConsistency,
     IAcrRecoveryService acrRecovery,
     IHostEnvironment env,
     IOptions<SourceFileOptions> sourceOptions,
@@ -38,6 +39,7 @@ public class DataRefreshService(
     private readonly INominationImportService _nominationImport = nominationImport;
     private readonly IAccountMasterImportService _accountMasterImport = accountMasterImport;
     private readonly ICapacityRebuildService _capacityRebuild = capacityRebuild;
+    private readonly INameConsistencyService _nameConsistency = nameConsistency;
     private readonly IAcrRecoveryService _acrRecovery = acrRecovery;
     private readonly IHostEnvironment _env = env;
     private readonly SourceFileOptions _sources = sourceOptions.Value;
@@ -106,7 +108,7 @@ public class DataRefreshService(
             result.AccountsImported = await _db.Accounts.CountAsync(ct);
             result.ResourceAccountLinks = await _db.ResourceAccounts.CountAsync(ct);
             await SyncStrategicFlagsAsync(ct);
-            result.CapacityRowsRebuilt = await _capacityRebuild.RebuildAllAsync(ct);
+            result.CapacityRowsRebuilt = await RelinkAndRebuildCapacityAsync(ct);
 
             // Book any ACR recovery whose FDO value rose above the frozen baseline this drop.
             var recovered = await _acrRecovery.ReconcileAsync(ct);
@@ -266,7 +268,7 @@ public class DataRefreshService(
             result.ResourceAccountLinks = await _db.ResourceAccounts.CountAsync(ct);
             result.AccountsImported = await _db.Accounts.CountAsync(ct);
             await SyncStrategicFlagsAsync(ct);
-            result.CapacityRowsRebuilt = await _capacityRebuild.RebuildAllAsync(ct);
+            result.CapacityRowsRebuilt = await RelinkAndRebuildCapacityAsync(ct);
             result.Messages.Add($"Resources imported from upload ({Path.GetFileName(fileName)}); capacity rebuilt.");
             result.Success = true;
         }
@@ -290,7 +292,7 @@ public class DataRefreshService(
         {
             await Persistence.SeedData.SeedAsync(_db, seedDemo: false, force: true, ct);
             await SyncStrategicFlagsAsync(ct);
-            result.CapacityRowsRebuilt = await _capacityRebuild.RebuildAllAsync(ct);
+            result.CapacityRowsRebuilt = await RelinkAndRebuildCapacityAsync(ct);
             result.Messages.Add("Re-seed complete (configuration + resource enrichments); capacity rebuilt.");
             result.Success = true;
         }
@@ -828,6 +830,13 @@ public class DataRefreshService(
             LeaveRecords = await _db.LeaveFacts.CountAsync(ct),
             PerformanceReviews = await _db.PerformanceReviews.CountAsync(ct),
         };
+    }
+
+    // SA-derived assignment links keep capacity following the FDO Solution Architect; refresh them before each rebuild.
+    private async Task<int> RelinkAndRebuildCapacityAsync(CancellationToken ct)
+    {
+        await _nameConsistency.LinkSolutionArchitectsAsync(true, ct);
+        return await _capacityRebuild.RebuildAllAsync(ct);
     }
 
     private async Task StampRefreshAsync(DateTimeOffset when, CancellationToken ct)

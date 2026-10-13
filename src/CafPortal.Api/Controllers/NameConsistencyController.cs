@@ -10,7 +10,7 @@ namespace CafPortal.Api.Controllers;
 [Route("api/name-consistency")]
 [Produces("application/json")]
 [Authorize(Roles = "Admin")]
-public class NameConsistencyController(INameConsistencyService service) : ControllerBase
+public class NameConsistencyController(INameConsistencyService service, ICapacityRebuildService capacityRebuild) : ControllerBase
 {
     [HttpGet("accounts")]
     public async Task<IActionResult> Accounts([FromQuery] double threshold, CancellationToken ct)
@@ -43,4 +43,12 @@ public class NameConsistencyController(INameConsistencyService service) : Contro
     [HttpPost("resources/rename")]
     public async Task<IActionResult> RenameResource([FromBody] RenameResourceRequest request, CancellationToken ct)
         => Ok(await service.RenameResourceAsync(request, ct));
+
+    [HttpPost("link-sa")]
+    public async Task<IActionResult> LinkSa([FromQuery] bool apply, CancellationToken ct)
+    {
+        var result = await service.LinkSolutionArchitectsAsync(apply, ct);
+        if (apply) await capacityRebuild.RebuildAllAsync(ct);
+        return Ok(result);
+    }
 }
