@@ -1,5 +1,6 @@
 using CafPortal.Application.Abstractions;
 using CafPortal.Application.Dtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CafPortal.Api.Controllers;
@@ -7,6 +8,7 @@ namespace CafPortal.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[Authorize(Roles = "Admin,Lead")]
 public class PerformanceController(IPerformanceReviewService performance) : ControllerBase
 {
     /// <summary>Latest review per person (region-filtered) with trend + training flags.</summary>

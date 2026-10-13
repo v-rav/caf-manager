@@ -1,15 +1,17 @@
 using CafPortal.Application.Abstractions;
 using CafPortal.Application.Common;
 using CafPortal.Domain.Entities.Configuration;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CafPortal.Api.Controllers;
 
-/// <summary>Exposes configuration metadata (regions, roles) that drives the UI without code changes.</summary>
+/// <summary>Configuration metadata that drives the UI without code changes. Read: any signed-in user; edits: Admin.</summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[Authorize]
 public class ConfigurationController(
     IApplicationDbContext db,
     ICapacityCalculationService capacity,
@@ -41,6 +43,7 @@ public class ConfigurationController(
     public async Task<IActionResult> GetCapacity(CancellationToken ct)
         => Ok(await BuildCapacityAsync(ct));
     [HttpPut("capacity")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateCapacity([FromBody] IReadOnlyList<RoleCapacityUpdate> updates, CancellationToken ct)
     {
         if (updates is null || updates.Count == 0)
@@ -111,6 +114,7 @@ public class ConfigurationController(
 
     /// <summary>Add a new account segment.</summary>
     [HttpPost("segments")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AddSegment([FromBody] SegmentUpsert input, CancellationToken ct)
     {
         var name = input.Name?.Trim();
@@ -128,6 +132,7 @@ public class ConfigurationController(
 
     /// <summary>Rename an existing account segment.</summary>
     [HttpPut("segments/{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateSegment(int id, [FromBody] SegmentUpsert input, CancellationToken ct)
     {
         var name = input.Name?.Trim();
@@ -153,6 +158,7 @@ public class ConfigurationController(
             .OrderBy(t => t.SortOrder).Select(t => new { t.Id, t.Name, t.SortOrder }).ToListAsync(ct));
 
     [HttpPost("tools")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AddTool([FromBody] VocabUpsert input, CancellationToken ct)
     {
         var name = input.Name?.Trim();
@@ -166,6 +172,7 @@ public class ConfigurationController(
     }
 
     [HttpPut("tools/{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateTool(int id, [FromBody] VocabUpsert input, CancellationToken ct)
     {
         var name = input.Name?.Trim();
@@ -185,6 +192,7 @@ public class ConfigurationController(
             .OrderBy(s => s.SortOrder).Select(s => new { s.Id, s.Name, s.SortOrder }).ToListAsync(ct));
 
     [HttpPost("skills")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AddSkill([FromBody] VocabUpsert input, CancellationToken ct)
     {
         var name = input.Name?.Trim();
@@ -198,6 +206,7 @@ public class ConfigurationController(
     }
 
     [HttpPut("skills/{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateSkill(int id, [FromBody] VocabUpsert input, CancellationToken ct)
     {
         var name = input.Name?.Trim();
@@ -223,6 +232,7 @@ public class ConfigurationController(
     }
 
     [HttpPost("lookups")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AddLookup([FromBody] LookupUpsert input, CancellationToken ct)
     {
         var category = input.Category?.Trim();
@@ -238,6 +248,7 @@ public class ConfigurationController(
     }
 
     [HttpPut("lookups/{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateLookup(int id, [FromBody] VocabUpsert input, CancellationToken ct)
     {
         var value = input.Name?.Trim();
@@ -252,6 +263,7 @@ public class ConfigurationController(
     }
 
     [HttpDelete("lookups/{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteLookup(int id, CancellationToken ct)
     {
         var lookup = await db.LookupValues.FirstOrDefaultAsync(l => l.Id == id, ct);
@@ -280,6 +292,7 @@ public class ConfigurationController(
     }
 
     [HttpPut("settings")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateSettings([FromBody] IReadOnlyList<SettingUpsert> updates, CancellationToken ct)
     {
         if (updates is null || updates.Count == 0) return BadRequest("No settings supplied.");
@@ -346,6 +359,7 @@ public class ConfigurationController(
     }
 
     [HttpPut("acr-targets")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpsertAcrTargets([FromBody] IReadOnlyList<AcrTargetUpsert> updates, CancellationToken ct)
     {
         if (updates is null) return BadRequest("No targets supplied.");

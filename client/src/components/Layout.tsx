@@ -414,9 +414,11 @@ export function Layout() {
                 <Option key={y} value={String(y)}>{fyLabel(y)}</Option>
               ))}
             </Dropdown>
-            <Button appearance="secondary" icon={<ArrowClockwiseRegular />} disabled={refreshing} onClick={runRefresh}>
-              {refreshing ? 'Refreshing…' : 'Refresh Data'}
-            </Button>
+            {user?.role !== 'Sa' && (
+              <Button appearance="secondary" icon={<ArrowClockwiseRegular />} disabled={refreshing} onClick={runRefresh}>
+                {refreshing ? 'Refreshing…' : 'Refresh Data'}
+              </Button>
+            )}
             {pageGuide && (
               <Popover withArrow>
                 <PopoverTrigger disableButtonEnhancement>

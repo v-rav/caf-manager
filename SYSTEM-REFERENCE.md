@@ -387,21 +387,25 @@ Loose 0.82. Clusters are built with union-find; groups whose members have confli
 
 ## 6. API catalog
 
-> **Auth:** cookie `caf.auth`. "Auth" = any signed-in user. Several controllers are still **anonymous** (⚠️ §10).
+> **Auth (6C-1):** cookie `caf.auth`. **Secure by default** — a fallback policy requires a signed-in user on every
+> endpoint; only `POST /api/auth/login`, `GET /health` and the SPA assets/`index.html` are anonymous. "Auth" = any
+> signed-in user (Admin/Lead/SA).
 
 | Area | Endpoints | Auth |
 |---|---|---|
-| Nominations | `GET /api/nominations?region&status` · `GET /vocab` · `PUT /{id}` · `POST/DELETE /{id}/waves[/{waveId}]` · `POST/DELETE /{id}/resources[/{rid}]` | anonymous ⚠️ |
+| Nominations | `GET /api/nominations?region&status` · `GET /vocab` · `PUT /{id}` · `POST/DELETE /{id}/waves[/{waveId}]` · `POST/DELETE /{id}/resources[/{rid}]` | Auth (SAs edit their nominations) |
 | Governance (per nomination) | `GET /api/nominations/{id}/governance` · `PUT …/items/{itemDefId}` · `POST …/blockers`, `…/blockers/{bid}/resolve` · `GET …/events` · `POST/DELETE …/milestones` · `POST/DELETE …/tool-usages` · `POST …/acr` (Admin/Lead) | Auth |
 | Governance board | `GET /api/governance/blockers|blocker-categories|blocker-owners|milestone-types|migration-tools|migration-activities|capability` | Auth |
-| Dashboard / analytics | `GET /api/dashboard/executive` · `GET /api/analytics` · `…/timeseries` · `…/timeseries/detail` · `…/attainment` · `…/acr-capture` | anonymous ⚠️ |
-| Capacity / leave / resources / accounts | `GET /api/capacity` · `/api/leave…` · `/api/resources…` · `/api/accounts…` (CRUD) | mostly anonymous ⚠️ |
-| ACR | `GET/PUT /api/acr/rates` · `POST /api/acr/estimate` · `/api/acr-recovery` (`GET`, `summary`, `flag`, `{id}/notify`, `{id}/close`, `reconcile`; mutations Admin/Lead) | mixed |
-| Imports / admin | `POST /api/admin/upload-auto` · `upload?kind=` · `refresh` · `seed` · `merge-accounts?apply` · `park-accounts?apply` · `unpark-accounts` · `import-offerings?apply` · `GET status` · `GET /api/imports`, `/{id}/changes` | anonymous ⚠️ |
+| Dashboard / analytics | `GET /api/dashboard/executive` · `GET /api/analytics` · `…/timeseries` · `…/timeseries/detail` · `…/attainment` · `…/acr-capture` | Auth |
+| Capacity / leave / resources / accounts | `GET /api/capacity` · `/api/leave…` (CRUD: Auth) · `/api/resources…`, `/api/accounts…` (create/update/assign: **Admin/Lead**; delete: **Admin**) | Auth reads |
+| Performance | `/api/performance` (read + create) | **Admin/Lead** |
+| Reconciliation | `GET` report/unmatched (**Admin/Lead**) · `POST seed|cleanup` (**Admin**) | as noted |
+| ACR | `GET /api/acr/rates` · `PUT rates` (**Admin**) · `POST /api/acr/estimate` · `/api/acr-recovery` (`GET`, `summary`; mutations Admin/Lead) | Auth |
+| Imports / admin | `POST refresh`, `upload`, `upload-auto` (**Admin/Lead**) · `seed`, `merge-accounts`, `park-accounts`, `unpark-accounts`, `import-offerings` (**Admin**) · `GET status` · `GET /api/imports`, `/{id}/changes` | as noted |
 | Name consistency | `GET accounts|resources|performance|ownership` · `POST accounts/apply`, `resources/apply`, `performance/apply`, `resources/rename`, `link-sa` | **Admin** |
-| Masters | `/api/configuration/*` (settings, lookups, segments, tools, skills, capacity) · `/api/gate-template/*` · `/api/capability-master/*` | mixed (masters: Admin) |
-| Users / access / backup | `/api/users*` (Admin) · `/api/access/pages` · `/api/auth/*` · `/api/backup/download|restore` (Admin) | as noted |
-| Exports | `GET /api/export/{resources|capacity|nominations|performance|summary|analytics|reconciliation}` | anonymous ⚠️ |
+| Masters | `/api/configuration/*` (reads Auth; every mutation **Admin**) · `/api/gate-template/*` (read Auth; edits Admin) · `/api/capability-master/*` · `/api/keyword-rules/*` (Admin) · `/api/status-rules` (read Auth; save Admin) | as noted |
+| Users / access / backup | `/api/users*` (Admin) · `/api/access/pages` (read Auth; save Admin) · `/api/auth/*` · `/api/backup/download|restore` (Admin) | as noted |
+| Exports | `GET /api/export/{resources|capacity|nominations|performance|summary|analytics|reconciliation}` | Auth |
 
 ---
 
@@ -575,7 +579,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | I8 | `StageTargetDays1..4` are editable but unused | Admins expect an effect | PV-01 decision: drive `StaleTier` from per-stage targets, or label them "informational" |
 | I9 | Two tool-usage stores: manual `NominationToolUsages` (5 rows) and imported `NominationToolUsageFacts` (61). The capability rollup now reads only the **imported** facts | Manual workspace captures don't show in the rollup | Union both sources (manual = authoritative activity; imported = inferred) |
 | I10 | Legacy tables still present: `Tools` (vs `MigrationTools`), `StrategicAccountConfigurations` (vs `Segment='Strategic'`), `RolePermissions` (not enforced), `ResourceAccounts` (not the capacity basis) | Confusion about which table is the source of truth | Mark as deprecated. Migrate or remove after review |
-| I11 | Many controllers are **anonymous** (nominations PUT, admin upload/refresh/merge/park, exports, analytics) | Anyone on the network can change data | `[Authorize]` everywhere. Admin/Lead on mutations and admin operations |
+| I11 | ~~Many controllers anonymous~~ — **fixed (6C-1)**: fallback policy requires sign-in everywhere; Admin/Lead on ingestion + master-data edits, Admin on destructive/config ops; verified anonymous → 401, SA on admin ops → 403 | — | Next: per-user ownership checks (e.g. SA may only edit own nominations) |
 | I12 | `ResourceAccounts` / `EngagementFacts` are wipe-and-rebuild | Safe today; fragile if they ever hold portal edits | Make them upsert-merge like nominations |
 | I13 | FY scope is client-side only. Exports and server analytics take their own `fy` | Totals can differ between the screen and the export when FY ≠ All | Push FY to the server as a standard `?fy=` filter |
 

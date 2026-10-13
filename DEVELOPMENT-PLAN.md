@@ -269,7 +269,7 @@ H1–H25, §10 inconsistencies I1–I13). **Progress metric:** items moving from
 
 | ID | Item | Fixes | Status |
 |----|------|-------|--------|
-| 6C-1 | `[Authorize]` on every controller; Admin/Lead on mutations + admin ops | I11 | ☐ |
+| 6C-1 | `[Authorize]` on every controller; Admin/Lead on mutations + admin ops | I11 | ✅ fallback policy (sign-in required by default; login/health/SPA anonymous); Admin/Lead: refresh/upload, resources/accounts edits, performance, reconciliation view; Admin: seed/merge/park/unpark/offerings, reconciliation fixes, all Configuration + ACR-rate edits, deletes. SA keeps nomination/workspace/leave/estimator. UI hides Refresh/Upload for SA |
 | 6C-2 | FY as a server-side `?fy=` filter on all nomination endpoints + exports | I13 | ☐ |
 | 6C-3 | Union manual `NominationToolUsages` + imported facts in the capability rollup | I9 | ☐ |
 | 6C-4 | Deprecate/retire legacy tables (`Tools`, `StrategicAccountConfigurations`, `RolePermissions`, `ResourceAccounts`) | I10 | ☐ |

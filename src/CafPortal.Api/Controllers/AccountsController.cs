@@ -1,5 +1,6 @@
 using CafPortal.Application.Abstractions;
 using CafPortal.Application.Dtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CafPortal.Api.Controllers;
@@ -7,6 +8,7 @@ namespace CafPortal.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[Authorize]
 public class AccountsController(IAccountService accounts) : ControllerBase
 {
     [HttpGet]
@@ -21,6 +23,7 @@ public class AccountsController(IAccountService accounts) : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Lead")]
     public async Task<IActionResult> Create([FromBody] AccountUpsertDto input, CancellationToken ct)
     {
         var created = await accounts.CreateAsync(input, ct);
@@ -28,6 +31,7 @@ public class AccountsController(IAccountService accounts) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin,Lead")]
     public async Task<IActionResult> Update(int id, [FromBody] AccountUpsertDto input, CancellationToken ct)
     {
         var updated = await accounts.UpdateAsync(id, input, ct);
@@ -35,6 +39,7 @@ public class AccountsController(IAccountService accounts) : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
         => await accounts.DeleteAsync(id, ct) ? NoContent() : NotFound();
 }

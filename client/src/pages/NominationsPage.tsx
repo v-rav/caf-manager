@@ -640,6 +640,7 @@ export function NominationsPage() {
                 <FilterSelect label="Classification" value={classFilter} options={['Strategic (all)', ...(vocab?.classifications ?? [])]} onChange={setClassFilter} minWidth={170} />
                 <FilterSelect label="Links" value={linkFilter} options={LINK_FILTERS} onChange={setLinkFilter} minWidth={150} />
                 <FilterSelect label="GHCP usage" value={ghcpFilter} options={['Reported', 'None']} onChange={setGhcpFilter} minWidth={140} />
+                {!isSa && (<>
                 <input
                   ref={fileInput}
                   type="file"
@@ -660,6 +661,7 @@ export function NominationsPage() {
                     {uploading ? 'Uploading…' : 'Upload'}
                   </Button>
                 </Tooltip>
+                </>)}
                 <Button
                   as="a"
                   href={api.exportUrl('nominations', region, {

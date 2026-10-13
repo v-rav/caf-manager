@@ -45,7 +45,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
         options.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
     });
-builder.Services.AddAuthorization();
+// Secure by default: every endpoint requires a signed-in user unless it opts out with [AllowAnonymous].
+builder.Services.AddAuthorization(options =>
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser().Build());
 
 var app = builder.Build();
 
@@ -74,17 +77,17 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors(SpaCors);
 
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Serve the built React SPA (wwwroot) as a single deployment package.
+// Serve the built React SPA (wwwroot) before auth so the login page itself can load.
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", utc = DateTimeOffset.UtcNow }));
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", utc = DateTimeOffset.UtcNow })).AllowAnonymous();
 
 // SPA fallback: non-API routes return index.html for client-side routing.
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html").AllowAnonymous();
 
 app.Run();

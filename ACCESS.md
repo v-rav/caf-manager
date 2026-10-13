@@ -45,8 +45,13 @@ Top-right **user menu → Change password**.
 - **Cookie auth** — an HttpOnly, same-origin session cookie (`caf.auth`), 8-hour sliding expiry. No tokens
   are stored in the browser/JS.
 - **Password storage** — PBKDF2 (SHA-256, 100k iterations, per-user salt). Plain passwords are never stored.
-- **API** — unauthenticated API calls return `401`; insufficient role returns `403`. `GET /api/auth/me`
-  returns the current user.
+- **API** — secure by default: every endpoint requires a signed-in user (fallback authorization policy);
+  only `POST /api/auth/login`, `GET /health` and the web app's static files are anonymous. Unauthenticated
+  calls return `401`; insufficient role returns `403`. `GET /api/auth/me` returns the current user.
+- **Role limits on the API** — **Admin/Lead**: data refresh & uploads, resource/account edits, performance,
+  reconciliation view. **Admin**: re-seed, account merge/park/unpark, offerings import, reconciliation fixes,
+  every Configuration/ACR-rate edit, deletes, users, backup/restore, rules. **SA**: their nominations, the SA
+  Workspace (gates/blockers/milestones/tool usage), leave, and the ACR estimator.
 - **Endpoints** — `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`,
   `POST /api/auth/change-password`; `GET/POST/PUT /api/users` and `POST /api/users/{id}/reset-password`
   (Admin only).
@@ -60,6 +65,6 @@ Top-right **user menu → Change password**.
   change it at next login.
 
 ## Not yet (planned)
-- API-level lockdown of the existing data endpoints (today the **UI** is gated; data endpoints are opened
-  up until the gate engine wires per-write `updated-by`).
+- Per-record ownership checks (e.g. an SA may only edit nominations they own) — today any signed-in user can
+  edit any nomination.
 - Password complexity policy / lockout after failed attempts.

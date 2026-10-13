@@ -243,8 +243,8 @@ import the **web app is the system of record**.
   (`ChangeTracker.Clear` + `CloseConnection` + `SqliteConnection.ClearAllPools()` + GC), swaps the
   file, deletes stale `-wal`/`-shm` sidecars, then runs `MigrateAsync` and returns post-restore
   counts. The validation connection uses `Pooling=false` so the temp file can be deleted; an invalid
-  zip returns **400** with a message. ⚠ Restore is **unauthenticated** (like the rest pre-Entra) and
-  `prerestore_*` copies accumulate in `App_Data` (gitignored) — add auth + a keep-last-N prune later.
+  zip returns **400** with a message. Restore is **Admin-only** (`[Authorize(Roles=Admin)]`) and
+  `prerestore_*` copies are pruned to the newest 5.
 
 ## Factory Operating System (P1–P5, shipped)
 The portal is now a gated, SA-owned **Factory Operating System** on top of the visibility portal. Blueprint:
@@ -256,8 +256,11 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   `PasswordHashing`, roles **Admin/Lead/SA**. `AppUser` entity; `AuthController` (login/logout/me/change-password),
   `UsersController` (`[Authorize(Roles="Admin")]` CRUD + reset). `ICurrentUser`/`CurrentUser` read claims.
   Frontend `auth.tsx` gates the router (`LoginPage`, forced password change). **Admin login `admin` / `admin@1234`.**
-  Default admin seeded idempotently in `DbInitializer`. `ACCESS.md` documents it. ⚠ Backup/restore still
-  unauthenticated.
+  Default admin seeded idempotently in `DbInitializer`. `ACCESS.md` documents it.
+  - **API is secure by default (6C-1)**: `Program.cs` sets a fallback policy requiring a signed-in user on every
+    endpoint; only `POST /api/auth/login`, `GET /health` and the SPA assets are anonymous (static files are served
+    before auth so the login page loads). New controllers are protected automatically — add `[Authorize(Roles=...)]`
+    for role limits (Admin/Lead for ingestion + master data, Admin for destructive/config ops). Liveness check: `GET /health`.
   - **Bulk-provision SA logins** — Configuration → Users & access → *Provision SA logins* (`POST /api/users/provision-sa`,
     Admin-only) creates an SA account for every distinct `Nomination.SolutionArchitect` (idempotent by display name;
     username slug from the name; temp password `Sa@12345`, forced change). Display name = exact SA name so the SA view matches.
