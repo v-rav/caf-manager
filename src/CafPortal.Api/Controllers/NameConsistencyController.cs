@@ -26,7 +26,11 @@ public class NameConsistencyController(INameConsistencyService service, ICapacit
 
     [HttpPost("resources/apply")]
     public async Task<IActionResult> ApplyResources([FromBody] ApplyResourceAliasRequest request, CancellationToken ct)
-        => Ok(await service.ApplyResourceAliasesAsync(request, ct));
+    {
+        var result = await service.ApplyResourceAliasesAsync(request, ct);
+        await ResyncCapacityAsync(ct); // a new alias can resolve an SA → keep capacity current
+        return Ok(result);
+    }
 
     [HttpGet("performance")]
     public async Task<IActionResult> Performance([FromQuery] double threshold, CancellationToken ct)
@@ -42,7 +46,18 @@ public class NameConsistencyController(INameConsistencyService service, ICapacit
 
     [HttpPost("resources/rename")]
     public async Task<IActionResult> RenameResource([FromBody] RenameResourceRequest request, CancellationToken ct)
-        => Ok(await service.RenameResourceAsync(request, ct));
+    {
+        var result = await service.RenameResourceAsync(request, ct);
+        await ResyncCapacityAsync(ct); // a rename can newly match an SA → keep capacity current
+        return Ok(result);
+    }
+
+    // Re-link SA → resource, then rebuild the capacity snapshot (so alias/rename edits take effect immediately).
+    private async Task ResyncCapacityAsync(CancellationToken ct)
+    {
+        await service.LinkSolutionArchitectsAsync(true, ct);
+        await capacityRebuild.RebuildAllAsync(ct);
+    }
 
     [HttpPost("link-sa")]
     public async Task<IActionResult> LinkSa([FromQuery] bool apply, CancellationToken ct)
