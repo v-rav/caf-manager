@@ -1,4 +1,4 @@
-import { Badge, Button, Combobox, Input, Option, SearchBox, Text, Textarea } from '@fluentui/react-components'
+import { Badge, Button, Combobox, Dropdown, Input, Option, SearchBox, Text, Textarea } from '@fluentui/react-components'
 import { AddRegular, ArrowDownloadRegular, HistoryRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
 import { api } from '../api'
@@ -28,6 +28,7 @@ export function PerformancePage() {
   const { region } = useRegion()
   const { data, loading, error, reload } = useAsync(() => api.performance(region), [region])
   const { data: roster } = useAsync(() => api.resources({}), [])
+  const { data: roles } = useAsync(() => api.roles(), [])
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounced(search)
 
@@ -56,6 +57,12 @@ export function PerformancePage() {
     ? Math.round((reviewed.reduce((s, r) => s + (r.score ?? 0), 0) / reviewed.length) * 100) / 100
     : 0
   const needTraining = (data ?? []).filter((r) => r.trainingNeeds.length > 0).length
+
+  // Existing reporting managers power the freeform Combobox (mix of pick-existing + type-new).
+  const managers = useMemo(
+    () => Array.from(new Set((data ?? []).map((r) => r.reportingManager).filter((m): m is string => !!m))).sort(),
+    [data],
+  )
 
   const patch = (p: Partial<PerformanceReviewUpsert>) => setForm((f) => (f ? { ...f, ...p } : f))
 
@@ -288,8 +295,35 @@ export function PerformancePage() {
               ) : null}
             </label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <Input style={{ flex: 1 }} placeholder="Role" value={form.role ?? ''} onChange={(_, d) => patch({ role: d.value })} />
-              <Input style={{ flex: 1 }} placeholder="Reporting Manager" value={form.reportingManager ?? ''} onChange={(_, d) => patch({ reportingManager: d.value })} />
+              <Dropdown
+                style={{ flex: 1 }}
+                placeholder="Role"
+                value={form.role ?? ''}
+                selectedOptions={form.role ? [form.role] : []}
+                onOptionSelect={(_, d) => patch({ role: d.optionValue ?? '' })}
+              >
+                {(roles ?? []).map((r) => (
+                  <Option key={r} value={r}>
+                    {r}
+                  </Option>
+                ))}
+              </Dropdown>
+              <Combobox
+                style={{ flex: 1 }}
+                placeholder="Reporting Manager"
+                value={form.reportingManager ?? ''}
+                onChange={(e) => patch({ reportingManager: e.target.value })}
+                onOptionSelect={(_, d) => patch({ reportingManager: d.optionValue ?? '' })}
+              >
+                {managers
+                  .filter((m) => !form.reportingManager || m.toLowerCase().includes((form.reportingManager ?? '').toLowerCase()))
+                  .slice(0, 50)
+                  .map((m) => (
+                    <Option key={m} value={m}>
+                      {m}
+                    </Option>
+                  ))}
+              </Combobox>
             </div>
             <Input type="date" value={form.reviewDate ?? today()} onChange={(_, d) => patch({ reviewDate: d.value })} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
