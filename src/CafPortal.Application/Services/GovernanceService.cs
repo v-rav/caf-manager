@@ -69,7 +69,8 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             nom.GhcpAdoptionLevel, nom.IsToolAttached,
             reported.SelectMany(r => ToolActivityClassifier.Classify(r.ToolName, r.Details)).Distinct().ToList());
 
-        return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, effectiveGhcp) with
+        return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, effectiveGhcp,
+            MsiModel.From(await SettingsCatalog.ReadAsync(_db, ct))) with
         {
             Classification = nom.Classification,
             Stage = StageNum(nom.MigrationStatus),
@@ -344,7 +345,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
 
     private static NominationGovernanceDto Build(int nominationId, string? account, string? tpid,
         List<GateDefinition> gates, IReadOnlyDictionary<int, NominationGateItem> state, List<NominationBlocker> openBlockers,
-        int? adoptionLevel)
+        int? adoptionLevel, MsiModel msiModel)
     {
         static string StatusName(GateItemStatus s) => s switch
         {
@@ -380,7 +381,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             var pct = counted.Count == 0 ? 0 : (int)Math.Round(100.0 * done / counted.Count);
             var status = counted.Count > 0 && done == counted.Count ? "Green" : done > 0 ? "InProgress" : "NotStarted";
 
-            var gk = MsiCalculator.GroupFor(g.Key);
+            var gk = MsiCalculator.NormalizeGroup(g.MsiGroup);
             var acc = grp[gk];
             grp[gk] = (acc.counted + counted.Count, acc.done + done);
 
@@ -401,9 +402,9 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         var compliance = totalWeight > 0 ? (int)Math.Round(weightedSum / totalWeight) : 0;
         currentGateKey ??= gateDtos.LastOrDefault()?.Key;
         int Pct((int counted, int done) x) => x.counted == 0 ? 0 : (int)Math.Round(100.0 * x.done / x.counted);
-        var msi = MsiCalculator.Compute(
+        var msi = MsiCalculator.Compute(msiModel,
             Pct(grp["Readiness"]), Pct(grp["Scope"]), Pct(grp["Delivery"]),
-            MsiCalculator.RiskHealth(openBlockers.Count, openBlockers.Any(b => b.ClockStopped)),
+            MsiCalculator.RiskHealth(msiModel, openBlockers.Count, openBlockers.Any(b => b.ClockStopped)),
             MsiCalculator.GhcpScore(adoptionLevel), Pct(grp["Signoff"]));
         return new NominationGovernanceDto(nominationId, account, tpid, null, currentGateKey, compliance, gateDtos, blockerDtos, msi.Score, msi.Band);
     }

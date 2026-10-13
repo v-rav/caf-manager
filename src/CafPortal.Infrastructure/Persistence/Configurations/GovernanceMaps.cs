@@ -13,6 +13,7 @@ public class GateDefinitionMap : IEntityTypeConfiguration<GateDefinition>
         builder.Property(x => x.Name).HasMaxLength(120).IsRequired();
         builder.Property(x => x.ExitCriteria).HasMaxLength(500);
         builder.Property(x => x.OwnerRole).HasMaxLength(20);
+        builder.Property(x => x.MsiGroup).HasMaxLength(20).IsRequired().HasDefaultValue("Readiness");
         builder.HasIndex(x => x.Key).IsUnique();
         builder.HasMany(x => x.Items).WithOne(i => i.Gate!).HasForeignKey(i => i.GateDefinitionId).OnDelete(DeleteBehavior.Cascade);
     }

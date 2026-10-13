@@ -846,6 +846,13 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("MsiGroup")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Readiness");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)

@@ -96,7 +96,8 @@ public static class GateTemplateSeed
         var order = 1;
         foreach (var (key, name, weight, exit, items) in Template)
         {
-            var gate = new GateDefinition { Key = key, Name = name, Weight = weight, ExitCriteria = exit, Order = order++, OwnerRole = "SA" };
+            var gate = new GateDefinition { Key = key, Name = name, Weight = weight, ExitCriteria = exit, Order = order++, OwnerRole = "SA",
+                MsiGroup = key switch { "G1" or "G2" or "G3" => "Readiness", "G4" or "G5" => "Scope", "G6" or "G7" => "Delivery", _ => "Signoff" } };
             var iOrder = 1;
             foreach (var (ikey, label, kind, sub, role, mandatory) in items)
                 gate.Items.Add(new GateItemDefinition { Key = ikey, Label = label, Kind = kind, SubStage = sub, ResponsibleRole = role, Mandatory = mandatory, Order = iOrder++ });

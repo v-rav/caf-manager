@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Domain.Entities.Governance;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,14 +7,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CafPortal.Api.Controllers;
 
-/// <summary>Admin CRUD for the governance gate template (gates + their checklist items).
-/// Deactivate hides a gate/item from new work; delete is blocked once any nomination has captured progress on it.</summary>
+/// <summary>Gate template (gates + checklist items). Read for any signed-in user (Help page shows live weights/MSI
+/// mapping); edits are Admin-only. Delete is blocked once any nomination has captured progress — deactivate instead.</summary>
 [ApiController]
 [Route("api/gate-template")]
 [Produces("application/json")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class GateTemplateController(IApplicationDbContext db) : ControllerBase
 {
+    /// <summary>MSI components a gate can feed (weights live in Configuration → Scoring models).</summary>
+    [HttpGet("msi-groups")]
+    public IActionResult GetMsiGroups() => Ok(MsiCalculator.GateGroups);
+
     [HttpGet("gates")]
     public async Task<IActionResult> GetGates(CancellationToken ct)
     {
@@ -23,7 +28,7 @@ public class GateTemplateController(IApplicationDbContext db) : ControllerBase
             .Select(x => x.GateItemDefinitionId).Distinct().ToListAsync(ct)).ToHashSet();
         return Ok(gates.Select(g => new
         {
-            g.Id, g.Key, g.Name, g.ExitCriteria, g.Order, g.Weight, g.OwnerRole, g.Active,
+            g.Id, g.Key, g.Name, g.ExitCriteria, g.Order, g.Weight, g.OwnerRole, g.MsiGroup, g.Active,
             InUse = g.Items.Any(i => usedItemIds.Contains(i.Id)),
             Items = g.Items.OrderBy(i => i.Order).Select(i => new
             {
@@ -35,6 +40,7 @@ public class GateTemplateController(IApplicationDbContext db) : ControllerBase
 
     // ---- Gates ----
     [HttpPost("gates")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateGate([FromBody] GateInput input, CancellationToken ct)
     {
         var key = input.Key?.Trim();
@@ -45,6 +51,7 @@ public class GateTemplateController(IApplicationDbContext db) : ControllerBase
         {
             Key = key, Name = input.Name?.Trim() ?? key, ExitCriteria = Trim(input.ExitCriteria),
             Weight = input.Weight ?? 10, OwnerRole = input.OwnerRole?.Trim() ?? "SA", Order = maxOrder + 1,
+            MsiGroup = MsiCalculator.NormalizeGroup(input.MsiGroup),
         };
         db.GateDefinitions.Add(gate);
         await db.SaveChangesAsync(ct);
@@ -52,6 +59,7 @@ public class GateTemplateController(IApplicationDbContext db) : ControllerBase
     }
 
     [HttpPut("gates/{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateGate(int id, [FromBody] GateInput input, CancellationToken ct)
     {
         var gate = await db.GateDefinitions.FirstOrDefaultAsync(g => g.Id == id, ct);
@@ -64,6 +72,7 @@ public class GateTemplateController(IApplicationDbContext db) : ControllerBase
         gate.ExitCriteria = Trim(input.ExitCriteria);
         if (input.Weight is int w) gate.Weight = w;
         if (!string.IsNullOrWhiteSpace(input.OwnerRole)) gate.OwnerRole = input.OwnerRole.Trim();
+        if (!string.IsNullOrWhiteSpace(input.MsiGroup)) gate.MsiGroup = MsiCalculator.NormalizeGroup(input.MsiGroup);
         if (input.Order is int o) gate.Order = o;
         if (input.Active is bool a) gate.Active = a;
         await db.SaveChangesAsync(ct);
@@ -71,6 +80,7 @@ public class GateTemplateController(IApplicationDbContext db) : ControllerBase
     }
 
     [HttpDelete("gates/{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteGate(int id, CancellationToken ct)
     {
         var gate = await db.GateDefinitions.Include(g => g.Items).FirstOrDefaultAsync(g => g.Id == id, ct);
@@ -86,6 +96,7 @@ public class GateTemplateController(IApplicationDbContext db) : ControllerBase
 
     // ---- Items ----
     [HttpPost("gates/{gateId:int}/items")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateItem(int gateId, [FromBody] ItemInput input, CancellationToken ct)
     {
         if (!await db.GateDefinitions.AnyAsync(g => g.Id == gateId, ct)) return NotFound();
@@ -105,6 +116,7 @@ public class GateTemplateController(IApplicationDbContext db) : ControllerBase
     }
 
     [HttpPut("items/{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateItem(int id, [FromBody] ItemInput input, CancellationToken ct)
     {
         var item = await db.GateItemDefinitions.FirstOrDefaultAsync(i => i.Id == id, ct);
@@ -124,6 +136,7 @@ public class GateTemplateController(IApplicationDbContext db) : ControllerBase
     }
 
     [HttpDelete("items/{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteItem(int id, CancellationToken ct)
     {
         var item = await db.GateItemDefinitions.FirstOrDefaultAsync(i => i.Id == id, ct);
@@ -146,6 +159,6 @@ public class GateTemplateController(IApplicationDbContext db) : ControllerBase
         return new string(chars).Replace("--", "-").Trim('-');
     }
 
-    public record GateInput(string? Key, string? Name, string? ExitCriteria, int? Weight, string? OwnerRole, int? Order, bool? Active);
+    public record GateInput(string? Key, string? Name, string? ExitCriteria, int? Weight, string? OwnerRole, int? Order, bool? Active, string? MsiGroup = null);
     public record ItemInput(string? Key, string? Label, string? Kind, string? SubStage, string? ResponsibleRole, bool? Mandatory, int? Order, bool? Active);
 }

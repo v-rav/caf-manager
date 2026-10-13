@@ -310,12 +310,13 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 
 ### 5.5 Migration Success Index (MSI)
 * **Where:** `MsiCalculator` (used identically by `NominationService` and `GovernanceService`).
-* **Gate group completion %** per MSI component: `done ÷ (items − N/A)` over active items. Gate → group (🔒
-  `GroupFor`): G1–G3 Readiness · G4–G5 Scope · G6–G7 Delivery · G8 Sign-off.
-* `Risk = max(0, 100 − 30 × openBlockers − (clockStopped ? 20 : 0))` (🔒)
+* **Gate group completion %** per MSI component: `done ÷ (items − N/A)` over active items. Gate → group (⚙️
+  `GateDefinition.MsiGroup`, Gate Template page; live: G1–G3 Readiness · G4–G5 Scope · G6–G7 Delivery · G8 Sign-off).
+* All weights, bands and risk penalties below are ⚙️ Configuration → **Scoring models** (`MsiModel` from `SettingsCatalog`).
+* `Risk = max(0, 100 − MsiRiskPerBlocker(30) × openBlockers − (clockStopped ? MsiRiskClockStop(20) : 0))`
 * `GHCP = round(level / 7 × 100)` using the **effective** level (`GhcpEffectiveLevel`, §5.10) — same in grid and workspace
-* `MSI = round(0.30·Readiness + 0.20·Scope + 0.20·Delivery + 0.10·Risk + 0.10·GHCP + 0.10·Sign-off)` (🔒 weights)
-* Band: **>80 Green · ≥60 Amber · <60 Red** (🔒).
+* `MSI = round(Σ weight% × component / 100)` with live weights 30 Readiness · 20 Scope · 20 Delivery · 10 Risk · 10 GHCP · 10 Sign-off (must total 100)
+* Band: **> MsiGreenAbove (80) Green · ≥ MsiAmberFrom (60) Amber · else Red**.
 
 ### 5.6 Readiness compliance % (workspace)
 * Gate-**weight**-weighted completion over all gates (weights ⚙️ via Gate Template). **Live weights:** G1 5 · G2 5 · G3 5 ·
@@ -375,7 +376,7 @@ Canonicalize (lower-case, strip diacritics, drop punctuation + corporate stopwor
 `max(TokenSetRatio, LevenshteinRatio)` with a single-token guard. Strictness presets: Strict 0.95 · Balanced 0.88 ·
 Loose 0.82. Clusters are built with union-find; groups whose members have conflicting TPIDs/PSIDs are never merged.
 
-### 5.14 Ownership Effectiveness (client-side, 🔒 all weights)
+### 5.14 Ownership Effectiveness (client-side formula; all weights/targets/bands ⚙️ Scoring models)
 * PM/CFTL (flow-led): `0.30·on-track + 0.30·momentum + 0.25·speed + 0.15·delivered-share`
 * SA (quality-led): `0.30·MSI + 0.25·on-track + 0.25·speed + 0.20·momentum`
 * `speed`: ≤45 d → 100, ≥180 d → 0 · `momentum`: ≤10 d → 100, ≥75 d → 0. Weights renormalise over the components that have data.
@@ -511,6 +512,8 @@ Client-side scorecard per PM/SA/CFTL (§5.14) · inline drill-down · CSV.
 |  Capacity: `DefaultCapacityLimit`, `Available/PartiallyUtilized/OverloadedThreshold` | ⚙️ | 5 · 40 / 80 / 100 | Capacity limit + status |
 |  Resourcing: `LeaveClashWindowDays`, `PerformanceTrainingThreshold` | ⚙️ | 30 · 4 | Leave clashes, training flag |
 |  Retention: `HistoryRetentionDays` | ⚙️ | 90 | Import history prune |
+| **Scoring models** (`SettingsCatalog` section *Scoring*) | Configuration → **Scoring models** (weight groups must total 100, bands ordered) | MSI 30/20/20/10/10/10 · bands 80/60 · risk 30/20 · Eff SA 30/25/25/20 · Eff PM/CFTL 30/30/25/15 · speed 45–180d · momentum 10–75d · tones 75/55 | MSI (grid + workspace), Ownership Effectiveness, Help page text |
+| Gate → MSI component (`GateDefinition.MsiGroup`) | Gate Template | G1–3 Readiness · G4–5 Scope · G6–7 Delivery · G8 Sign-off | MSI |
 | `Acr*` rates (10 keys) + `AcrContainerCoreFloor` | Configuration → ACR rates | see §5.11 | ACR estimator, capture, recovery |
 | `AcrTarget<FY>` | Configuration → ACR targets | `AcrTarget2027 = 50,000,000` | Attainment |
 | `CapacityConfigurations` | Configuration → role capacity | App Architect / App Engineer / DevOps / SME = 7 · Architect Lead = 5 | Capacity limit |
@@ -530,8 +533,8 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 |---|---|---|---|---|
 | H1 | ~~Stage keyword → 1–4~~ — now ⚙️ `KeywordRules` domain **Stage** (6B-1) | Classification Rules page | 6 rules | done |
 | H2 | "Settled" status set | `CapacityService`, `CapacityRebuildService`, `DashboardService`, `ReconciliationService`, `NameConsistencyService`, `AnalyticsService` (substring!), client `fy.tsx`, `EffectivenessPage` | Closed/Completed/Withdrawn/CustomerDeferred | **P1** |
-| H3 | MSI weights, band cutoffs, risk coefficients, GHCP divisor | `MsiCalculator` | 30/20/20/10/10/10 · 80/60 · −30/blocker, −20 clock-stop · /7 | **P1** |
-| H4 | Gate → MSI group mapping | `MsiCalculator.GroupFor` | by gate *key* G1..G8 | **P1** (breaks if gates are renamed or added) |
+| H3 | ~~MSI weights, band cutoffs, risk coefficients~~ — now ⚙️ Configuration → Scoring models (6B-2); GHCP divisor /7 stays (fixed 0–7 scale) | `SettingsCatalog` (Scoring) | 30/20/20/10/10/10 · 80/60 · 30/20 | done |
+| H4 | ~~Gate → MSI group by key~~ — now ⚙️ `GateDefinition.MsiGroup` (Gate Template page) (6B-3) | Gate Template | per gate | done |
 | H5 | ~~Strategic tier thresholds~~ — now ⚙️ (6A-4) | `SettingsCatalog` | 60/90/120 | done |
 | H6 | "Standard Factory" sentinel ⇒ not strategic | `NominationService`, `NominationDto`, `NominationsController` fallback, `LookupSeed` | string | P1 |
 | H7 | Withdraw guard / `MapStatus` / `IsActivelyExecuting` | `NominationImportService` | Declined→Withdrawn; executing/finalize | P1 |
@@ -543,7 +546,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | H13 | ~~Health keywords~~ — now ⚙️ domain **Health** (client colours use the server bucket) | Classification Rules page | 4 rules | done |
 | H14 | Capacity heat-colour mapping | `CapacityCalculationService.ResolveHeatColor` | Green/Amber/Red | P3 |
 | H15 | SA auto-link fuzzy threshold | `NameConsistencyService.LinkSolutionArchitectsAsync` | 0.95 | P2 |
-| H16 | Effectiveness weights + speed/momentum targets + tones | client `EffectivenessPage` | §5.14 | **P1** (leadership scorecard, client-only) |
+| H16 | ~~Effectiveness weights + speed/momentum targets + tones~~ — now ⚙️ Scoring models (6B-2); formula still client-side → 6B-6 | `EffectivenessPage` reads settings | §5.14 | P2 |
 | H17 | Recommended-action text + 42-day defer rule | client `NominationsPage.recommendedAction` | Day 3/5/10/42 | P2 |
 | H18 | Blocker suggestion regexes | client `NominationsPage.suggestBlocker` | access/LZ/approval/testing… | P3 |
 | H19 | Team assign roles + role eligibility keywords | client `NominationsPage` (`ASSIGN_ROLES`) | SA / Migration Engineer / DevOps | P3 |

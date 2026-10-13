@@ -275,7 +275,7 @@ public class ConfigurationController(
         {
             d.Key,
             Value = stored.TryGetValue(d.Key, out var v) ? v : d.Default,
-            d.Description, d.Label, d.Group, d.Min, d.Max, d.Integer, d.Default,
+            d.Description, d.Label, d.Group, d.Min, d.Max, d.Integer, d.Default, d.Section,
         }));
     }
 

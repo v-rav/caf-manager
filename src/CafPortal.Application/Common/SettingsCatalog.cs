@@ -1,8 +1,9 @@
 namespace CafPortal.Application.Common;
 
-/// <summary>One editable operational setting: its key, UI grouping/label, seeded default, and validation bounds.</summary>
+/// <summary>One editable setting: its key, UI section/group/label, seeded default, and validation bounds.</summary>
 public sealed record SettingDefinition(
-    string Key, string Group, string Label, string Default, double Min, double Max, bool Integer, string Description);
+    string Key, string Group, string Label, string Default, double Min, double Max, bool Integer, string Description,
+    string Section = "Operations");
 
 /// <summary>Catalog of every operational setting the portal reads. Single source for seeding, the Configuration UI,
 /// and save-time validation — adding a rule-driving value means adding it here, not hardcoding it in a service.</summary>
@@ -49,6 +50,36 @@ public static class SettingsCatalog
 
         new("HistoryRetentionDays", "Data retention", "Import history retention (days)", "90", 7, 3650, true,
             "Import run/change history older than this is pruned (nominations are never deleted)"),
+
+        // ---- Scoring models (section "Scoring") ----
+        new("MsiWeightReadiness", "MSI weights (%)", "Readiness", "30", 0, 100, true, "Gates mapped to Readiness", "Scoring"),
+        new("MsiWeightScope", "MSI weights (%)", "Scope", "20", 0, 100, true, "Gates mapped to Scope", "Scoring"),
+        new("MsiWeightDelivery", "MSI weights (%)", "Delivery", "20", 0, 100, true, "Gates mapped to Delivery", "Scoring"),
+        new("MsiWeightRisk", "MSI weights (%)", "Risk", "10", 0, 100, true, "Open blockers (see risk penalties)", "Scoring"),
+        new("MsiWeightGhcp", "MSI weights (%)", "GHCP", "10", 0, 100, true, "Effective GHCP adoption level ÷ 7", "Scoring"),
+        new("MsiWeightSignoff", "MSI weights (%)", "Sign-off", "10", 0, 100, true, "Gates mapped to Sign-off", "Scoring"),
+
+        new("MsiGreenAbove", "MSI bands & risk", "Green when score above", "80", 1, 100, true, "MSI strictly above this is Green", "Scoring"),
+        new("MsiAmberFrom", "MSI bands & risk", "Amber from score", "60", 0, 100, true, "MSI at or above this (and not Green) is Amber; below is Red", "Scoring"),
+        new("MsiRiskPerBlocker", "MSI bands & risk", "Risk penalty per open blocker", "30", 0, 100, true, "Points removed from Risk health per open blocker", "Scoring"),
+        new("MsiRiskClockStop", "MSI bands & risk", "Risk penalty when clock stopped", "20", 0, 100, true, "Extra points removed while any clock-stop blocker is open", "Scoring"),
+
+        new("EffSaMsi", "Effectiveness · SA weights (%)", "Avg MSI", "30", 0, 100, true, "Quality-led SA score", "Scoring"),
+        new("EffSaOnTrack", "Effectiveness · SA weights (%)", "On-track %", "25", 0, 100, true, "Active book without an SLA breach", "Scoring"),
+        new("EffSaSpeed", "Effectiveness · SA weights (%)", "Delivery speed", "25", 0, 100, true, "From average delivery days", "Scoring"),
+        new("EffSaMomentum", "Effectiveness · SA weights (%)", "Momentum", "20", 0, 100, true, "From average days-in-stage of the active book", "Scoring"),
+
+        new("EffFlowOnTrack", "Effectiveness · PM/CFTL weights (%)", "On-track %", "30", 0, 100, true, "Flow-led PM/CFTL score", "Scoring"),
+        new("EffFlowMomentum", "Effectiveness · PM/CFTL weights (%)", "Momentum", "30", 0, 100, true, "From average days-in-stage of the active book", "Scoring"),
+        new("EffFlowSpeed", "Effectiveness · PM/CFTL weights (%)", "Delivery speed", "25", 0, 100, true, "From average delivery days", "Scoring"),
+        new("EffFlowDelivered", "Effectiveness · PM/CFTL weights (%)", "Delivered share", "15", 0, 100, true, "Delivered ÷ assigned", "Scoring"),
+
+        new("EffSpeedBestDays", "Effectiveness · targets & bands", "Speed = 100 at or under (days)", "45", 1, 3650, true, "Average delivery days scoring full marks", "Scoring"),
+        new("EffSpeedWorstDays", "Effectiveness · targets & bands", "Speed = 0 at or over (days)", "180", 1, 3650, true, "Average delivery days scoring zero", "Scoring"),
+        new("EffMomentumBestDays", "Effectiveness · targets & bands", "Momentum = 100 at or under (days)", "10", 1, 3650, true, "Average days-in-stage scoring full marks", "Scoring"),
+        new("EffMomentumWorstDays", "Effectiveness · targets & bands", "Momentum = 0 at or over (days)", "75", 1, 3650, true, "Average days-in-stage scoring zero", "Scoring"),
+        new("EffGreenFrom", "Effectiveness · targets & bands", "Green from score", "75", 1, 100, true, "Effectiveness at or above is Green", "Scoring"),
+        new("EffAmberFrom", "Effectiveness · targets & bands", "Amber from score", "55", 0, 100, true, "Effectiveness at or above (and not Green) is Amber", "Scoring"),
     };
 
     private static readonly Dictionary<string, SettingDefinition> ByKey =
@@ -65,7 +96,15 @@ public static class SettingsCatalog
         ("StrategicAmberDays", "StrategicRedDays", true),
         ("AvailableThreshold", "PartiallyUtilizedThreshold", true),
         ("PartiallyUtilizedThreshold", "OverloadedThreshold", false),
+        ("MsiAmberFrom", "MsiGreenAbove", true),
+        ("EffSpeedBestDays", "EffSpeedWorstDays", true),
+        ("EffMomentumBestDays", "EffMomentumWorstDays", true),
+        ("EffAmberFrom", "EffGreenFrom", true),
     };
+
+    // Weight groups whose members must total exactly 100%.
+    private static readonly string[] SumTo100Groups =
+        { "MSI weights (%)", "Effectiveness · SA weights (%)", "Effectiveness · PM/CFTL weights (%)" };
 
     /// <summary>Validates a full candidate value set (current values merged with edits). Returns null when valid.</summary>
     public static string? Validate(IReadOnlyDictionary<string, double> values)
@@ -83,6 +122,26 @@ public static class SettingsCatalog
             if (strict ? lo >= hi : lo > hi)
                 return $"{Find(lower)!.Label} must be {(strict ? "less than" : "at most")} {Find(upper)!.Label}.";
         }
+        foreach (var group in SumTo100Groups)
+        {
+            var members = All.Where(d => d.Group == group).ToList();
+            if (!members.All(m => values.ContainsKey(m.Key))) continue;
+            var total = members.Sum(m => values[m.Key]);
+            if (Math.Abs(total - 100) > 0.001) return $"{group} must total 100 (currently {total}).";
+        }
         return null;
+    }
+
+    /// <summary>Every catalog value (stored value, else its default) as numbers — the input to the scoring models.</summary>
+    public static async Task<IReadOnlyDictionary<string, double>> ReadAsync(
+        Abstractions.IApplicationDbContext db, CancellationToken ct = default)
+    {
+        var keys = All.Select(d => d.Key).ToList();
+        var stored = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToDictionaryAsync(
+            db.ApplicationSettings.Where(s => keys.Contains(s.Key)), s => s.Key, s => s.Value, ct);
+        return All.ToDictionary(d => d.Key, d =>
+            double.TryParse(stored.GetValueOrDefault(d.Key) ?? d.Default, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var v)
+                ? v : double.Parse(d.Default, System.Globalization.CultureInfo.InvariantCulture));
     }
 }

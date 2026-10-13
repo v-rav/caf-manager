@@ -49,7 +49,7 @@ const CONTAINER_ACR_LINK = 'https://outlook.office.com/mail/MBX%3A7bb996a6-f854-
 type GuideConcept = { term: string; body: string }
 const GUIDE_CONCEPTS: GuideConcept[] = [
   { term: 'Stage vs Status', body: 'Stage (1–4) is which phase of the migration journey a nomination is in — Validating, Executing Pre-Requisites, Finalize Scope, Executing Migration. Status is whether that work is on track or blocked. They are tracked separately.' },
-  { term: 'MSI (Migration Success Index)', body: '0–100 composite: 30% readiness (gates 1–3) + 20% scope (4–5) + 20% delivery (6–7) + 10% risk (blockers) + 10% GHCP adoption + 10% sign-off (gate 8). Bands: Green > 80, Amber 60–80, Red < 60.' },
+  { term: 'MSI (Migration Success Index)', body: '' },
   { term: 'SLA & the clock', body: 'Stale tiers (Warn / Escalate / Defer) apply to execution stages 2–4 based on days in the current stage. Clock-stopping blockers subtract their open window, so a live clock-stop freezes the SLA — the grid shows a Paused chip.' },
   { term: 'Waves', body: 'A nomination may link to Security / DB / Landing-Zone / Dispatch waves. Wave links are informational, not required — no wave type is mandatory. FDO links refresh each drop; portal-added links are preserved.' },
   { term: 'ACR', body: 'Estimated annual Azure consumption a workload will drive once migrated, derived from cores-per-app and rate-per-core thumb-rules (see the FAQ below). Rates are admin-editable.' },
@@ -145,7 +145,7 @@ function UsageGuide() {
             <AccordionPanel>
               <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {GUIDE_CONCEPTS.map((c) => (
-                  <li key={c.term}><Text size={300}><b>{c.term}</b> — {c.body}</Text></li>
+                  <li key={c.term}><Text size={300}><b>{c.term}</b> — {c.term.startsWith('MSI') ? <MsiSummary /> : c.body}</Text></li>
                 ))}
               </ul>
             </AccordionPanel>
@@ -190,19 +190,34 @@ const STAGE_MAP: StageRow[] = [
   { stage: '4', phase: 'Executing Migration', gates: 'G6 Delivery Readiness · G7 Delivery Governance · G8 Closure' },
 ]
 
-type GateRow = { gate: string; weight: string; msi: string }
-const GATE_MAP: GateRow[] = [
-  { gate: 'G1 Discovery', weight: '5', msi: 'Readiness (30%)' },
-  { gate: 'G2 Prerequisites', weight: '5', msi: 'Readiness (30%)' },
-  { gate: 'G3 Assessment', weight: '5', msi: 'Readiness (30%)' },
-  { gate: 'G4 Scope', weight: '10', msi: 'Scope (20%)' },
-  { gate: 'G5 Architecture', weight: '10', msi: 'Scope (20%)' },
-  { gate: 'G6 Delivery Readiness', weight: '10', msi: 'Delivery (20%)' },
-  { gate: 'G7 Delivery Governance', weight: '50', msi: 'Delivery (20%)' },
-  { gate: 'G8 Closure', weight: '5', msi: 'Sign-off (10%)' },
-]
+// Live MSI model: gate → component mapping from the gate template, weights/bands from Configuration → Scoring models.
+function useMsiModel() {
+  const gates = useAsync(() => api.gateTemplate(), [])
+  const settings = useAsync(() => api.operationsSettings(), [])
+  const v = (k: string) => Number(settings.data?.find((s) => s.key === k)?.value ?? NaN)
+  const weightOf: Record<string, number> = {
+    Readiness: v('MsiWeightReadiness'), Scope: v('MsiWeightScope'), Delivery: v('MsiWeightDelivery'), Signoff: v('MsiWeightSignoff'),
+  }
+  const activeGates = (gates.data ?? []).filter((g) => g.active).sort((a, b) => a.order - b.order)
+  const gatesIn = (group: string) => activeGates.filter((g) => g.msiGroup === group).map((g) => g.key).join(', ') || '—'
+  return { ready: !!gates.data && !!settings.data, v, weightOf, activeGates, gatesIn }
+}
+
+function MsiSummary() {
+  const m = useMsiModel()
+  if (!m.ready) return <>loading…</>
+  return (
+    <>
+      0–100 composite: {m.weightOf.Readiness}% readiness ({m.gatesIn('Readiness')}) + {m.weightOf.Scope}% scope ({m.gatesIn('Scope')})
+      {' '}+ {m.weightOf.Delivery}% delivery ({m.gatesIn('Delivery')}) + {m.v('MsiWeightRisk')}% risk (blockers) + {m.v('MsiWeightGhcp')}% GHCP
+      adoption + {m.weightOf.Signoff}% sign-off ({m.gatesIn('Signoff')}). Bands: Green &gt; {m.v('MsiGreenAbove')}, Amber
+      {' '}{m.v('MsiAmberFrom')}–{m.v('MsiGreenAbove')}, Red &lt; {m.v('MsiAmberFrom')}.
+    </>
+  )
+}
 
 function StageGateMap() {
+  const m = useMsiModel()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 760 }}>
       <Text size={300}>
@@ -228,15 +243,17 @@ function StageGateMap() {
         <table style={{ borderCollapse: 'collapse', width: '100%' }}>
           <thead><tr><th style={cellHead}>Gate</th><th style={cellHead}>Weight</th><th style={cellHead}>MSI component</th></tr></thead>
           <tbody>
-            {GATE_MAP.map((r) => (
-              <tr key={r.gate}><td style={cellBody}>{r.gate}</td><td style={cellBody}>{r.weight}</td><td style={cellBody}>{r.msi}</td></tr>
+            {m.activeGates.map((g) => (
+              <tr key={g.key}><td style={cellBody}>{g.key} {g.name}</td><td style={cellBody}>{g.weight}</td><td style={cellBody}>{g.msiGroup} ({m.weightOf[g.msiGroup]}%)</td></tr>
             ))}
           </tbody>
         </table>
         <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginTop: 6 }}>
           Readiness % is the weight-weighted completion of a nomination’s gates. MSI adds two non-gate components — Risk
-          (10%, open blockers) and GHCP adoption (10%) — to the gate-derived Readiness / Scope / Delivery / Sign-off above.
-          Bands: Green &gt; 80 · Amber 60–80 · Red &lt; 60.
+          ({m.v('MsiWeightRisk')}%, open blockers) and GHCP adoption ({m.v('MsiWeightGhcp')}%) — to the gate-derived
+          Readiness / Scope / Delivery / Sign-off above. Bands: Green &gt; {m.v('MsiGreenAbove')} · Amber
+          {' '}{m.v('MsiAmberFrom')}–{m.v('MsiGreenAbove')} · Red &lt; {m.v('MsiAmberFrom')}. Weights and mapping are live
+          (Gate Template + Configuration → Scoring models).
         </Text>
       </div>
     </div>

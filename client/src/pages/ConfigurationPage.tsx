@@ -126,7 +126,10 @@ export function ConfigurationPage() {
       <LookupPanel title="Velocity impact" category="VelocityImpact" placeholder="New level" hint="Strategic-account velocity-impact levels." />
       <LookupPanel title="Milestone types" category="Milestone" placeholder="New milestone" hint="Dated app-factory events captured in the workspace (kick-off, runbook shared, actual migration start, …)." />
       <AcrRatesPanel />
-      <OperationsSettingsPanel />
+      <OperationsSettingsPanel section="Operations" title="Operational thresholds"
+        intro="Rule-driving values read by the server (SLA cadence, strategic tiers, capacity bands, retention). Ordered tiers are validated on save; capacity changes rebuild the capacity snapshot." />
+      <OperationsSettingsPanel section="Scoring" title="Scoring models"
+        intro="MSI and Ownership Effectiveness formulas. Each weight group must total 100%; band cut-offs must stay ordered. Changes apply on the next page load everywhere the score is shown." />
       <FiscalTargetsPanel />
     </div>
   )
@@ -576,8 +579,9 @@ function FiscalTargetsPanel() {
 }
 
 // Labels, grouping, bounds and order all come from the server SettingsCatalog — nothing hardcoded here.
-function OperationsSettingsPanel() {
-  const { data, loading, error, reload } = useAsync(() => api.operationsSettings(), [])
+function OperationsSettingsPanel({ section, title, intro }: { section: string; title: string; intro: string }) {
+  const { data: all, loading, error, reload } = useAsync(() => api.operationsSettings(), [])
+  const data = useMemo(() => all?.filter((s) => s.section === section), [all, section])
   const [edits, setEdits] = useState<Record<string, number>>({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -623,7 +627,7 @@ function OperationsSettingsPanel() {
 
   return (
     <Panel
-      title="Operational thresholds"
+      title={title}
       action={
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {saved && !dirty && (
@@ -644,8 +648,7 @@ function OperationsSettingsPanel() {
       ) : (
         <>
           <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
-            Rule-driving values read by the server (SLA cadence, strategic tiers, capacity bands, retention). Ordered
-            tiers are validated on save; capacity changes rebuild the capacity snapshot.
+            {intro}
           </Text>
           {saveError && (
             <Text size={300} style={{ color: 'var(--colorPaletteRedForeground1)', display: 'block', marginBottom: 12 }}>
@@ -654,7 +657,17 @@ function OperationsSettingsPanel() {
           )}
           {groups.map(([group, items]) => (
             <div key={group} style={{ marginBottom: 16 }}>
-              <Text weight="semibold" size={300} style={{ display: 'block', marginBottom: 8 }}>{group}</Text>
+              <Text weight="semibold" size={300} style={{ display: 'block', marginBottom: 8 }}>
+                {group}
+                {group.endsWith('(%)') && (() => {
+                  const total = items.reduce((t, s) => t + (edits[s.key] ?? Number(s.value)), 0)
+                  return (
+                    <Badge appearance="tint" color={total === 100 ? 'success' : 'danger'} size="small" style={{ marginLeft: 8 }}>
+                      total {total}%
+                    </Badge>
+                  )
+                })()}
+              </Text>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
                 {items.map((s) => (
                   <div

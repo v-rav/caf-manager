@@ -12,6 +12,8 @@ public class GateDefinition : AuditableEntity
     public int Order { get; set; }
     public int Weight { get; set; }                    // relative weight for Readiness Compliance %
     public string OwnerRole { get; set; } = "SA";
+    /// <summary>MSI component this gate feeds: Readiness · Scope · Delivery · Signoff.</summary>
+    public string MsiGroup { get; set; } = "Readiness";
     public bool Active { get; set; } = true;
 
     public ICollection<GateItemDefinition> Items { get; set; } = new List<GateItemDefinition>();

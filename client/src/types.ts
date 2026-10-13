@@ -580,6 +580,7 @@ export interface OperationsSetting {
   max: number
   integer: boolean
   default: string
+  section: string
 }
 
 export interface AcrTarget {
@@ -712,6 +713,7 @@ export interface GateTemplateGate {
   order: number
   weight: number
   ownerRole: string
+  msiGroup: string
   active: boolean
   inUse: boolean
   items: GateTemplateItem[]

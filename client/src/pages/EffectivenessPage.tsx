@@ -10,7 +10,7 @@ import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
 import { downloadCsv } from '../export'
-import type { Nomination } from '../types'
+import type { Nomination, OperationsSetting } from '../types'
 
 type Role = 'PM' | 'SA' | 'CFTL'
 
@@ -52,7 +52,12 @@ type ScoreRow = {
   effectiveness: number
 }
 
-function buildRows(noms: Nomination[], role: Role): ScoreRow[] {
+// Scoring model from Configuration → Scoring models (server SettingsCatalog); weights are percentages.
+type EffModel = Record<string, number>
+const effModelFrom = (settings: OperationsSetting[]): EffModel =>
+  Object.fromEntries(settings.filter((s) => s.key.startsWith('Eff')).map((s) => [s.key, Number(s.value)]))
+
+function buildRows(noms: Nomination[], role: Role, m: EffModel): ScoreRow[] {
   const groups = new Map<string, Nomination[]>()
   for (const n of noms) {
     const o = ownerOf(n, role)
@@ -87,19 +92,19 @@ function buildRows(noms: Nomination[], role: Role): ScoreRow[] {
     // instead — on-track health, momentum (days-in-stage), delivery speed, and delivered share.
     // Weights renormalise over whatever components have data (success rate is intentionally not
     // used: with almost no withdrawn/deferred outcomes it sits at ~100% for everyone).
-    const sp = speedScore(avgDeliveryDays)
-    const mo = momentumScore(avgActiveAge)
+    const sp = speedScore(avgDeliveryDays, m)
+    const mo = momentumScore(avgActiveAge, m)
     const parts: { w: number; v: number }[] = []
     if (role === 'SA') {
-      parts.push({ w: 0.3, v: avgMsi })
-      if (onTrackPct != null) parts.push({ w: 0.25, v: onTrackPct })
-      if (sp != null) parts.push({ w: 0.25, v: sp })
-      if (mo != null) parts.push({ w: 0.2, v: mo })
+      parts.push({ w: m.EffSaMsi, v: avgMsi })
+      if (onTrackPct != null) parts.push({ w: m.EffSaOnTrack, v: onTrackPct })
+      if (sp != null) parts.push({ w: m.EffSaSpeed, v: sp })
+      if (mo != null) parts.push({ w: m.EffSaMomentum, v: mo })
     } else {
-      if (onTrackPct != null) parts.push({ w: 0.3, v: onTrackPct })
-      if (mo != null) parts.push({ w: 0.3, v: mo })
-      if (sp != null) parts.push({ w: 0.25, v: sp })
-      parts.push({ w: 0.15, v: deliveredPct })
+      if (onTrackPct != null) parts.push({ w: m.EffFlowOnTrack, v: onTrackPct })
+      if (mo != null) parts.push({ w: m.EffFlowMomentum, v: mo })
+      if (sp != null) parts.push({ w: m.EffFlowSpeed, v: sp })
+      parts.push({ w: m.EffFlowDelivered, v: deliveredPct })
     }
     const wsum = parts.reduce((s, p) => s + p.w, 0) || 1
     const effectiveness = Math.round(parts.reduce((s, p) => s + p.w * p.v, 0) / wsum)
@@ -111,18 +116,20 @@ function buildRows(noms: Nomination[], role: Role): ScoreRow[] {
 
 const money = (v: number) => (v ? '$' + Math.round(v).toLocaleString() : '—')
 const pct = (v: number | null) => (v == null ? '—' : `${v}%`)
-const effTone = (v: number): 'success' | 'warning' | 'danger' => (v >= 75 ? 'success' : v >= 55 ? 'warning' : 'danger')
+const effTone = (v: number, m: EffModel): 'success' | 'warning' | 'danger' =>
+  v >= m.EffGreenFrom ? 'success' : v >= m.EffAmberFrom ? 'warning' : 'danger'
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)))
-// Delivery-speed sub-score from average delivery days: ≤45 days → 100, ≥180 → 0.
-const speedScore = (days: number | null) => (days == null ? null : clamp(((180 - days) / (180 - 45)) * 100))
-// Momentum sub-score from average days-in-stage of the active book: ≤10 → 100, ≥75 → 0.
-const momentumScore = (age: number | null) => (age == null ? null : clamp(((75 - age) / (75 - 10)) * 100))
+// Linear sub-score: 100 at/under `best` days, 0 at/over `worst` days.
+const linear = (days: number | null, best: number, worst: number) =>
+  days == null ? null : clamp(((worst - days) / (worst - best)) * 100)
+const speedScore = (days: number | null, m: EffModel) => linear(days, m.EffSpeedBestDays, m.EffSpeedWorstDays)
+const momentumScore = (age: number | null, m: EffModel) => linear(age, m.EffMomentumBestDays, m.EffMomentumWorstDays)
 
 // Human-readable breakdown of the composite for the tooltip (role decides the weighting model).
-function effExplain(r: ScoreRow, role: Role): string {
-  const sp = speedScore(r.avgDeliveryDays)
-  const mo = momentumScore(r.avgActiveAge)
+function effExplain(r: ScoreRow, role: Role, m: EffModel): string {
+  const sp = speedScore(r.avgDeliveryDays, m)
+  const mo = momentumScore(r.avgActiveAge, m)
   const bits: string[] = []
   if (role === 'SA') {
     bits.push(`MSI ${r.avgMsi}`)
@@ -163,6 +170,8 @@ export function EffectivenessPage() {
   const { region } = useRegion()
   const { fy } = useFy()
   const noms = useAsync(() => api.nominations(region), [region])
+  const settings = useAsync(() => api.operationsSettings(), [])
+  const model = useMemo(() => effModelFrom(settings.data ?? []), [settings.data])
   const [role, setRole] = useState<Role>('PM')
   const [selected, setSelected] = useState<string | null>(null)
   useEffect(() => setSelected(null), [role]) // a role switch clears the open owner
@@ -174,7 +183,7 @@ export function EffectivenessPage() {
     () => (noms.data ?? []).filter((n) => nominationInFy(n, fy) && n.status !== 'Closed'),
     [noms.data, fy],
   )
-  const rows = useMemo(() => buildRows(scoped, role), [scoped, role])
+  const rows = useMemo(() => buildRows(scoped, role, model), [scoped, role, model])
 
   // The selected owner's row + their nominations (in the current role), for the inline drill-down.
   const detail = useMemo(() => {
@@ -224,7 +233,7 @@ export function EffectivenessPage() {
       rows,
     )
 
-  if (noms.loading) return <Loading />
+  if (noms.loading || settings.loading) return <Loading />
   if (noms.error) return <ErrorText error={noms.error} onRetry={noms.reload} />
 
   const columns: Column<ScoreRow>[] = [
@@ -277,8 +286,8 @@ export function EffectivenessPage() {
       align: 'center',
       sortValue: (r) => r.effectiveness,
       render: (r) => (
-        <Tooltip relationship="description" content={effExplain(r, role)}>
-          <Badge appearance="filled" color={effTone(r.effectiveness)}>{r.effectiveness}</Badge>
+        <Tooltip relationship="description" content={effExplain(r, role, model)}>
+          <Badge appearance="filled" color={effTone(r.effectiveness, model)}>{r.effectiveness}</Badge>
         </Tooltip>
       ),
     },
@@ -366,7 +375,7 @@ export function EffectivenessPage() {
             <Stat label="SLA breaches" value={detail.row.slaBreaches} />
             <Stat label="Avg MSI" value={detail.row.avgMsi} />
             <Stat label="ACR delivered" value={money(detail.row.acrDelivered)} />
-            <Stat label="Effectiveness" value={<Badge appearance="filled" color={effTone(detail.row.effectiveness)}>{detail.row.effectiveness}</Badge>} />
+            <Stat label="Effectiveness" value={<Badge appearance="filled" color={effTone(detail.row.effectiveness, model)}>{detail.row.effectiveness}</Badge>} />
           </div>
           <DataTable<Nomination>
             ariaLabel={`${selected} nominations`}

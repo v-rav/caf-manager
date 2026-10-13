@@ -292,9 +292,11 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   page at `/adoption` (licensed L4+ · awaiting L1–3 · used% · tool-attached% · reported usage (FDO) · 0–7 distribution ·
   by-region reported% · reported tool usage · capability utilization · Upload). Levels shown are the **effective** level
   (`GhcpEffectiveLevel`). Dashboard, Effectiveness and MSI (grid + workspace) use the same effective level (Phase 6A-3).
-- **MSI (P5a)** — **Migration Success Index** (`MsiCalculator` in `Application/Common`): `30% Readiness (G1–3) +
-  20% Scope (G4–5) + 20% Delivery (G6–7) + 10% Risk (blockers) + 10% GHCP (level/7) + 10% Sign-off (G8)`, bands
-  Green >80 / Amber 60–80 / Red <60. Grid **MSI** column (component tooltip) + workspace header card; computed in
+- **MSI (P5a)** — **Migration Success Index** (`MsiCalculator` + `MsiModel` in `Application/Common`): `30% Readiness +
+  20% Scope + 20% Delivery + 10% Risk (blockers) + 10% GHCP (effective level/7) + 10% Sign-off`, bands
+  Green >80 / Amber 60–80 / Red <60 — **all weights, bands and risk penalties are settings** (Configuration → **Scoring
+  models**), and each gate's component is `GateDefinition.MsiGroup` (Gate Template). Ownership Effectiveness weights,
+  speed/momentum targets and tones live in the same Scoring models panel. Grid **MSI** column (component tooltip) + workspace header card; computed in
   both `NominationService` (grid) and `GovernanceService` (workspace) so they agree.
 - **Migration Flow (P5b)** — `/flow` (`FlowPage`): funnel conversion/drop-off across the journey + bottleneck
   analytics (in-flight by stage × age, blockers by category, SA workload, by migration type). Derived client-side.

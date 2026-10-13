@@ -71,6 +71,7 @@ export function GateTemplatePage() {
               action={
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <Badge appearance="tint" color="brand">weight {g.weight}%</Badge>
+                  <Badge appearance="outline">MSI · {g.msiGroup}</Badge>
                   <Badge appearance="tint" color={g.active ? 'success' : 'danger'}>{g.active ? 'active' : 'inactive'}</Badge>
                   <Button size="small" appearance="subtle" icon={<EditRegular />} onClick={() => setEditGate(g)}>Edit gate</Button>
                   <Button size="small" appearance="subtle" icon={<DeleteRegular />} onClick={() => delGate(g)} aria-label="Delete gate" />
@@ -136,13 +137,15 @@ function EditGateModal({ gate, onClose, onSaved }: { gate: GateTemplateGate; onC
   const [exit, setExit] = useState(gate.exitCriteria ?? '')
   const [weight, setWeight] = useState(String(gate.weight))
   const [ownerRole, setOwnerRole] = useState(gate.ownerRole)
+  const [msiGroup, setMsiGroup] = useState(gate.msiGroup)
+  const { data: msiGroups } = useAsync(() => api.msiGroups(), [])
   const [order, setOrder] = useState(String(gate.order))
   const [active, setActive] = useState(gate.active)
   const [busy, setBusy] = useState(false)
   const save = async () => {
     setBusy(true)
     try {
-      await api.updateGate(gate.id, { key: key.trim(), name: name.trim(), exitCriteria: exit.trim() || null, weight: Number(weight) || 0, ownerRole: ownerRole.trim() || 'SA', order: Number(order) || gate.order, active })
+      await api.updateGate(gate.id, { key: key.trim(), name: name.trim(), exitCriteria: exit.trim() || null, weight: Number(weight) || 0, ownerRole: ownerRole.trim() || 'SA', msiGroup, order: Number(order) || gate.order, active })
       onSaved()
     } finally { setBusy(false) }
   }
@@ -157,6 +160,12 @@ function EditGateModal({ gate, onClose, onSaved }: { gate: GateTemplateGate; onC
         <div style={{ width: 100 }}><Text size={200}>Weight %</Text><Input type="number" value={weight} onChange={(_, d) => setWeight(d.value)} style={{ width: '100%' }} /></div>
         <div style={{ width: 100 }}><Text size={200}>Order</Text><Input type="number" value={order} onChange={(_, d) => setOrder(d.value)} style={{ width: '100%' }} /></div>
         <div style={{ flex: 1 }}><Text size={200}>Owner role</Text><Input value={ownerRole} onChange={(_, d) => setOwnerRole(d.value)} style={{ width: '100%' }} /></div>
+      </div>
+      <div>
+        <Text size={200}>MSI component (this gate's completion feeds it)</Text>
+        <Dropdown value={msiGroup} selectedOptions={[msiGroup]} onOptionSelect={(_, d) => setMsiGroup(d.optionValue ?? msiGroup)} style={{ width: '100%' }}>
+          {(msiGroups ?? [msiGroup]).map((g) => <Option key={g} value={g}>{g}</Option>)}
+        </Dropdown>
       </div>
       <Checkbox checked={active} onChange={(_, d) => setActive(!!d.checked)} label="Active" />
     </Modal>

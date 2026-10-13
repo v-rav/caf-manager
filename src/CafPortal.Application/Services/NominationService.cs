@@ -62,6 +62,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
             g => g.SelectMany(x => ToolActivityClassifier.Classify(x.ToolName, x.Details)).Distinct().ToList());
 
         // Gate state for MSI: which item-defs belong to each MSI group, and each nomination's item statuses.
+        var msiModel = MsiModel.From(await SettingsCatalog.ReadAsync(_db, ct));
         var gateDefs = await _db.GateDefinitions.AsNoTracking()
             .Where(g => g.Active)
             .Include(g => g.Items.Where(i => i.Active))
@@ -72,7 +73,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
         };
         foreach (var g in gateDefs)
             foreach (var i in g.Items)
-                groupDefs[MsiCalculator.GroupFor(g.Key)].Add(i.Id);
+                groupDefs[MsiCalculator.NormalizeGroup(g.MsiGroup)].Add(i.Id);
         var gateState = await _db.NominationGateItems.AsNoTracking()
             .Where(x => nomIds.Contains(x.NominationId))
             .Select(x => new { x.NominationId, x.GateItemDefinitionId, x.Status })
@@ -133,9 +134,9 @@ public class NominationService(IApplicationDbContext db) : INominationService
 
             var openBlk = openCounts.TryGetValue(n.Id, out var oc) ? oc : 0;
             var st = stateByNom.TryGetValue(n.Id, out var s2) ? s2 : null;
-            var msi = MsiCalculator.Compute(
+            var msi = MsiCalculator.Compute(msiModel,
                 GroupPct(st, groupDefs["Readiness"]), GroupPct(st, groupDefs["Scope"]), GroupPct(st, groupDefs["Delivery"]),
-                MsiCalculator.RiskHealth(openBlk, clockStopped), MsiCalculator.GhcpScore(effectiveGhcp),
+                MsiCalculator.RiskHealth(msiModel, openBlk, clockStopped), MsiCalculator.GhcpScore(effectiveGhcp),
                 GroupPct(st, groupDefs["Signoff"]));
             // Wave links are informational (no required type); surface presence so empty records can be found.
             var waveTypes = n.WaveLinks.Select(w => w.WaveType).ToHashSet();

@@ -331,7 +331,8 @@ export const api = {
     http.get<GateTemplateGate[]>('/api/gate-template/gates').then((r) => r.data),
   createGate: (body: { key: string; name: string; exitCriteria?: string | null; weight?: number; ownerRole?: string }) =>
     http.post('/api/gate-template/gates', body).then((r) => r.data),
-  updateGate: (id: number, body: { key: string; name: string; exitCriteria?: string | null; weight?: number; ownerRole?: string; order?: number; active?: boolean }) =>
+  msiGroups: () => http.get<string[]>('/api/gate-template/msi-groups').then((r) => r.data),
+  updateGate: (id: number, body: { key: string; name: string; exitCriteria?: string | null; weight?: number; ownerRole?: string; msiGroup?: string; order?: number; active?: boolean }) =>
     http.put(`/api/gate-template/gates/${id}`, body).then((r) => r.data),
   deleteGate: (id: number) =>
     http.delete(`/api/gate-template/gates/${id}`).then((r) => r.data),
