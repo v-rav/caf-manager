@@ -189,6 +189,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 StageIndex = stage,
                 StageLabel = NominationRules.StageLabel(stage),
                 IsSettled = NominationRules.IsSettled(n.Status),
+                FiscalYear = NominationRules.FiscalYearOf(NominationRules.IsSettled(n.Status), n.ActualEndDate, n.NominatedDate, n.OpenedDate),
                 EffectiveStartDate = n.ActualStartDate ?? n.PlannedStartDate,
                 IsUpcoming = isUpcoming,
                 IsBlocked = StatusRules.IsBlocked(n.Status),

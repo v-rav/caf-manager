@@ -1,3 +1,4 @@
+using CafPortal.Api.Auth;
 using CafPortal.Application.Abstractions;
 using CafPortal.Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
@@ -7,11 +8,15 @@ namespace CafPortal.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[SaOwnsNomination]
 public class NominationsController(INominationService nominations, ILookupService lookups) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] string? region, [FromQuery] string? status, CancellationToken ct)
-        => Ok(await nominations.GetAsync(region, status, ct));
+    public async Task<IActionResult> Get([FromQuery] string? region, [FromQuery] string? status, [FromQuery] int? fy, CancellationToken ct)
+    {
+        var rows = await nominations.GetAsync(region, status, ct);
+        return Ok(fy is null ? rows : rows.Where(n => n.FiscalYear == fy).ToList());
+    }
 
     [HttpGet("vocab")]
     public async Task<IActionResult> Vocab(CancellationToken ct)

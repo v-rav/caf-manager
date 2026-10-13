@@ -2,6 +2,7 @@ using CafPortal.Application.Abstractions;
 using CafPortal.Domain.Entities;
 using CafPortal.Infrastructure.Persistence;
 using ClosedXML.Excel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CafPortal.Infrastructure.Import;
@@ -34,6 +35,14 @@ public class EngagementImportService(AppDbContext db, ILogger<EngagementImportSe
         var colRegion = ExcelHelpers.FindColumn(headers, "Region", "Geo");
         var colRemarks = ExcelHelpers.FindColumn(headers, "Remarks", "Notes", "Comments");
 
+        // Additive: skip rows already loaded. Key excludes AccountId, which merge/park can re-point or null.
+        static string Key(DateOnly d, int? res, string? meeting, double? dur) =>
+            $"{d:yyyy-MM-dd}|{res}|{(meeting ?? string.Empty).Trim().ToLowerInvariant()}|{dur}";
+        var existing = (await _db.EngagementFacts.AsNoTracking()
+                .Select(e => new { e.Date, e.ResourceId, e.MeetingName, e.Duration }).ToListAsync(ct))
+            .Select(e => Key(e.Date, e.ResourceId, e.MeetingName, e.Duration))
+            .ToHashSet();
+
         var inserted = 0;
         foreach (var row in rows.Skip(1))
         {
@@ -46,6 +55,10 @@ public class EngagementImportService(AppDbContext db, ILogger<EngagementImportSe
                 ExcelHelpers.GetString(row, colPsid),
                 ExcelHelpers.GetString(row, colEmail),
                 ExcelHelpers.GetString(row, colResource));
+            var meeting = ExcelHelpers.GetString(row, colMeeting);
+            var duration = ExcelHelpers.GetDouble(row, colDuration);
+            if (existing.Contains(Key(date, resourceId, meeting, duration)))
+                continue;
 
             int? accountId = null;
             var accountName = ExcelHelpers.GetString(row, colAccount);
@@ -61,8 +74,8 @@ public class EngagementImportService(AppDbContext db, ILogger<EngagementImportSe
                 Date = date,
                 ResourceId = resourceId,
                 AccountId = accountId,
-                MeetingName = ExcelHelpers.GetString(row, colMeeting),
-                Duration = ExcelHelpers.GetDouble(row, colDuration),
+                MeetingName = meeting,
+                Duration = duration,
                 Region = region,
                 Remarks = ExcelHelpers.GetString(row, colRemarks)
             });

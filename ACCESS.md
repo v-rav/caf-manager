@@ -64,7 +64,10 @@ Top-right **user menu → Change password**.
 - **"Must reset" badge** on a user — that account still has a temporary password and will be prompted to
   change it at next login.
 
+## Ownership
+- An **SA** can change (workspace gates, blockers, milestones, tool usage, Manage dialog) only nominations where
+  their display name is the SA, PM or CFTL, or they are an assigned resource. Other nominations are read-only (403).
+  Admin and Lead can edit any nomination.
+
 ## Not yet (planned)
-- Per-record ownership checks (e.g. an SA may only edit nominations they own) — today any signed-in user can
-  edit any nomination.
 - Password complexity policy / lockout after failed attempts.

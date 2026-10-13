@@ -671,6 +671,7 @@ export function NominationsPage() {
                     sla: slaFilter,
                     links: linkFilter,
                     search: debouncedSearch,
+                    fy: fy === 'all' ? undefined : String(fy),
                   })}
                   appearance="secondary"
                   icon={<ArrowDownloadRegular />}

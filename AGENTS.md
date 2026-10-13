@@ -174,7 +174,7 @@ import the **web app is the system of record**.
   `ExecuteDeleteAsync` nominations. See `NominationImportService` loop + `DEVELOPMENT-PLAN.md` §8.
   (**Leave is portal-owned** — never from FDO: `LeaveFacts` is **additive/idempotent** (skips existing
   `(ResourceId, LeaveDate)` pairs) and the refresh **no longer wipes** it, so an FDO drop can't destroy
-  hand-entered leave. ⚠ `ResourceAccounts`/`EngagementFacts` still wipe-and-rebuild — safe today.)
+  hand-entered leave. `ResourceAccounts` is additive and `EngagementFacts` import is additive/idempotent — no wipe.)
 - **Nominations are NEVER hard-deleted by imports.** Absent-from-drop rows are soft-set `Withdrawn`;
   hard delete is a manual, user-only action from the UI. Do not add auto-purge of nominations.
 - **Smart in-app upload** (Nominations page **and** GHCP Adoption page → **Upload**): `POST /api/admin/upload-auto` (multipart)
@@ -265,8 +265,9 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
     Admin-only) creates an SA account for every distinct `Nomination.SolutionArchitect` (idempotent by display name;
     username slug from the name; temp password `Sa@12345`, forced change). Display name = exact SA name so the SA view matches.
   - **SA self-scoped view** — on `/nominations`, SA-role users default to a **My nominations** switch (their own book of
-    work, matched by display name via `matchesPerson`); they can toggle it off to see all. **Page-level (role-based)
-    route access is the next step** (not yet enforced — all signed-in users can reach every page).
+    work, matched by display name via `matchesPerson`); they can toggle it off to see all. **Writes are ownership-checked**:
+    `[SaOwnsNomination]` (Api/Auth) lets an SA change a nomination only when their display name is its SA/PM/CFTL or an
+    assigned resource (403 otherwise); reads stay open, Admin/Lead unrestricted.
 - **Gate engine (P1)** — 8-gate SA template (`GateDefinition` + `GateItemDefinition`, seeded idempotently by
   `GateTemplateSeed`; **live weights** G1 Discovery & Readiness 5 · G2 Prerequisites 5 · G3 Assessment 5 · G4 Scope
   Governance 10 · G5 Architecture 10 · G6 Delivery Readiness 10 · **G7 Delivery Governance 50** (17 items by SubStage) ·
@@ -417,8 +418,7 @@ left nav** (Overview / Delivery / Resourcing / Admin — only the active group e
 and **Migration Capability Utilization** (Tool × Activity masters + per-nomination usage + leadership rollups).
 **Backlog:** `NominationOutcome` value-capture (hours saved · defects · CSAT → real Factory Productivity);
 config-editable strategic time-thresholds + PV-01 stale-basis decision; retire the `/workspace` P0 mock
-(kept as reference); `ResourceAccounts`/`EngagementFacts` wipe-and-rebuild fix (leave is already portal-owned/
-additive); Entra auth; in-app upload; API smoke tests.
+(kept as reference); Entra auth; API smoke tests.
 - **Migration Capability Utilization** (the GHCP/AppMod/accelerator value story): two portal-owned masters —
   **`MigrationTool`** (Name · Category · Vendor; seeded 15-tool taxonomy — **Assessment** (Azure Migrate, AppCAT) ·
   **GHCP** (GHCP-CI, GHCP Agent Mode, GHCP Custom Prompts, AppMod .NET/Java/CLI, Upgrade Assistant — AppMod is a

@@ -188,8 +188,8 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
     public async Task<CapabilityUtilizationDto> GetCapabilityAsync(string? region, CancellationToken ct = default)
     {
         var scoped = !string.IsNullOrWhiteSpace(region) && !region.Equals("Global View", StringComparison.OrdinalIgnoreCase);
-        // Source of truth is the imported FDO "Nomination Wize Tool Usage" facts (the real captured usage),
-        // not the sparse manual Tool × Activity junction. Tool names are aligned to the master; the activity is
+        // Source of truth is the imported FDO "Nomination Wize Tool Usage" facts plus the SA-captured workspace rows.
+        // Imported tool names are aligned to the master; their activity is
         // inferred from the raw name + free-text details (the export conflates tool + activity in one column).
         var raw = await (
             from u in _db.NominationToolUsageFacts.AsNoTracking()
@@ -208,6 +208,22 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             var category = toolCategory.TryGetValue(tool, out var c) ? c : "GHCP";
             return new { r.NominationId, Tool = tool, Category = category, Activities = ToolActivityClassifier.Classify(r.ToolName, r.Details) };
         }).ToList();
+
+        // Union the SA-captured Tool × Activity rows from the workspace (already master-aligned, explicit activity).
+        var manual = await (
+            from u in _db.NominationToolUsages.AsNoTracking()
+            join n in _db.Nominations.AsNoTracking() on u.NominationId equals n.Id
+            where !scoped || n.Region == region
+            join t in _db.MigrationTools.AsNoTracking() on u.ToolId equals t.Id
+            join a in _db.MigrationActivities.AsNoTracking() on u.ActivityId equals (int?)a.Id into aj
+            from a in aj.DefaultIfEmpty()
+            select new { u.NominationId, Tool = t.Name, t.Category, Activity = a != null ? a.Name : null })
+            .ToListAsync(ct);
+        rows.AddRange(manual.Select(m => new
+        {
+            m.NominationId, m.Tool, m.Category,
+            Activities = (IReadOnlyList<string>)(m.Activity is null ? Array.Empty<string>() : new[] { m.Activity }),
+        }));
 
         var byTool = rows.GroupBy(r => r.Tool)
             .Select(g => new NameValueDto(g.Key, g.Select(x => x.NominationId).Distinct().Count()))

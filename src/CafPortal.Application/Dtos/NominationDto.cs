@@ -69,6 +69,7 @@ public class NominationDto
     public int? StageIndex { get; set; }
     public string StageLabel { get; set; } = string.Empty;
     public bool IsSettled { get; set; }
+    public int FiscalYear { get; set; }
     // Effective start = ActualStartDate ?? PlannedStartDate; PMs pre-create future waves, so a not-yet-started wave is
     // Upcoming (not active workload) until it falls within WorkloadStartLookaheadDays.
     public DateOnly? EffectiveStartDate { get; set; }

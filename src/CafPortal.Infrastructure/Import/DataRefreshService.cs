@@ -79,7 +79,7 @@ public class DataRefreshService(
 
             if (File.Exists(engagementPath))
             {
-                await _db.EngagementFacts.ExecuteDeleteAsync(ct);
+                // Additive/idempotent (skips rows already loaded) — no wipe, so merge/park re-pointing survives.
                 result.EngagementRecords = await TryImportAsync(engagementPath, _engagementImport, "Time-hunt tracking", result, ct);
             }
             else

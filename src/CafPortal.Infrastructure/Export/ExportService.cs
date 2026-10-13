@@ -69,11 +69,12 @@ public class ExportService(
     }
 
     public async Task<byte[]> NominationsAsync(string? region, string? approval = null, string? migrationStatus = null,
-        string? currentState = null, string? sla = null, string? links = null, string? search = null, CancellationToken ct = default)
+        string? currentState = null, string? sla = null, string? links = null, string? search = null, int? fy = null, CancellationToken ct = default)
     {
         var all = await nominations.GetAsync(region, status: null, ct);
         // Apply the same filters the Nominations grid uses, so the export matches the on-screen view.
         var rows = all.Where(x =>
+            (fy is null || x.FiscalYear == fy) &&
             (string.IsNullOrEmpty(approval) || string.Equals(x.ApprovalStatus ?? "", approval, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(migrationStatus) || string.Equals(x.MigrationStatus, migrationStatus, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(currentState) || string.Equals(x.CurrentState, currentState, StringComparison.OrdinalIgnoreCase)) &&

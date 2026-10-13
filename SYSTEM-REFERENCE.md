@@ -577,11 +577,11 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | I6 | ~~`HistoryRetentionDays` was a C# const~~ — **fixed (6A-4)**: read from settings | — | — |
 | I7 | ~~Capacity thresholds / default limit / training threshold had no UI~~ — **fixed (6A-4)**: Configuration → Operational thresholds | — | — |
 | I8 | `StageTargetDays1..4` are editable but unused | Admins expect an effect | PV-01 decision: drive `StaleTier` from per-stage targets, or label them "informational" |
-| I9 | Two tool-usage stores: manual `NominationToolUsages` (5 rows) and imported `NominationToolUsageFacts` (61). The capability rollup now reads only the **imported** facts | Manual workspace captures don't show in the rollup | Union both sources (manual = authoritative activity; imported = inferred) |
+| I9 | ✅ *Resolved (6C-3)* — the capability rollup unions manual `NominationToolUsages` (explicit activity) with imported `NominationToolUsageFacts` (normalized tool, inferred activity) | — | — |
 | I10 | Legacy tables still present: `Tools` (vs `MigrationTools`), `StrategicAccountConfigurations` (vs `Segment='Strategic'`), `RolePermissions` (not enforced), `ResourceAccounts` (not the capacity basis) | Confusion about which table is the source of truth | Mark as deprecated. Migrate or remove after review |
 | I11 | ~~Many controllers anonymous~~ — **fixed (6C-1)**: fallback policy requires sign-in everywhere; Admin/Lead on ingestion + master-data edits, Admin on destructive/config ops; verified anonymous → 401, SA on admin ops → 403 | — | Next: per-user ownership checks (e.g. SA may only edit own nominations) |
-| I12 | `ResourceAccounts` / `EngagementFacts` are wipe-and-rebuild | Safe today; fragile if they ever hold portal edits | Make them upsert-merge like nominations |
-| I13 | FY scope is client-side only. Exports and server analytics take their own `fy` | Totals can differ between the screen and the export when FY ≠ All | Push FY to the server as a standard `?fy=` filter |
+| I12 | ✅ *Resolved (6C-5)* — `ResourceAccounts` is additive; `EngagementFacts` import is additive/idempotent (no wipe) | — | — |
+| I13 | ✅ *Resolved (6C-2)* — FY is computed on the server (`NominationDto.FiscalYear`); `?fy=` on `GET /api/nominations` and the nominations export; the grid export passes the selected FY | — | — |
 
 ---
 
@@ -611,9 +611,9 @@ data before saving (the same pattern as `?apply=false`).
 
 ### Phase C — hardening
 * `[Authorize]` on every controller; Admin/Lead on mutations (I11).
-* FY as a server-side filter on all endpoints (I13).
+* FY as a server-side filter on all endpoints (I13) ✅ nominations + export.
 * Unit tests per rule domain (keyword rules, score models), plus an API smoke test that pins KPI parity between pages.
-* Retire legacy tables (I10). Union the two tool-usage stores (I9).
+* Retire legacy tables (I10). Union the two tool-usage stores (I9) ✅.
 
 ---
 

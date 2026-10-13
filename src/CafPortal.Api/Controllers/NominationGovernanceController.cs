@@ -1,3 +1,4 @@
+using CafPortal.Api.Auth;
 using CafPortal.Application.Abstractions;
 using CafPortal.Application.Dtos;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +10,7 @@ namespace CafPortal.Api.Controllers;
 [Route("api/nominations/{nominationId:int}/governance")]
 [Produces("application/json")]
 [Authorize]
+[SaOwnsNomination]
 public class NominationGovernanceController(IGovernanceService governance) : ControllerBase
 {
     [HttpGet]

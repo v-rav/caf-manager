@@ -9,25 +9,14 @@ export function currentFy(): number {
   return d.getMonth() + 1 >= 7 ? d.getFullYear() + 1 : d.getFullYear()
 }
 
-export function fiscalYearOf(dateStr?: string | null): number | null {
-  if (!dateStr) return null
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return null
-  return d.getMonth() + 1 >= 7 ? d.getFullYear() + 1 : d.getFullYear()
-}
-
 export function fyLabel(fy: number): string {
   return `FY${String(fy % 100).padStart(2, '0')}`
 }
 
-/** Every nomination belongs to one FY: settled items by their close date, active/in-flight by when they entered
- *  the pipeline. So a FY view shows work completed-this-FY plus work nominated-this-FY (still in flight). */
+/** Every nomination belongs to one FY (server `fiscalYear`): settled items by their close date, active/in-flight by
+ *  when they entered the pipeline. So a FY view shows work completed-this-FY plus work nominated-this-FY. */
 export function nominationInFy(n: Nomination, fy: Fy): boolean {
-  if (fy === 'all') return true
-  const anchor = n.isSettled
-    ? (n.actualEndDate ?? n.nominatedDate ?? n.openedDate)
-    : (n.nominatedDate ?? n.openedDate)
-  return fiscalYearOf(anchor) === fy
+  return fy === 'all' || n.fiscalYear === fy
 }
 
 interface FyState {

@@ -11,6 +11,10 @@ public static class NominationRules
 
     public static bool IsSettled(NominationStatusType status) => StatusRules.IsSettled(status);
 
+    /// <summary>The one FY a nomination belongs to: settled by its close date, in-flight by when it entered the pipeline.</summary>
+    public static int FiscalYearOf(bool settled, DateOnly? actualEnd, DateOnly? nominated, DateOnly opened) =>
+        FiscalCalendar.FiscalYear(settled ? actualEnd ?? nominated ?? opened : nominated ?? opened);
+
     /// <summary>Latest effective start (Actual ?? Planned) that still counts as started workload: today + look-ahead.
     /// Later starts are pre-created future waves (Upcoming) and are excluded from workload, capacity, active KPIs and SLA.</summary>
     public static async Task<DateOnly> StartCutoffAsync(Abstractions.IApplicationDbContext db, CancellationToken ct = default) =>
