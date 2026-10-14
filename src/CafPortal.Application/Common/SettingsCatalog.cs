@@ -43,6 +43,20 @@ public static class SettingsCatalog
         new("OverloadedThreshold", "Capacity", "Fully utilized up to (%)", "100", 1, 500, true,
             "Utilization % above which a resource is Overloaded"),
 
+        new("HeatAvailable", "Capacity heat colour (0 Green · 1 Amber · 2 Red)", "Available", "0", 0, 2, true,
+            "Heat-map row colour for Available resources"),
+        new("HeatPartiallyUtilized", "Capacity heat colour (0 Green · 1 Amber · 2 Red)", "Partially utilized", "1", 0, 2, true,
+            "Heat-map row colour for Partially Utilized resources"),
+        new("HeatFullyUtilized", "Capacity heat colour (0 Green · 1 Amber · 2 Red)", "Fully utilized", "1", 0, 2, true,
+            "Heat-map row colour for Fully Utilized resources"),
+        new("HeatOverloaded", "Capacity heat colour (0 Green · 1 Amber · 2 Red)", "Overloaded", "2", 0, 2, true,
+            "Heat-map row colour for Overloaded resources"),
+
+        new("BlockerAgeAmberDays", "Blocker ageing", "Amber from (days blocked)", "5", 1, 365, true,
+            "Open blockers at or above this age show amber (Governance Board, Workspace)"),
+        new("BlockerAgeRedDays", "Blocker ageing", "Red from (days blocked)", "10", 1, 365, true,
+            "Open blockers at or above this age show red"),
+
         new("LeaveClashWindowDays", "Resourcing", "Leave-clash window (days)", "30", 1, 365, true,
             "Upcoming-leave window used to detect coverage clashes"),
         new("WorkloadStartLookaheadDays", "Resourcing", "Count waves starting within (days)", "0", 0, 180, true,
@@ -99,6 +113,7 @@ public static class SettingsCatalog
         ("AvailableThreshold", "PartiallyUtilizedThreshold", true),
         ("PartiallyUtilizedThreshold", "OverloadedThreshold", false),
         ("MsiAmberFrom", "MsiGreenAbove", true),
+        ("BlockerAgeAmberDays", "BlockerAgeRedDays", true),
         ("EffSpeedBestDays", "EffSpeedWorstDays", true),
         ("EffMomentumBestDays", "EffMomentumWorstDays", true),
         ("EffAmberFrom", "EffGreenFrom", true),

@@ -296,21 +296,6 @@ function eligibleForRole(assignRole: string, resourceRole?: string): boolean {
 }
 
 
-// Lightweight keyword → blocker-reason suggestion from free-text (no AI needed).
-function suggestBlocker(text?: string): string | undefined {
-  const t = (text ?? '').toLowerCase()
-  if (!t) return undefined
-  if (/(access|permission|rbac)/.test(t)) return 'Access Pending'
-  if (/(landing zone|\balz\b|prereq|pre-requisite)/.test(t)) return 'Landing Zone Pending'
-  if (/(approv|sign-?off)/.test(t)) return 'Approval Pending'
-  if (/(test|uat|validation)/.test(t)) return 'Testing/Validation Pending'
-  if (/(budget|priorit|cost)/.test(t)) return 'Budget/Priority Hold'
-  if (/(depend|blocked by)/.test(t)) return 'Dependency Pending'
-  if (/(align|internal)/.test(t)) return 'Internal Alignment'
-  if (/(customer|client|awaiting)/.test(t)) return 'Waiting for Customer Action'
-  return undefined
-}
-
 const staleTone: Record<string, { label: string; color: string; bg: string }> = {
   Warn: { label: 'Warn', color: '#8a6d00', bg: '#fff4ce' },
   Escalate: { label: 'Escalate', color: '#8a3b00', bg: '#fed9cc' },
@@ -459,7 +444,7 @@ export function NominationsPage() {
     setForm({
       status: n.status,
       migrationStatus: n.migrationStatus ?? '',
-      blockedReason: n.blockedReason ?? suggestBlocker(n.remarks ?? n.currentState),
+      blockedReason: n.blockedReason ?? n.suggestedBlockerReason ?? undefined,
       blockedSince: n.blockedSince,
       followUpDate: n.followUpDate,
       remarks: n.remarks ?? '',

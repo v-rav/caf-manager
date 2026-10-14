@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,8 +19,13 @@ public class CapacityCalculationService(IApplicationDbContext db, ISettingsProvi
         var available = await _settings.GetDoubleAsync(SettingKeys.AvailableThreshold, 40, ct);
         var partiallyUtilized = await _settings.GetDoubleAsync(SettingKeys.PartiallyUtilizedThreshold, 80, ct);
         var overloaded = await _settings.GetDoubleAsync(SettingKeys.OverloadedThreshold, 100, ct);
-        return new CapacityThresholds(available, partiallyUtilized, overloaded);
+        var heat = new List<string>();
+        foreach (var key in new[] { "HeatAvailable", "HeatPartiallyUtilized", "HeatFullyUtilized", "HeatOverloaded" })
+            heat.Add(HeatNames[Math.Clamp(await _settings.GetIntAsync(key, int.Parse(SettingsCatalog.Find(key)!.Default), ct), 0, 2)]);
+        return new CapacityThresholds(available, partiallyUtilized, overloaded, heat);
     }
+
+    private static readonly string[] HeatNames = { "Green", "Amber", "Red" };
 
     public async Task<int> ResolveCapacityLimitAsync(string role, int? resourceOverride, CancellationToken ct = default)
     {
@@ -59,12 +65,17 @@ public class CapacityCalculationService(IApplicationDbContext db, ISettingsProvi
             : CapacityStatusType.FullyUtilized;
     }
 
-    public string ResolveHeatColor(CapacityStatusType status) => status switch
+    public string ResolveHeatColor(CapacityStatusType status, CapacityThresholds thresholds)
     {
-        CapacityStatusType.Available => "Green",
-        CapacityStatusType.PartiallyUtilized => "Amber",
-        CapacityStatusType.FullyUtilized => "Amber",
-        CapacityStatusType.Overloaded => "Red",
-        _ => "Green"
-    };
+        var idx = status switch
+        {
+            CapacityStatusType.PartiallyUtilized => 1,
+            CapacityStatusType.FullyUtilized => 2,
+            CapacityStatusType.Overloaded => 3,
+            _ => 0,
+        };
+        return (thresholds.Heat is { Count: 4 } h ? h : DefaultHeat)[idx];
+    }
+
+    private static readonly string[] DefaultHeat = { "Green", "Amber", "Amber", "Red" };
 }

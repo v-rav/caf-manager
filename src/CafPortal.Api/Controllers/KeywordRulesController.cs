@@ -126,6 +126,7 @@ public class KeywordRulesController(IApplicationDbContext db, ICurrentUser curre
             KeywordRules.ToolAlias => db.NominationToolUsageFacts.Select(u => u.ToolName),
             KeywordRules.Activity => db.NominationToolUsageFacts.Select(u => (u.ToolName ?? "") + " " + (u.Details ?? "")),
             KeywordRules.WaveType => db.WaveLinks.Where(w => w.Source == "FDO").Select(w => w.Reference),
+            KeywordRules.BlockerReason => db.Nominations.Select(n => n.Remarks ?? n.CurrentState),
             _ => Enumerable.Empty<string?>().AsQueryable(),
         };
         var values = await source.Where(v => v != null && v != "").ToListAsync(ct);

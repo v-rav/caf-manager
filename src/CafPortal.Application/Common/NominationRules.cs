@@ -26,6 +26,11 @@ public static class NominationRules
     public static int StageTarget(IReadOnlyDictionary<string, double> settings, int? stage) =>
         stage is >= 1 and <= 4 ? (int)settings[$"StageTargetDays{stage}"] : 0;
 
+    /// <summary>Badge tone for how long a blocker has been open (BlockerAgeAmberDays / BlockerAgeRedDays).</summary>
+    public static string BlockerAgeTone(int daysBlocked, IReadOnlyDictionary<string, double> settings) =>
+        daysBlocked >= settings["BlockerAgeRedDays"] ? "danger"
+        : daysBlocked >= settings["BlockerAgeAmberDays"] ? "warning" : "informative";
+
     /// <summary>The one FY a nomination belongs to: settled by its close date, in-flight by when it entered the pipeline.</summary>
     public static int FiscalYearOf(bool settled, DateOnly? actualEnd, DateOnly? nominated, DateOnly opened) =>
         FiscalCalendar.FiscalYear(settled ? actualEnd ?? nominated ?? opened : nominated ?? opened);

@@ -399,7 +399,7 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
     seeds missing keys on startup, renders Configuration → **Operational thresholds**, and validates saves (incl. tier
     ordering). Read defaults from the catalog, never inline literals.
   - **Keyword classification is data**: `KeywordRules` table + engine `Application/Common/KeywordRules.cs` (domains
-    Stage · Health · WaveType · ToolAlias · Activity · ContainerPath; first-match by priority, Activity = all matches).
+    Stage · Health · WaveType · ToolAlias · Activity · ContainerPath · BlockerReason; first-match by priority, Activity = all matches).
     Edited on Admin → **Classification Rules** (`/rules`, `KeywordRulesController` at `api/keyword-rules`) with an impact
     preview. `KeywordRules.Defaults` only seeds empty domains; the snapshot reloads at startup and after every edit. Never
     add `text.Contains("...")` classification in code — add a rule/domain instead.

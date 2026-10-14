@@ -376,7 +376,7 @@ export function NominationWorkspacePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {blockers.map((b) => (
               <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--colorNeutralStroke2)' }}>
-                <Badge appearance="tint" color={b.daysBlocked >= 10 ? 'danger' : b.daysBlocked >= 5 ? 'warning' : 'informative'}>{b.daysBlocked}d</Badge>
+                <Badge appearance="tint" color={b.ageTone ?? 'informative'}>{b.daysBlocked}d</Badge>
                 <div style={{ flex: 1 }}>
                   <Text size={300} weight="semibold">{b.category}{b.clockStopped ? '' : ''}</Text>
                   <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>

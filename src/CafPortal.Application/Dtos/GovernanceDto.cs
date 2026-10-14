@@ -47,7 +47,7 @@ public record CapabilityOutcomeDto(string Activity, string Tool, int Nominations
 public record BlockerDto(
     int Id, int NominationId, string? Account, int? GateItemDefId, string Category, bool ClockStopped, string? Owner,
     DateTime BlockedSinceUtc, DateTime? ExpectedResolutionUtc, DateTime? ResolvedUtc, string? Notes, int DaysBlocked,
-    string? RaisedBy);
+    string? RaisedBy, string AgeTone = "informative");
 
 public record UpdateGateItemRequest(string Status, string? Owner, string? Ref, string? Notes);
 

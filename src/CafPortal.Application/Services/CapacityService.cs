@@ -73,7 +73,7 @@ public class CapacityService(IApplicationDbContext db, ICapacityCalculationServi
                 CapacityLimit = limit,
                 UtilizationPercent = utilization,
                 CapacityStatus = status.ToDisplay(),
-                HeatColor = _calc.ResolveHeatColor(status)
+                HeatColor = _calc.ResolveHeatColor(status, thresholds)
             });
         }
         return rows;

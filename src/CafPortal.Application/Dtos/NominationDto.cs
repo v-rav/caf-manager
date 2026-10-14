@@ -71,6 +71,8 @@ public class NominationDto
     public int? StageIndex { get; set; }
     public string StageLabel { get; set; } = string.Empty;
     public bool IsSettled { get; set; }
+    /// <summary>Blocker reason suggested from Remarks (else Current State) by the BlockerReason keyword rules.</summary>
+    public string? SuggestedBlockerReason { get; set; }
     public int StageTargetDays { get; set; }
     public int FiscalYear { get; set; }
     // Effective start = ActualStartDate ?? PlannedStartDate; PMs pre-create future waves, so a not-yet-started wave is

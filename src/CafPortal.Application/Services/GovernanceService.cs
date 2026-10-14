@@ -70,7 +70,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             reported.SelectMany(r => ToolActivityClassifier.Classify(r.ToolName, r.Details)).Distinct().ToList());
 
         return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, effectiveGhcp,
-            MsiModel.From(await SettingsCatalog.ReadAsync(_db, ct))) with
+            await SettingsCatalog.ReadAsync(_db, ct)) with
         {
             Classification = nom.Classification,
             Stage = StageNum(nom.MigrationStatus),
@@ -187,7 +187,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
 
     public async Task<CapabilityUtilizationDto> GetCapabilityAsync(string? region, CancellationToken ct = default)
     {
-        var scoped = !string.IsNullOrWhiteSpace(region) && !region.Equals("Global View", StringComparison.OrdinalIgnoreCase);
+        var scoped = !string.IsNullOrWhiteSpace(region);
         // Source of truth is the imported FDO "Nomination Wize Tool Usage" facts plus the SA-captured workspace rows.
         // Imported tool names are aligned to the master; their activity is
         // inferred from the raw name + free-text details (the export conflates tool + activity in one column).
@@ -318,10 +318,12 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
                           where region == null || region == "" || (n != null && n.Region == region)
                           select new { b, Account = n != null ? n.AccountName : null }).ToListAsync(ct);
         var now = DateTime.UtcNow;
+        var settings = await SettingsCatalog.ReadAsync(_db, ct);
         return rows
             .Select(x => new BlockerDto(x.b.Id, x.b.NominationId, x.Account, x.b.GateItemDefinitionId, x.b.Category,
                 x.b.ClockStopped, x.b.Owner, x.b.BlockedSinceUtc, x.b.ExpectedResolutionUtc, x.b.ResolvedUtc, x.b.Notes,
-                (int)(now - x.b.BlockedSinceUtc).TotalDays, x.b.RaisedBy))
+                (int)(now - x.b.BlockedSinceUtc).TotalDays, x.b.RaisedBy,
+                NominationRules.BlockerAgeTone((int)(now - x.b.BlockedSinceUtc).TotalDays, settings)))
             .OrderByDescending(x => x.DaysBlocked)
             .ToList();
     }
@@ -361,8 +363,9 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
 
     private static NominationGovernanceDto Build(int nominationId, string? account, string? tpid,
         List<GateDefinition> gates, IReadOnlyDictionary<int, NominationGateItem> state, List<NominationBlocker> openBlockers,
-        int? adoptionLevel, MsiModel msiModel)
+        int? adoptionLevel, IReadOnlyDictionary<string, double> settings)
     {
+        var msiModel = MsiModel.From(settings);
         static string StatusName(GateItemStatus s) => s switch
         {
             GateItemStatus.Done => "Done",
@@ -412,7 +415,8 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         var blockerDtos = openBlockers
             .Select(b => new BlockerDto(b.Id, b.NominationId, account, b.GateItemDefinitionId, b.Category, b.ClockStopped,
                 b.Owner, b.BlockedSinceUtc, b.ExpectedResolutionUtc, b.ResolvedUtc, b.Notes,
-                (int)(now - b.BlockedSinceUtc).TotalDays, b.RaisedBy))
+                (int)(now - b.BlockedSinceUtc).TotalDays, b.RaisedBy,
+                NominationRules.BlockerAgeTone((int)(now - b.BlockedSinceUtc).TotalDays, settings)))
             .ToList();
 
         var compliance = totalWeight > 0 ? (int)Math.Round(weightedSum / totalWeight) : 0;

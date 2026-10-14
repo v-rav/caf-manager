@@ -307,6 +307,7 @@ export interface Nomination {
   stageIndex?: number | null
   stageLabel?: string
   isSettled?: boolean
+  suggestedBlockerReason?: string | null
   stageTargetDays?: number
   fdoStageDays?: (number | null)[]
   fdoTotalDays?: number | null
@@ -802,6 +803,7 @@ export interface Blocker {
   resolvedUtc?: string
   notes?: string
   daysBlocked: number
+  ageTone?: 'informative' | 'warning' | 'danger'
   raisedBy?: string
 }
 export interface NominationEvent {

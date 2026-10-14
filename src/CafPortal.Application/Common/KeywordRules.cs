@@ -19,6 +19,7 @@ public static class KeywordRules
     public const string ToolAlias = "ToolAlias";
     public const string Activity = "Activity";
     public const string ContainerPath = "ContainerPath";
+    public const string BlockerReason = "BlockerReason";
 
     public static readonly IReadOnlyList<RuleDomain> Domains = new RuleDomain[]
     {
@@ -34,6 +35,10 @@ public static class KeywordRules
             null, "Every matching rule adds its activity; drives capability rollups and the effective GHCP level."),
         new(ContainerPath, "Containerized path (migration path)", "Nomination Primary Migration Path", false, null,
             new[] { "Containerized" }, "Any match marks the path containerized for ACR capture."),
+        new(BlockerReason, "Blocker reason suggestion (remarks / state → reason)", "Nomination Remarks, else Current State", false, null,
+            new[] { "Access Pending", "Landing Zone Pending", "Approval Pending", "Testing/Validation Pending", "Budget/Priority Hold",
+                "Dependency Pending", "Internal Alignment", "Waiting for Customer Action" },
+            "Pre-fills the blocker reason in the Manage dialog when a nomination is set to a blocked status. First match wins."),
     };
 
     public static RuleDomain? FindDomain(string key) =>
@@ -56,7 +61,15 @@ public static class KeywordRules
             ("dependency", "Dependency Analysis"), ("upgrade", "Version Upgrade"), ("modern", "Modernization"),
             ("document", "Documentation Generation"), ("test", "Testing & Validation") }),
         (ContainerPath, "Contains", new[] { ("container", "Containerized"), ("aks", "Containerized"), ("aca", "Containerized"),
-            ("eks", "Containerized"), ("ecs", "Containerized") }));
+            ("eks", "Containerized"), ("ecs", "Containerized") }),
+        (BlockerReason, "Contains", new[] { ("access", "Access Pending"), ("permission", "Access Pending"), ("rbac", "Access Pending"),
+            ("landing zone", "Landing Zone Pending"), ("alz", "Landing Zone Pending"), ("prereq", "Landing Zone Pending"),
+            ("pre-requisite", "Landing Zone Pending"), ("approv", "Approval Pending"), ("sign-off", "Approval Pending"),
+            ("signoff", "Approval Pending"), ("test", "Testing/Validation Pending"), ("uat", "Testing/Validation Pending"),
+            ("validation", "Testing/Validation Pending"), ("budget", "Budget/Priority Hold"), ("priorit", "Budget/Priority Hold"),
+            ("cost", "Budget/Priority Hold"), ("depend", "Dependency Pending"), ("blocked by", "Dependency Pending"),
+            ("align", "Internal Alignment"), ("internal", "Internal Alignment"), ("customer", "Waiting for Customer Action"),
+            ("client", "Waiting for Customer Action"), ("awaiting", "Waiting for Customer Action") }));
 
     private static List<KeywordRuleItem> Build(params (string Domain, string Match, (string Pattern, string Target)[] Rules)[] sets) =>
         sets.SelectMany(s => s.Rules.Select((r, i) => new KeywordRuleItem(s.Domain, r.Pattern, s.Match, r.Target, (i + 1) * 10))).ToList();

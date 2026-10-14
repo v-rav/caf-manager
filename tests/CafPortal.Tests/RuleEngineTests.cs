@@ -50,6 +50,16 @@ public class KeywordRulesTests
         Assert.Equal(new[] { "Unclassified" }, ToolActivityClassifier.Classify("GHCP", "general help"));
     }
 
+    [Theory]
+    [InlineData("Waiting on customer RBAC access", "Access Pending")]
+    [InlineData("ALZ not ready", "Landing Zone Pending")]
+    [InlineData("Pending CAB sign-off", "Approval Pending")]
+    [InlineData("UAT in progress", "Testing/Validation Pending")]
+    [InlineData("Customer is awaiting internal budget", "Budget/Priority Hold")] // budget outranks customer
+    [InlineData("All good", null)]
+    public void Blocker_reason_suggestion(string text, string? expected)
+        => Assert.Equal(expected, KeywordRules.First(KeywordRules.BlockerReason, text));
+
     [Fact]
     public void Evaluate_respects_priority_for_first_match_domains()
     {
@@ -130,6 +140,15 @@ public class NominationRulesTests
     [InlineData(3, true, 90, 5, "")]          // settled never tiered
     public void Sla_tier_counts_days_past_stage_target(int stage, bool settled, int days, int target, string expected)
         => Assert.Equal(expected, NominationRules.StaleTier(stage, settled, days, target, 3, 5, 10));
+
+    [Fact]
+    public void Blocker_age_tone_uses_settings()
+    {
+        var s = new Dictionary<string, double> { ["BlockerAgeAmberDays"] = 5, ["BlockerAgeRedDays"] = 10 };
+        Assert.Equal("informative", NominationRules.BlockerAgeTone(4, s));
+        Assert.Equal("warning", NominationRules.BlockerAgeTone(5, s));
+        Assert.Equal("danger", NominationRules.BlockerAgeTone(10, s));
+    }
 
     [Theory]
     [InlineData(null, false)]

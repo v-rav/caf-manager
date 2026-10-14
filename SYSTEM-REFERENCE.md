@@ -566,17 +566,17 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | H11 | Activity keywords — now ⚙️ domain **Activity**; *remaining:* assessment/execution activity sets + 7/6/5/4 level derivation in `ToolActivityClassifier` | `ToolActivityClassifier` | 14 rules; level rule | P2 |
 | H12 | ~~Containerized-path keywords~~ — now ⚙️ domain **ContainerPath**; *remaining:* low-cores ≤16 | `AnalyticsService` | 5 rules; 16 | P2 |
 | H13 | ~~Health keywords~~ — now ⚙️ domain **Health** (client colours use the server bucket) | Classification Rules page | 4 rules | done |
-| H14 | Capacity heat-colour mapping | `CapacityCalculationService.ResolveHeatColor` | Green/Amber/Red | P3 |
+| H14 | ~~Capacity heat-colour mapping~~ — now ⚙️ `HeatAvailable/PartiallyUtilized/FullyUtilized/Overloaded` (0 Green · 1 Amber · 2 Red) | Operational thresholds | 0/1/1/2 | done |
 | H15 | SA auto-link fuzzy threshold | `NameConsistencyService.LinkSolutionArchitectsAsync` | 0.95 | P2 |
 | H16 | ~~Effectiveness weights + speed/momentum targets + tones + formula~~ — now ⚙️ Scoring models (6B-2), computed server-side by `EffectivenessService` (6B-6) | `GET /api/effectiveness` | §5.14 | done |
 | H17 | Recommended-action text + 42-day defer rule | client `NominationsPage.recommendedAction` | Day 3/5/10/42 | P2 |
-| H18 | Blocker suggestion regexes | client `NominationsPage.suggestBlocker` | access/LZ/approval/testing… | P3 |
+| H18 | ~~Blocker suggestion regexes~~ — now ⚙️ KeywordRules domain **BlockerReason** (23 rules; server `NominationDto.SuggestedBlockerReason`; parity 0 diffs / 1,112) | Classification Rules page | 23 rules | done |
 | H19 | Team assign roles + role eligibility keywords | client `NominationsPage` (`ASSIGN_ROLES`) | SA / Migration Engineer / DevOps | P3 |
 | H20 | Adoption level labels 0–7 | client `adoption.ts` | 8 labels | P3 |
 | H21 | ~~Approval default = `Approved`~~ — now ⚙️ `DefaultApprovalFilter` (Workflow status rules panel) | setting | Approved | done |
 | H22 | ~~Import history retention~~ — now ⚙️ (6A-4) | `SettingsCatalog` | 90 days | done |
-| H23 | Aging colours on Governance Board | client `GovernanceBoardPage` | 10 / 5 days | P3 |
-| H24 | `"Global View"` sentinel | `GovernanceService`, `region.tsx`, others | string | P3 |
+| H23 | ~~Aging colours on Governance Board~~ — now ⚙️ `BlockerAgeAmberDays` / `BlockerAgeRedDays` (server `BlockerDto.AgeTone`; Board + Workspace) | Operational thresholds | 5 / 10 days | done |
+| H24 | ~~`"Global View"` sentinel~~ — removed from the server; all regions = empty region everywhere (label is display-only in the region switcher) | — | — | done |
 | H25 | Page-guide / help content | client `pageGuide.ts`, `HelpPage.tsx` | text | P3 |
 
 ---

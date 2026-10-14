@@ -5,16 +5,16 @@ import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
 import { ErrorText, Loading, Panel } from '../components/common'
+import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import type { Blocker } from '../types'
-
-function agingColor(d: number): 'informative' | 'warning' | 'danger' {
-  return d >= 10 ? 'danger' : d >= 5 ? 'warning' : 'informative'
-}
 
 export function GovernanceBoardPage() {
   const { region } = useRegion()
   const navigate = useNavigate()
+  // Ageing thresholds (Configuration → Blocker ageing) for the average-days KPI; per-row tone comes from the server.
+  const settings = useAsync(() => api.operationsSettings(), [])
+  const ageAt = (key: string, fallback: number) => Number(settings.data?.find((s) => s.key === key)?.value ?? fallback)
   const [rows, setRows] = useState<Blocker[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -65,7 +65,7 @@ export function GovernanceBoardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
         <KpiCard label="Open blockers" value={kpis.open} tone={kpis.open ? 'warning' : 'success'} />
         <KpiCard label="Clock stopped" value={kpis.clock} tone={kpis.clock ? 'warning' : 'neutral'} />
-        <KpiCard label="Avg days blocked" value={`${kpis.avg}d`} tone={kpis.avg >= 10 ? 'danger' : kpis.avg >= 5 ? 'warning' : 'neutral'} />
+        <KpiCard label="Avg days blocked" value={`${kpis.avg}d`} tone={kpis.avg >= ageAt('BlockerAgeRedDays', 10) ? 'danger' : kpis.avg >= ageAt('BlockerAgeAmberDays', 5) ? 'warning' : 'neutral'} />
         <KpiCard label="Categories" value={kpis.cats} tone="neutral" />
       </div>
 
@@ -90,7 +90,7 @@ export function GovernanceBoardPage() {
             { key: 'account', header: 'Account', sortValue: (b) => b.account ?? '', render: (b) => <Link onClick={() => navigate(`/nominations/${b.nominationId}`)}>{b.account ?? `Nomination ${b.nominationId}`}</Link> },
             { key: 'category', header: 'Category', sortValue: (b) => b.category },
             { key: 'owner', header: 'Owner', sortValue: (b) => b.owner ?? '', render: (b) => b.owner ?? '—' },
-            { key: 'days', header: 'Days', align: 'end', sortValue: (b) => b.daysBlocked, render: (b) => <Badge appearance="tint" color={agingColor(b.daysBlocked)}>{b.daysBlocked}d</Badge> },
+            { key: 'days', header: 'Days', align: 'end', sortValue: (b) => b.daysBlocked, render: (b) => <Badge appearance="tint" color={b.ageTone ?? 'informative'}>{b.daysBlocked}d</Badge> },
             { key: 'clock', header: 'Clock', sortValue: (b) => (b.clockStopped ? 1 : 0), render: (b) => (b.clockStopped ? <Badge appearance="tint" color="warning">stopped</Badge> : <Badge appearance="tint" color="success">running</Badge>) },
             { key: 'eta', header: 'ETA', sortValue: (b) => b.expectedResolutionUtc ?? '', render: (b) => (b.expectedResolutionUtc ? b.expectedResolutionUtc.slice(0, 10) : '—') },
             { key: 'raised', header: 'Raised by', sortValue: (b) => b.raisedBy ?? '', render: (b) => b.raisedBy ?? '—' },
