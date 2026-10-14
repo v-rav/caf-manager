@@ -87,6 +87,8 @@ public class NominationDto
     public DateOnly? PlannedStartDate { get; set; }
     public DateOnly? PlannedEndDate { get; set; }
     public int? TotalDays { get; set; }
+    /// <summary>Delivery duration for completed work: offering TotalDays, else nominated → actual end.</summary>
+    public int? DeliveryDays { get; set; }
 
     /// <summary>Whole days since last update. Drives stale detection.</summary>
     public int DaysSinceUpdate { get; set; }

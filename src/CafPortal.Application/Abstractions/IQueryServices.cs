@@ -53,6 +53,11 @@ public interface ICapacityService
     Task<IReadOnlyList<CapacityRowDto>> GetAsync(string? region, CancellationToken ct = default);
 }
 
+public interface IEffectivenessService
+{
+    Task<EffectivenessDto> GetAsync(string? region, string role, int? fy, CancellationToken ct = default);
+}
+
 
 public interface ILeaveService
 {

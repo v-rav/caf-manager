@@ -331,8 +331,9 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   everyone) and the synthetic **`Closed`** status is **excluded** (ambiguous, not a real outcome; otherwise
   all-Closed books read as 0). Owner name opens an **inline individual drill-down** (stat chips — incl. Withdrawn/
   Deferred — + their nominations table linking to the SA Workspace; plus "Open in Nominations"); CSV export; honors
-  Region + FY. Fully client-side from `api.nominations(region)` — no new backend service (only an `AccessService`
-  catalog entry).
+  Region + FY. Scored **server-side** by `EffectivenessService` (`GET /api/effectiveness?role=&region=&fy=`, Admin/Lead)
+  from the Scoring-models settings — rows carry `effectiveness`, `tone` and an `explain` breakdown; the page only presents
+  them (the drill-down list uses `api.nominations` + server `deliveryDays`).
 - **Executive Dashboard 4 views (P5c)** — `/` is a `TabList`: **Leadership** (totals · ACR influenced · avg MSI +
   band rollup · adoption rate) · **Operational** (by-stage · **Standard-only** clock-aware SLA · blockers · avg
   effective age · SA load) · **GHCP Adoption** (F4 embedded) · **Factory Productivity** (completed · ACR realized ·

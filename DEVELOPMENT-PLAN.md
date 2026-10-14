@@ -263,7 +263,7 @@ H1–H25, §10 inconsistencies I1–I13). **Progress metric:** items moving from
 | 6B-3 | `GateDefinition.MsiGroup` column (replace `GroupFor` by key) | H4 | ✅ migration carries today's mapping; editable on Gate Template; Help page renders MSI text + gate map live |
 | 6B-4 | `StatusRule(Status, IsSettled, IsActive, IsBlocked, Colour)` — drives capacity, KPIs, badges, approval default | H2, H21 | ✅ `StatusRules` table (settled · blocked · tone · selectable · order) + `DefaultApprovalFilter` setting → Configuration → **Workflow status rules**; settled edits rebuild capacity; parity verified (settled 896, in-flight 216, capacity 53/16/4/3 unchanged) |
 | 6B-5 | `ImportProfile` + `ImportColumnMap` — file detection signatures + per-import header candidates | H8 | ✅ tables `ImportProfiles` (4: kind · label · detect order · signature) + `ImportColumnMaps` (54 field → header candidates) seeded from `ImportProfiles` defaults; snapshot reloads on edit. Detail View / Offerings / Account master / Tool Usage importers and `DetectFileKind` read them. Admin edits in Configuration → **Import column maps** (`api/import-profiles`). 3 unit tests |
-| 6B-6 | Move Effectiveness scoring server-side (`/api/effectiveness`) using 6B-2 models | H16 | ☐ |
+| 6B-6 | Move Effectiveness scoring server-side (`/api/effectiveness`) using 6B-2 models | H16 | ✅ `EffectivenessService` + `GET /api/effectiveness` (role · region · fy); rows carry score, tone, explain; `NominationDto.DeliveryDays` server-computed. Parity vs the old client formula: 0 diffs across PM 96 / SA 46 / CFTL 39 owners (FY27). Also: unknown `/api/*` paths now return 404 instead of the SPA shell |
 
 ### 6C — Hardening
 

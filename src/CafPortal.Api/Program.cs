@@ -87,6 +87,9 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", utc = DateTimeOffset.UtcNow })).AllowAnonymous();
 
+// Unknown API paths are a real 404, not the SPA shell (controllers win over this catch-all by route precedence).
+app.Map("/api/{**rest}", () => Results.NotFound()).AllowAnonymous();
+
 // SPA fallback: non-API routes return index.html for client-side routing.
 app.MapFallbackToFile("index.html").AllowAnonymous();
 

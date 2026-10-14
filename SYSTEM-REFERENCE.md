@@ -568,7 +568,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | H13 | ~~Health keywords~~ — now ⚙️ domain **Health** (client colours use the server bucket) | Classification Rules page | 4 rules | done |
 | H14 | Capacity heat-colour mapping | `CapacityCalculationService.ResolveHeatColor` | Green/Amber/Red | P3 |
 | H15 | SA auto-link fuzzy threshold | `NameConsistencyService.LinkSolutionArchitectsAsync` | 0.95 | P2 |
-| H16 | ~~Effectiveness weights + speed/momentum targets + tones~~ — now ⚙️ Scoring models (6B-2); formula still client-side → 6B-6 | `EffectivenessPage` reads settings | §5.14 | P2 |
+| H16 | ~~Effectiveness weights + speed/momentum targets + tones + formula~~ — now ⚙️ Scoring models (6B-2), computed server-side by `EffectivenessService` (6B-6) | `GET /api/effectiveness` | §5.14 | done |
 | H17 | Recommended-action text + 42-day defer rule | client `NominationsPage.recommendedAction` | Day 3/5/10/42 | P2 |
 | H18 | Blocker suggestion regexes | client `NominationsPage.suggestBlocker` | access/LZ/approval/testing… | P3 |
 | H19 | Team assign roles + role eligibility keywords | client `NominationsPage` (`ASSIGN_ROLES`) | SA / Migration Engineer / DevOps | P3 |

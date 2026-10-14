@@ -192,6 +192,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 PlannedStartDate = n.PlannedStartDate,
                 PlannedEndDate = n.PlannedEndDate,
                 TotalDays = n.TotalDays,
+                DeliveryDays = n.TotalDays is > 0 ? n.TotalDays
+                    : n.NominatedDate is { } nd && n.ActualEndDate is { } ae && ae >= nd ? ae.DayNumber - nd.DayNumber : null,
                 DaysSinceUpdate = days,
                 EffectiveAgeDays = effectiveDays,
                 ClockStopped = clockStopped,

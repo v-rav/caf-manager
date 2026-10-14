@@ -2,6 +2,7 @@ import axios from 'axios'
 import type {
   StatusRuleRow,
   StatusRulesResponse,
+  Effectiveness,
   ImportProfilesResponse,
   KeywordRuleInput,
   KeywordRulePreview,
@@ -302,6 +303,8 @@ export const api = {
   keywordRules: () =>
     http.get<KeywordRulesResponse>('/api/keyword-rules').then((r) => r.data),
   importProfiles: () => http.get<ImportProfilesResponse>('/api/import-profiles').then((r) => r.data),
+  effectiveness: (region: string | undefined, role: string, fy?: number) =>
+    http.get<Effectiveness>('/api/effectiveness', { params: { region, role, fy } }).then((r) => r.data),
   saveImportProfile: (id: number, body: { label: string; detectOrder: number; signature: string }) =>
     http.put(`/api/import-profiles/profiles/${id}`, body),
   saveImportColumn: (id: number, candidates: string) => http.put(`/api/import-profiles/columns/${id}`, { candidates }),

@@ -24,6 +24,39 @@ export interface TimeSeries {
   fiscalYears: number[]
 }
 
+export interface EffectivenessRow {
+  name: string
+  assigned: number
+  active: number
+  delivered: number
+  withdrawn: number
+  deferred: number
+  blocked: number
+  successRate: number | null
+  deliveredPct: number
+  avgDeliveryDays: number | null
+  avgActiveAge: number | null
+  avgMsi: number
+  onTrackPct: number | null
+  slaBreaches: number
+  avgGhcp: number | null
+  acrDelivered: number
+  effectiveness: number
+  tone: 'success' | 'warning' | 'danger'
+  explain: string
+}
+export interface Effectiveness {
+  role: string
+  owners: number
+  assigned: number
+  delivered: number
+  active: number
+  deliveredPct: number
+  avgDeliveryDays: number | null
+  avgActiveAge: number | null
+  rows: EffectivenessRow[]
+}
+
 export interface Analytics {
   totalApproved: number
   inFlight: number
@@ -290,6 +323,7 @@ export interface Nomination {
   plannedStartDate?: string
   plannedEndDate?: string
   totalDays?: number
+  deliveryDays?: number | null
   daysSinceUpdate: number
   effectiveAgeDays: number
   clockStopped: boolean

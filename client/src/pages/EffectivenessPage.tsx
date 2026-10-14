@@ -10,7 +10,7 @@ import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
 import { downloadCsv } from '../export'
-import type { Nomination, OperationsSetting } from '../types'
+import type { EffectivenessRow as ScoreRow, Nomination } from '../types'
 
 type Role = 'PM' | 'SA' | 'CFTL'
 
@@ -21,129 +21,8 @@ function ownerOf(n: Nomination, role: Role): string | undefined {
   return (v ?? '').trim() || undefined
 }
 
-// Delivery duration for a completed nomination: the offering TotalDays when present,
-// else nominated→actual-end. Null when neither is available.
-function deliveryDays(n: Nomination): number | null {
-  if (n.totalDays && n.totalDays > 0) return n.totalDays
-  if (n.nominatedDate && n.actualEndDate) {
-    const d = (new Date(n.actualEndDate).getTime() - new Date(n.nominatedDate).getTime()) / 86_400_000
-    return d >= 0 ? Math.round(d) : null
-  }
-  return null
-}
-
-type ScoreRow = {
-  name: string
-  assigned: number
-  active: number
-  delivered: number
-  withdrawn: number
-  deferred: number
-  blocked: number
-  successRate: number | null
-  deliveredPct: number
-  avgDeliveryDays: number | null
-  avgActiveAge: number | null
-  avgMsi: number
-  onTrackPct: number | null
-  slaBreaches: number
-  avgGhcp: number | null
-  acrDelivered: number
-  effectiveness: number
-}
-
-// Scoring model from Configuration → Scoring models (server SettingsCatalog); weights are percentages.
-type EffModel = Record<string, number>
-const effModelFrom = (settings: OperationsSetting[]): EffModel =>
-  Object.fromEntries(settings.filter((s) => s.key.startsWith('Eff')).map((s) => [s.key, Number(s.value)]))
-
-function buildRows(noms: Nomination[], role: Role, m: EffModel): ScoreRow[] {
-  const groups = new Map<string, Nomination[]>()
-  for (const n of noms) {
-    const o = ownerOf(n, role)
-    if (!o) continue
-    let arr = groups.get(o)
-    if (!arr) { arr = []; groups.set(o, arr) }
-    arr.push(n)
-  }
-  const rows: ScoreRow[] = []
-  for (const [name, list] of groups) {
-    const assigned = list.length
-    const activeList = list.filter((n) => !n.isSettled)
-    const active = activeList.length
-    const delivered = list.filter((n) => n.status === 'Completed').length
-    const withdrawn = list.filter((n) => n.status === 'Withdrawn').length
-    const deferred = list.filter((n) => n.status === 'Customer Deferred').length
-    const blocked = list.filter((n) => (n.openBlockerCount ?? 0) > 0 || n.status === 'Blocked').length
-    const settled = delivered + withdrawn + deferred
-    const successRate = settled > 0 ? Math.round((delivered / settled) * 100) : null
-    const deliveredPct = assigned ? Math.round((delivered / assigned) * 100) : 0
-    const durs = list.filter((n) => n.status === 'Completed').map(deliveryDays).filter((d): d is number => d != null)
-    const avgDeliveryDays = durs.length ? Math.round(durs.reduce((a, b) => a + b, 0) / durs.length) : null
-    const avgActiveAge = active ? Math.round(activeList.reduce((a, n) => a + (n.effectiveAgeDays ?? 0), 0) / active) : null
-    const avgMsi = Math.round(list.reduce((a, n) => a + (n.msiScore ?? 0), 0) / assigned)
-    const onTrackPct = active ? Math.round((activeList.filter((n) => !n.staleTier).length / active) * 100) : null
-    const slaBreaches = activeList.filter((n) => !!n.staleTier).length
-    const ghcps = list.map((n) => n.ghcpEffectiveLevel ?? n.ghcpAdoptionLevel).filter((v): v is number => v != null)
-    const avgGhcp = ghcps.length ? Math.round((ghcps.reduce((a, b) => a + b, 0) / ghcps.length) * 10) / 10 : null
-    const acrDelivered = list.filter((n) => n.status === 'Completed').reduce((a, n) => a + (n.totalAcr ?? 0), 0)
-
-    // Role-sensitive composite. Gate-driven MSI is an SA lever, so PM/CFTL are scored on flow
-    // instead — on-track health, momentum (days-in-stage), delivery speed, and delivered share.
-    // Weights renormalise over whatever components have data (success rate is intentionally not
-    // used: with almost no withdrawn/deferred outcomes it sits at ~100% for everyone).
-    const sp = speedScore(avgDeliveryDays, m)
-    const mo = momentumScore(avgActiveAge, m)
-    const parts: { w: number; v: number }[] = []
-    if (role === 'SA') {
-      parts.push({ w: m.EffSaMsi, v: avgMsi })
-      if (onTrackPct != null) parts.push({ w: m.EffSaOnTrack, v: onTrackPct })
-      if (sp != null) parts.push({ w: m.EffSaSpeed, v: sp })
-      if (mo != null) parts.push({ w: m.EffSaMomentum, v: mo })
-    } else {
-      if (onTrackPct != null) parts.push({ w: m.EffFlowOnTrack, v: onTrackPct })
-      if (mo != null) parts.push({ w: m.EffFlowMomentum, v: mo })
-      if (sp != null) parts.push({ w: m.EffFlowSpeed, v: sp })
-      parts.push({ w: m.EffFlowDelivered, v: deliveredPct })
-    }
-    const wsum = parts.reduce((s, p) => s + p.w, 0) || 1
-    const effectiveness = Math.round(parts.reduce((s, p) => s + p.w * p.v, 0) / wsum)
-
-    rows.push({ name, assigned, active, delivered, withdrawn, deferred, blocked, successRate, deliveredPct, avgDeliveryDays, avgActiveAge, avgMsi, onTrackPct, slaBreaches, avgGhcp, acrDelivered, effectiveness })
-  }
-  return rows.sort((a, b) => b.effectiveness - a.effectiveness)
-}
-
 const money = (v: number) => (v ? '$' + Math.round(v).toLocaleString() : '—')
 const pct = (v: number | null) => (v == null ? '—' : `${v}%`)
-const effTone = (v: number, m: EffModel): 'success' | 'warning' | 'danger' =>
-  v >= m.EffGreenFrom ? 'success' : v >= m.EffAmberFrom ? 'warning' : 'danger'
-
-const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)))
-// Linear sub-score: 100 at/under `best` days, 0 at/over `worst` days.
-const linear = (days: number | null, best: number, worst: number) =>
-  days == null ? null : clamp(((worst - days) / (worst - best)) * 100)
-const speedScore = (days: number | null, m: EffModel) => linear(days, m.EffSpeedBestDays, m.EffSpeedWorstDays)
-const momentumScore = (age: number | null, m: EffModel) => linear(age, m.EffMomentumBestDays, m.EffMomentumWorstDays)
-
-// Human-readable breakdown of the composite for the tooltip (role decides the weighting model).
-function effExplain(r: ScoreRow, role: Role, m: EffModel): string {
-  const sp = speedScore(r.avgDeliveryDays, m)
-  const mo = momentumScore(r.avgActiveAge, m)
-  const bits: string[] = []
-  if (role === 'SA') {
-    bits.push(`MSI ${r.avgMsi}`)
-    if (r.onTrackPct != null) bits.push(`on-track ${r.onTrackPct}%`)
-    if (sp != null) bits.push(`speed ${sp}`)
-    if (mo != null) bits.push(`momentum ${mo}`)
-  } else {
-    if (r.onTrackPct != null) bits.push(`on-track ${r.onTrackPct}%`)
-    if (mo != null) bits.push(`momentum ${mo}`)
-    if (sp != null) bits.push(`speed ${sp}`)
-    bits.push(`delivered ${r.deliveredPct}%`)
-  }
-  return `${role === 'SA' ? 'Quality-led' : 'Flow-led'}: ${bits.join(' · ')} (weighted, renormalised)`
-}
 
 const stageNum = (n: Nomination): string => (n.stageIndex ? String(n.stageIndex) : '—')
 
@@ -161,20 +40,18 @@ export function EffectivenessPage() {
   const { region } = useRegion()
   const { fy } = useFy()
   const noms = useAsync(() => api.nominations(region), [region])
-  const settings = useAsync(() => api.operationsSettings(), [])
-  const model = useMemo(() => effModelFrom(settings.data ?? []), [settings.data])
   const [role, setRole] = useState<Role>('PM')
+  // Scores are computed on the server (Scoring models settings); the page only presents them.
+  const eff = useAsync(() => api.effectiveness(region, role, fy === 'all' ? undefined : fy), [region, role, fy])
   const [selected, setSelected] = useState<string | null>(null)
   useEffect(() => setSelected(null), [role]) // a role switch clears the open owner
 
-  // Fiscal-year + region scoped (the global selectors drive this page like the rest of Delivery).
-  // The synthetic "Closed" workflow status is excluded — it's ambiguous (not a real outcome) and
-  // otherwise makes all-Closed books read as 0-effectiveness failures.
+  // Drill-down list scope mirrors the server (FY + region, synthetic "Closed" excluded).
   const scoped = useMemo(
     () => (noms.data ?? []).filter((n) => nominationInFy(n, fy) && n.status !== 'Closed'),
     [noms.data, fy],
   )
-  const rows = useMemo(() => buildRows(scoped, role, model), [scoped, role, model])
+  const rows = useMemo(() => eff.data?.rows ?? [], [eff.data])
 
   // The selected owner's row + their nominations (in the current role), for the inline drill-down.
   const detail = useMemo(() => {
@@ -187,19 +64,15 @@ export function EffectivenessPage() {
     return { row, list }
   }, [selected, rows, scoped, role])
 
-  // Pooled totals for the KPI band (computed straight from the scoped set for this role).
-  const kpis = useMemo(() => {
-    const roleNoms = scoped.filter((n) => ownerOf(n, role))
-    const assigned = roleNoms.length
-    const delivered = roleNoms.filter((n) => n.status === 'Completed').length
-    const activeList = roleNoms.filter((n) => !n.isSettled)
-    const active = activeList.length
-    const deliveredPct = assigned ? Math.round((delivered / assigned) * 100) : 0
-    const durs = roleNoms.filter((n) => n.status === 'Completed').map(deliveryDays).filter((d): d is number => d != null)
-    const avgDays = durs.length ? Math.round(durs.reduce((a, b) => a + b, 0) / durs.length) : null
-    const avgAge = active ? Math.round(activeList.reduce((a, n) => a + (n.effectiveAgeDays ?? 0), 0) / active) : null
-    return { owners: rows.length, assigned, delivered, active, deliveredPct, avgDays, avgAge }
-  }, [scoped, role, rows.length])
+  const kpis = {
+    owners: eff.data?.owners ?? 0,
+    assigned: eff.data?.assigned ?? 0,
+    delivered: eff.data?.delivered ?? 0,
+    active: eff.data?.active ?? 0,
+    deliveredPct: eff.data?.deliveredPct ?? 0,
+    avgDays: eff.data?.avgDeliveryDays ?? null,
+    avgAge: eff.data?.avgActiveAge ?? null,
+  }
 
   const exportRows = () =>
     downloadCsv<ScoreRow>(
@@ -224,8 +97,9 @@ export function EffectivenessPage() {
       rows,
     )
 
-  if (noms.loading || settings.loading) return <Loading />
+  if ((noms.loading && !noms.data) || (eff.loading && !eff.data)) return <Loading />
   if (noms.error) return <ErrorText error={noms.error} onRetry={noms.reload} />
+  if (eff.error) return <ErrorText error={eff.error} onRetry={eff.reload} />
 
   const columns: Column<ScoreRow>[] = [
     {
@@ -277,8 +151,8 @@ export function EffectivenessPage() {
       align: 'center',
       sortValue: (r) => r.effectiveness,
       render: (r) => (
-        <Tooltip relationship="description" content={effExplain(r, role, model)}>
-          <Badge appearance="filled" color={effTone(r.effectiveness, model)}>{r.effectiveness}</Badge>
+        <Tooltip relationship="description" content={r.explain}>
+          <Badge appearance="filled" color={r.tone}>{r.effectiveness}</Badge>
         </Tooltip>
       ),
     },
@@ -305,8 +179,8 @@ export function EffectivenessPage() {
       key: 'days',
       header: 'Delivery days',
       align: 'end',
-      sortValue: (n) => deliveryDays(n) ?? Number.MAX_SAFE_INTEGER,
-      render: (n) => deliveryDays(n) ?? '—',
+      sortValue: (n) => n.deliveryDays ?? Number.MAX_SAFE_INTEGER,
+      render: (n) => n.deliveryDays ?? '—',
     },
     { key: 'acr', header: 'ACR', align: 'end', sortValue: (n) => n.totalAcr ?? 0, render: (n) => money(n.totalAcr ?? 0) },
   ]
@@ -366,7 +240,7 @@ export function EffectivenessPage() {
             <Stat label="SLA breaches" value={detail.row.slaBreaches} />
             <Stat label="Avg MSI" value={detail.row.avgMsi} />
             <Stat label="ACR delivered" value={money(detail.row.acrDelivered)} />
-            <Stat label="Effectiveness" value={<Badge appearance="filled" color={effTone(detail.row.effectiveness, model)}>{detail.row.effectiveness}</Badge>} />
+            <Stat label="Effectiveness" value={<Badge appearance="filled" color={detail.row.tone}>{detail.row.effectiveness}</Badge>} />
           </div>
           <DataTable<Nomination>
             ariaLabel={`${selected} nominations`}

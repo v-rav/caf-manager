@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<ICapacityService, CapacityService>();
         services.AddScoped<ILeaveService, LeaveService>();
         services.AddScoped<INominationService, NominationService>();
+        services.AddScoped<IEffectivenessService, EffectivenessService>();
         services.AddScoped<IPerformanceReviewService, PerformanceReviewService>();
         services.AddScoped<IImportHistoryService, ImportHistoryService>();
         services.AddScoped<IReconciliationService, ReconciliationService>();
