@@ -121,6 +121,17 @@ public class NominationRulesTests
     }
 
     [Theory]
+    [InlineData(2, false, 12, 10, "")]        // over target by 2 → below Warn (3)
+    [InlineData(2, false, 13, 10, "Warn")]    // target 10 + 3
+    [InlineData(3, false, 10, 5, "Escalate")] // target 5 + 5
+    [InlineData(4, false, 33, 23, "Defer")]   // target 23 + 10
+    [InlineData(4, false, 20, 23, "")]        // within target
+    [InlineData(1, false, 90, 10, "")]        // Stage 1 never tiered
+    [InlineData(3, true, 90, 5, "")]          // settled never tiered
+    public void Sla_tier_counts_days_past_stage_target(int stage, bool settled, int days, int target, string expected)
+        => Assert.Equal(expected, NominationRules.StaleTier(stage, settled, days, target, 3, 5, 10));
+
+    [Theory]
     [InlineData(null, false)]
     [InlineData("", false)]
     [InlineData("standard factory", false)]

@@ -79,10 +79,8 @@ import the **web app is the system of record**.
     Pre-Requisites", "3 - Finalize Scope", "4 - Executing Migration" (values like "9 days").
     `NominationService` uses it as the age basis (falls back to update-recency) and it drives the
     stale tier.
-    > ⚠ **Pending (verify vs FDO):** the stage day-count may only accrue **after** an SLA breach, not
-    > from stage entry. If so, the Warn/Escalate/Defer thresholds and the "Age in stage" label need
-    > re-mapping. Tracked as PV-01 in `DEVELOPMENT-PLAN.md` §7 — do not treat the current SLA-breach
-    > basis as final.
+    > ✅ **PV-01 resolved:** the age is days-in-stage; the SLA limit is the **per-stage target** and the
+    > Warn/Escalate/Defer cadence counts **days past that target** (see Stale cadence).
 - **TPID** lives on `Account` (external master key), surfaced onto `NominationDto.Tpid` via
   `Include(n => n.Account)` in `NominationService`.
 - **Approval status** (`Nomination.ApprovalStatus`, FDO-owned): from the FDO "Nomination Approval
@@ -111,15 +109,14 @@ import the **web app is the system of record**.
   **Wave Types** export column. The current FDO export contains only App/Security/SQL(DB)/OSSDB(DB)
   waves — there is **no Landing Zone/Dispatch/ALZ wave** in the data, so ALZ stays empty unless added
   in the portal.
-- **Stale cadence** (configurable via `ApplicationSetting`): Warn `StaleWarnDays=3` ·
-    Escalate `StaleEscalateDays=5` · Defer `StaleDeferDays=10`. **Applies to execution Stages 2–4
-    only** (not Stage 1 Validating) — gated in `NominationService.StaleTier` via `StageIndex`. The
+- **Stale cadence** (configurable via `ApplicationSetting`): the SLA limit is the **per-stage target**
+    (`StageTargetDays1..4`, defaults 10/10/5/23, Configuration → Stage targets) and the cadence counts **days past
+    that target**: Warn `StaleWarnDays=3` · Escalate `StaleEscalateDays=5` · Defer `StaleDeferDays=10`
+    (`NominationRules.StaleTier`, on clock-aware effective age; DTO `StageTargetDays`). **Applies to execution
+    Stages 2–4 only** (not Stage 1 Validating), never to settled or upcoming waves. The
     documented governance action per tier (Day 3 remind → Blocked, Day 5 2nd remind, Day 10 →
     Customer Deferred) plus the **>6-week-in-stage** (`DEFER_WEEKS_DAYS=42`) Customer-Deferred rule are
     surfaced as the "Next step" line in the Summary hover (`recommendedAction()` in `NominationsPage`).
-    **Per-stage target days** (`StageTargetDays1..4`, defaults 10/10/5/23 from the FDO TARGET columns) are
-    editable in Configuration → Operations Settings; currently informational (config-only), not yet wired
-    into `StaleTier` (that swap is the PV-01 decision).
 - **Account master data** (single source of truth): `Account` carries identity (`AccountId`, `Tpid`,
     `ExternalAccountId`, `AccountName`, `Segment`, `Region`, `Status`, `StrategicFlag`) + the ownership
     matrix. `AccountMasterImportService` loads **`Nominations In-Flight.xlsx`** (Segment · TPID · Customer
@@ -419,7 +416,7 @@ User & Access page**, **CSV exports + light filters on Adoption/Strategic/Flow**
 left nav** (Overview / Delivery / Resourcing / Admin — only the active group expanded, so the sidebar never scrolls),
 and **Migration Capability Utilization** (Tool × Activity masters + per-nomination usage + leadership rollups).
 **Backlog:** `NominationOutcome` value-capture (hours saved · defects · CSAT → real Factory Productivity);
-config-editable strategic time-thresholds + PV-01 stale-basis decision; retire the `/workspace` P0 mock
+config-editable strategic time-thresholds; retire the `/workspace` P0 mock
 (kept as reference); Entra auth; API smoke tests.
 - **Migration Capability Utilization** (the GHCP/AppMod/accelerator value story): two portal-owned masters —
   **`MigrationTool`** (Name · Category · Vendor; seeded 15-tool taxonomy — **Assessment** (Azure Migrate, AppCAT) ·

@@ -11,6 +11,21 @@ public static class NominationRules
 
     public static bool IsSettled(NominationStatusType status) => StatusRules.IsSettled(status);
 
+    /// <summary>SLA tier for execution stages 2–4: the stage target (StageTargetDays1..4) is the limit, and the
+    /// Warn/Escalate/Defer cadence counts days past that target. Stage 1 and settled work are never tiered.</summary>
+    public static string StaleTier(int? stage, bool settled, int effectiveDays, int stageTarget, int warn, int escalate, int defer)
+    {
+        if (stage is null or < 2 || settled) return string.Empty;
+        var over = effectiveDays - stageTarget;
+        if (over >= defer) return "Defer";
+        if (over >= escalate) return "Escalate";
+        if (over >= warn) return "Warn";
+        return string.Empty;
+    }
+
+    public static int StageTarget(IReadOnlyDictionary<string, double> settings, int? stage) =>
+        stage is >= 1 and <= 4 ? (int)settings[$"StageTargetDays{stage}"] : 0;
+
     /// <summary>The one FY a nomination belongs to: settled by its close date, in-flight by when it entered the pipeline.</summary>
     public static int FiscalYearOf(bool settled, DateOnly? actualEnd, DateOnly? nominated, DateOnly opened) =>
         FiscalCalendar.FiscalYear(settled ? actualEnd ?? nominated ?? opened : nominated ?? opened);

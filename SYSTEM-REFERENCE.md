@@ -296,10 +296,10 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 * `EffectiveAgeDays = max(0, days − min(days, clockStoppedDays))`; `ClockStopped = any open clock-stop blocker`.
 
 ### 5.3 SLA stale tier (Warn / Escalate / Defer)
-* **Applies to Stages 2–4 only (🔒)** and only to non-settled rows.
-* `≥ StaleDeferDays (10) → Defer`, `≥ StaleEscalateDays (5) → Escalate`, `≥ StaleWarnDays (3) → Warn` (⚙️).
-* Basis = **EffectiveAgeDays**. ⚠️ **PV-01:** the FDO day-count may only start counting *after* an SLA breach. The
-  per-stage targets `StageTargetDays1..4` (⚙️ 10/10/5/**25** live) are stored but **not used** by the tier yet.
+* **Applies to Stages 2–4 only (🔒)** and only to non-settled, started rows.
+* Limit = per-stage target `StageTargetDays{stage}` (⚙️ 10/10/5/25 live). Over = `EffectiveAgeDays − target`;
+  `over ≥ StaleDeferDays (10) → Defer`, `≥ StaleEscalateDays (5) → Escalate`, `≥ StaleWarnDays (3) → Warn` (⚙️).
+  Computed in `NominationRules.StaleTier` (unit-tested). PV-01 resolved: age = days in stage, cadence = days past target.
 * **Recommended next step** (client, 🔒 `recommendedAction()` in `NominationsPage.tsx`): Warn → remind / mark Blocked,
   Escalate → second reminder, Defer → Customer Deferred, plus a ">6 weeks in stage" rule (`DEFER_WEEKS_DAYS = 42`).
 
@@ -512,7 +512,7 @@ Client-side scorecard per PM/SA/CFTL (§5.14) · inline drill-down · CSV.
 |---|---|---|---|
 | **Operational settings catalog** (`SettingsCatalog`, Application/Common) | Configuration → **Operational thresholds** (grouped, bounded, ordering-validated; capacity edits rebuild `CapacityFact`) | see rows below | — |
 |  SLA cadence: `StaleWarnDays` / `StaleEscalateDays` / `StaleDeferDays` | ⚙️ | 3 / 5 / 10 | SLA tier |
-|  Stage targets: `StageTargetDays1..4` | ⚙️ | 10 / 10 / 5 / 25 | **Nothing yet** (PV-01) |
+|  Stage targets: `StageTargetDays1..4` | ⚙️ | 10 / 10 / 5 / 25 | SLA limit per stage; the Warn/Escalate/Defer cadence counts days past it |
 |  Strategic: `StrategicGreen/Amber/RedDays` | ⚙️ | 60 / 90 / 120 | Strategic tier |
 |  Capacity: `DefaultCapacityLimit`, `Available/PartiallyUtilized/OverloadedThreshold` | ⚙️ | 5 · 40 / 80 / 100 | Capacity limit + status |
 |  Resourcing: `LeaveClashWindowDays`, `PerformanceTrainingThreshold`, `WorkloadStartLookaheadDays` | ⚙️ | 30 · 4 · 0 | Leave clashes, training flag, upcoming-wave cut-off (`IsUpcoming` = start (actual ?? planned) > today + N; excluded from SA workload, capacity, Active/in-flight KPIs and SLA tier) |
@@ -576,7 +576,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | I5 | ~~Strategic threshold keys read but never seeded/exposed~~ — **fixed (6A-4)** | — | — |
 | I6 | ~~`HistoryRetentionDays` was a C# const~~ — **fixed (6A-4)**: read from settings | — | — |
 | I7 | ~~Capacity thresholds / default limit / training threshold had no UI~~ — **fixed (6A-4)**: Configuration → Operational thresholds | — | — |
-| I8 | `StageTargetDays1..4` are editable but unused | Admins expect an effect | PV-01 decision: drive `StaleTier` from per-stage targets, or label them "informational" |
+| I8 | ✅ *Resolved (6C-7)* — `StageTargetDays1..4` are the SLA limit; the cadence counts days past them | — | — |
 | I9 | ✅ *Resolved (6C-3)* — the capability rollup unions manual `NominationToolUsages` (explicit activity) with imported `NominationToolUsageFacts` (normalized tool, inferred activity) | — | — |
 | I10 | Legacy tables still present: `Tools` (vs `MigrationTools`), `StrategicAccountConfigurations` (vs `Segment='Strategic'`), `RolePermissions` (not enforced), `ResourceAccounts` (not the capacity basis) | Confusion about which table is the source of truth | Mark as deprecated. Migrate or remove after review |
 | I11 | ~~Many controllers anonymous~~ — **fixed (6C-1)**: fallback policy requires sign-in everywhere; Admin/Lead on ingestion + master-data edits, Admin on destructive/config ops; verified anonymous → 401, SA on admin ops → 403 | — | Next: per-user ownership checks (e.g. SA may only edit own nominations) |

@@ -214,7 +214,9 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 MsiRisk = msi.Risk,
                 MsiGhcp = msi.Ghcp,
                 MsiSignoff = msi.Signoff,
-                StaleTier = isUpcoming ? string.Empty : StaleTier(n.Status, stage, effectiveDays, warn, escalate, defer),
+                StaleTier = isUpcoming ? string.Empty : NominationRules.StaleTier(stage, NominationRules.IsSettled(n.Status),
+                    effectiveDays, NominationRules.StageTarget(settings, stage), warn, escalate, defer),
+                StageTargetDays = NominationRules.StageTarget(settings, stage),
                 DbLinked = dbLinked,
                 AlzLinked = alzLinked,
                 SecurityLinked = securityLinked,
@@ -401,19 +403,6 @@ public class NominationService(IApplicationDbContext db) : INominationService
         if (inFlightDays > amber) return "Red";
         if (inFlightDays > green) return "Amber";
         return "Green";
-    }
-
-    private static string StaleTier(NominationStatusType status, int? stage, int days, int warn, int escalate, int defer)
-    {
-        // Documented cadence applies to execution stages 2–4 only (not initial validation/scoping).
-        if (stage is null or < 2)
-            return string.Empty;
-        if (NominationRules.IsSettled(status))
-            return string.Empty;
-        if (days >= defer) return "Defer";
-        if (days >= escalate) return "Escalate";
-        if (days >= warn) return "Warn";
-        return string.Empty;
     }
 
     private static bool IsBlockedState(NominationStatusType s) => StatusRules.IsBlocked(s);

@@ -320,7 +320,7 @@ const staleTone: Record<string, { label: string; color: string; bg: string }> = 
 // >6 weeks in an execution stage (customer-driven) → Customer Deferred, per the governance cadence.
 const DEFER_WEEKS_DAYS = 42
 
-// Documented Day 3/5/10 action for a stale Stage 2–4 nomination (only set when an SLA tier applies).
+// Documented Day 3/5/10 (past the stage target) action for a stale Stage 2–4 nomination (only set when an SLA tier applies).
 function recommendedAction(staleTier: string, ageDays: number): string | null {
   if (!staleTier) return null
   if (ageDays >= DEFER_WEEKS_DAYS) return 'Delayed >6 weeks — move to Customer Deferred & set follow-up'
@@ -599,9 +599,9 @@ export function NominationsPage() {
               title="Health"
               items={[
                 { label: 'Blocked / Waiting', value: blockedTotal, tone: 'warning' },
-                { label: 'Warn (3d+)', value: staleCount('Warn'), tone: 'warning', active: slaFilter === 'Warn', onClick: () => setSlaFilter(slaFilter === 'Warn' ? '' : 'Warn') },
-                { label: 'Escalate (5d+)', value: staleCount('Escalate'), tone: 'warning', active: slaFilter === 'Escalate', onClick: () => setSlaFilter(slaFilter === 'Escalate' ? '' : 'Escalate') },
-                { label: 'Defer (10d+)', value: staleCount('Defer'), tone: 'danger', active: slaFilter === 'Defer', onClick: () => setSlaFilter(slaFilter === 'Defer' ? '' : 'Defer') },
+                { label: 'Warn (3d+ over target)', value: staleCount('Warn'), tone: 'warning', active: slaFilter === 'Warn', onClick: () => setSlaFilter(slaFilter === 'Warn' ? '' : 'Warn') },
+                { label: 'Escalate (5d+ over)', value: staleCount('Escalate'), tone: 'warning', active: slaFilter === 'Escalate', onClick: () => setSlaFilter(slaFilter === 'Escalate' ? '' : 'Escalate') },
+                { label: 'Defer (10d+ over)', value: staleCount('Defer'), tone: 'danger', active: slaFilter === 'Defer', onClick: () => setSlaFilter(slaFilter === 'Defer' ? '' : 'Defer') },
               ]}
             />
             <SummaryCard
@@ -741,7 +741,7 @@ export function NominationsPage() {
                             {n.blockedReason && <div><b>Blocker:</b> {n.blockedReason}</div>}
                             {n.blockedSince && <div><b>Blocked since:</b> {n.blockedSince}</div>}
                             {n.followUpDate && <div><b>Follow-up:</b> {n.followUpDate}</div>}
-                            <div><b>Age in stage:</b> {age} days{n.staleTier ? ` · SLA ${n.staleTier}` : ''}</div>
+                            <div><b>Age in stage:</b> {age} days{n.stageTargetDays ? ` / target ${n.stageTargetDays}` : ''}{n.staleTier ? ` · SLA ${n.staleTier}` : ''}</div>
                             {paused > 0 && <div><b>SLA clock:</b> {n.clockStopped ? 'stopped' : 'ran'} · {paused}d not counted · {n.effectiveAgeDays}d effective</div>}
                             {n.openBlockerCount > 0 && <div><b>Open blockers:</b> {n.openBlockerCount}</div>}
                             {action && <div style={{ color: 'var(--colorPaletteRedForeground1)' }}><b>Next step:</b> {action}</div>}

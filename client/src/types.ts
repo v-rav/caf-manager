@@ -275,6 +275,7 @@ export interface Nomination {
   stageIndex?: number | null
   stageLabel?: string
   isSettled?: boolean
+  stageTargetDays?: number
   fiscalYear?: number
   effectiveStartDate?: string | null
   isUpcoming?: boolean
