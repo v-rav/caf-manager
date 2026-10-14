@@ -10,5 +10,4 @@ public class RoleConfiguration : AuditableEntity
     public int SortOrder { get; set; }
     public bool ActiveFlag { get; set; } = true;
 
-    public ICollection<RolePermission> Permissions { get; set; } = new List<RolePermission>();
 }

@@ -31,6 +31,10 @@ internal static class ExcelHelpers
         return null;
     }
 
+    /// <summary>Column for a configured import field (Configuration → Import column maps).</summary>
+    public static int? Col(Dictionary<string, int> headers, string kind, string field)
+        => FindColumn(headers, CafPortal.Application.Common.ImportProfiles.Candidates(kind, field));
+
     public static string? GetString(IXLRow row, int? column)
     {
         if (column is null)

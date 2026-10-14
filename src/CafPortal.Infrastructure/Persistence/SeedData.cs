@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CafPortal.Infrastructure.Persistence;
 
 /// <summary>
-/// Seeds configuration tables (regions, roles, permissions, thresholds, aliases, strategic accounts)
+/// Seeds configuration tables (regions, roles, thresholds, aliases)
 /// and, when the database is otherwise empty, a small demo dataset so the dashboard is usable
 /// before any source workbooks are supplied.
 /// </summary>
@@ -41,7 +41,6 @@ public static class SeedData
         await SeedResourceEmailsAsync(db, ct);
         await SeedResourceMobilesAsync(db, ct);
         await SeedResourceRegionsAsync(db, ct);
-        await SeedStrategicAccountsAsync(db, ct);
         await db.SaveChangesAsync(ct);
 
         // Demo data is only seeded when requested (no real source workbook) and the DB has no resources yet.
@@ -81,33 +80,20 @@ public static class SeedData
         if (await db.Roles.AnyAsync(ct))
             return;
 
-        string[] adminPerms = ["view.dashboard", "view.resources", "view.accounts", "view.capacity", "view.leave", "view.strategic", "view.nominations", "manage.configuration"];
-        string[] leadPerms = ["view.dashboard", "view.resources", "view.accounts", "view.capacity", "view.leave", "view.strategic", "view.nominations"];
-        string[] memberPerms = ["view.dashboard", "view.resources", "view.accounts", "view.capacity"];
-        string[] viewerPerms = ["view.dashboard"];
-
-        var roles = new (string Name, string Desc, int Sort, string[] Perms)[]
+        var roles = new (string Name, string Desc, int Sort)[]
         {
-            ("Global Lead", "Global CAF operations owner", 1, adminPerms),
-            ("Regional Lead", "Regional operations owner", 2, leadPerms),
-            ("Architect Lead", "Leads architecture practice", 3, leadPerms),
-            ("App Architect", "Application architect", 4, memberPerms),
-            ("App Engineer", "Application engineer", 5, memberPerms),
-            ("DevOps Engineer", "DevOps engineer", 6, memberPerms),
-            ("SME", "Subject matter expert", 7, memberPerms),
-            ("Viewer", "Read-only executive viewer", 8, viewerPerms)
+            ("Global Lead", "Global CAF operations owner", 1),
+            ("Regional Lead", "Regional operations owner", 2),
+            ("Architect Lead", "Leads architecture practice", 3),
+            ("App Architect", "Application architect", 4),
+            ("App Engineer", "Application engineer", 5),
+            ("DevOps Engineer", "DevOps engineer", 6),
+            ("SME", "Subject matter expert", 7),
+            ("Viewer", "Read-only executive viewer", 8)
         };
 
-        foreach (var (name, desc, sort, perms) in roles)
-        {
-            db.Roles.Add(new RoleConfiguration
-            {
-                RoleName = name,
-                Description = desc,
-                SortOrder = sort,
-                Permissions = perms.Select(p => new RolePermission { PermissionKey = p, Granted = true }).ToList()
-            });
-        }
+        foreach (var (name, desc, sort) in roles)
+            db.Roles.Add(new RoleConfiguration { RoleName = name, Description = desc, SortOrder = sort });
     }
 
     private static async Task SeedSegmentsAsync(AppDbContext db, CancellationToken ct)
@@ -159,12 +145,6 @@ public static class SeedData
 
     private static async Task SeedVocabulariesAsync(AppDbContext db, CancellationToken ct)
     {
-        if (!await db.Tools.AnyAsync(ct))
-        {
-            var tools = new[] { "AppCAT", "Azure Migrate", "Docker", "GitHub Copilot", "Java Upgrade", "OpenRewrite" };
-            for (var i = 0; i < tools.Length; i++)
-                db.Tools.Add(new ToolConfiguration { Name = tools[i], SortOrder = i + 1 });
-        }
         if (!await db.Skills.AnyAsync(ct))
         {
             var skills = new[] { ".NET", "Java", "AKS", "DevOps", "Data", "Security" };
@@ -506,22 +486,6 @@ public static class SeedData
         "Mercedes-Benz", "MOE", "KPC", "Glencore", "Simployer", "FNZ", "CAIT",
         "Repsol", "Swiss Re", "Bilfinger"
     ];
-
-    private static async Task SeedStrategicAccountsAsync(AppDbContext db, CancellationToken ct)
-    {
-        if (await db.StrategicAccountConfigurations.AnyAsync(ct))
-            return;
-        foreach (var name in StrategicSeed)
-        {
-            db.StrategicAccountConfigurations.Add(new StrategicAccountConfiguration
-            {
-                AccountName = name,
-                StrategicFlag = true,
-                PriorityWeight = 2,
-                ExecutiveVisibilityFlag = true
-            });
-        }
-    }
 
     private static async Task SeedDemoDataAsync(AppDbContext db, CancellationToken ct)
     {

@@ -17,7 +17,6 @@ public static class DependencyInjection
         services.AddScoped<IResourceService, ResourceService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<ICapacityService, CapacityService>();
-        services.AddScoped<IStrategicAccountService, StrategicAccountService>();
         services.AddScoped<ILeaveService, LeaveService>();
         services.AddScoped<INominationService, NominationService>();
         services.AddScoped<IPerformanceReviewService, PerformanceReviewService>();

@@ -150,6 +150,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 MigrationStatus = n.MigrationStatus,
                 ApprovalStatus = n.ApprovalStatus,
                 StageAgeDays = n.StageAgeDays,
+                FdoStageDays = new[] { n.FdoStage1Days, n.FdoStage2Days, n.FdoStage3Days, n.FdoStage4Days },
+                FdoTotalDays = n.FdoTotalDays,
                 CurrentState = n.CurrentState,
                 SolutionArchitect = n.SolutionArchitect,
                 CftlPrimary = n.CftlPrimary,

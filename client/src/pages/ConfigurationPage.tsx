@@ -105,14 +105,6 @@ export function ConfigurationPage() {
         update={(id, n) => api.updateSegment(id, n)}
       />
       <VocabPanel
-        title="Tool names"
-        placeholder="New tool name"
-        hint="Controlled tool vocabulary — replaces free-text entry (the biggest source of reporting drift)."
-        load={() => api.tools()}
-        add={(n) => api.addTool(n)}
-        update={(id, n) => api.updateTool(id, n)}
-      />
-      <VocabPanel
         title="Skills"
         placeholder="New skill name"
         hint="Controlled skill vocabulary used across resources and matching."
@@ -131,8 +123,107 @@ export function ConfigurationPage() {
       <OperationsSettingsPanel section="Scoring" title="Scoring models"
         intro="MSI and Ownership Effectiveness formulas. Each weight group must total 100%; band cut-offs must stay ordered. Changes apply on the next page load everywhere the score is shown." />
       <StatusRulesPanel />
+      <ImportProfilesPanel />
       <FiscalTargetsPanel />
     </div>
+  )
+}
+
+// FDO import profiles: how an uploaded workbook is recognised (signature) and which header names feed each field.
+// Lets a renamed FDO column be fixed here instead of in code.
+function ImportProfilesPanel() {
+  const { data, loading, error, reload } = useAsync(() => api.importProfiles(), [])
+  const [edits, setEdits] = useState<Record<string, string>>({})
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [kind, setKind] = useState('nominations')
+
+  const save = async (key: string, run: () => Promise<unknown>) => {
+    setMsg(null)
+    try {
+      await run()
+      setEdits(({ [key]: _, ...rest }) => rest)
+      setMsg({ ok: true, text: 'Saved — applies to the next upload/refresh.' })
+      reload()
+    } catch (e: unknown) {
+      const d = (e as { response?: { data?: unknown } })?.response?.data
+      setMsg({ ok: false, text: typeof d === 'string' ? d : 'Save failed.' })
+    }
+  }
+  const cell = { padding: '6px 8px', verticalAlign: 'top' as const }
+
+  return (
+    <Panel title="Import column maps (FDO files)">
+      {loading ? <Loading /> : error ? <ErrorText error={error} onRetry={reload} /> : data && (
+        <>
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
+            <b>Signature</b>: how an uploaded workbook is recognised — clauses separated by <code>;</code> must all be present as
+            exact headers; alternatives within a clause are separated by <code>|</code>. Types are tried in <b>Order</b>.
+            <b> Header candidates</b>: for each field, the first header that <i>contains</i> any candidate (<code>|</code>-separated) is used.
+          </Text>
+          {msg && <Text style={{ color: msg.ok ? 'var(--colorPaletteGreenForeground1)' : 'var(--colorPaletteRedForeground1)', display: 'block', marginBottom: 8 }}>{msg.text}</Text>}
+          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13, marginBottom: 16 }}>
+            <thead>
+              <tr style={{ textAlign: 'left' }}>
+                {['File type', 'Label', 'Order', 'Signature', ''].map((h) => <th key={h} style={{ ...cell, borderBottom: '2px solid var(--colorNeutralStroke2)' }}>{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {data.profiles.map((p) => {
+                const k = `p${p.id}`
+                const [label, order, sig] = (edits[k] ?? `${p.label}\u0000${p.detectOrder}\u0000${p.signature}`).split('\u0000')
+                const set = (i: number, v: string) => {
+                  const parts = [label, order, sig]; parts[i] = v
+                  setEdits((e) => ({ ...e, [k]: parts.join('\u0000') }))
+                }
+                return (
+                  <tr key={p.id} style={{ borderBottom: '1px solid var(--colorNeutralStroke2)' }}>
+                    <td style={cell}><Badge appearance="tint">{p.kind}</Badge></td>
+                    <td style={cell}><Input size="small" value={label} onChange={(_, d) => set(0, d.value)} /></td>
+                    <td style={cell}><Input size="small" type="number" value={order} onChange={(_, d) => set(1, d.value)} style={{ width: 70 }} /></td>
+                    <td style={cell}><Input size="small" value={sig} onChange={(_, d) => set(2, d.value)} style={{ width: '100%', minWidth: 320 }} /></td>
+                    <td style={cell}>
+                      <Button size="small" icon={<SaveRegular />} disabled={!edits[k]}
+                        onClick={() => save(k, () => api.saveImportProfile(p.id, { label, detectOrder: Number(order) || 0, signature: sig }))}>Save</Button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <Text weight="semibold">Header candidates for</Text>
+            <Dropdown value={kind} selectedOptions={[kind]} onOptionSelect={(_, d) => setKind(d.optionValue ?? kind)} style={{ minWidth: 200 }}>
+              {data.profiles.map((p) => <Option key={p.kind} value={p.kind}>{p.kind}</Option>)}
+            </Dropdown>
+          </div>
+          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: 'left' }}>
+                {['Field', 'Header candidates', ''].map((h) => <th key={h} style={{ ...cell, borderBottom: '2px solid var(--colorNeutralStroke2)' }}>{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {data.columns.filter((c) => c.kind === kind).map((c) => {
+                const k = `c${c.id}`
+                const v = edits[k] ?? c.candidates
+                return (
+                  <tr key={c.id} style={{ borderBottom: '1px solid var(--colorNeutralStroke2)' }}>
+                    <td style={cell}>{c.field}</td>
+                    <td style={cell}>
+                      <Input size="small" value={v} onChange={(_, d) => setEdits((e) => ({ ...e, [k]: d.value }))} style={{ width: '100%', minWidth: 320 }} />
+                      {c.default && c.default !== c.candidates && <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Default: {c.default}</Text>}
+                    </td>
+                    <td style={cell}>
+                      <Button size="small" icon={<SaveRegular />} disabled={!edits[k]} onClick={() => save(k, () => api.saveImportColumn(c.id, v))}>Save</Button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </>
+      )}
+    </Panel>
   )
 }
 

@@ -85,8 +85,9 @@ flowchart LR
 ## 2. Data sources & ingestion rules
 
 All uploads go through **`POST /api/admin/upload-auto`** (Nominations page and GHCP Adoption page → **Upload**). The
-server reads the first header row and routes by signature in `DataRefreshService.DetectFileKind`
-(**order matters**, 🔒):
+server reads the first header row and routes by signature from the **`ImportProfiles`** table (⚙️ Configuration →
+Import column maps; tried in **detect order**). Each importer reads its header candidates from **`ImportColumnMaps`**.
+Default order:
 
 | # | File | Detection signature (header row) | Importer | Match key | Write mode |
 |---|---|---|---|---|---|
@@ -196,9 +197,9 @@ erDiagram
 | | `StatusRules` | 9 | ⚙️ (Configuration → Workflow status rules) | Per-status behaviour: settled, blocked, tone, selectable, order |
 | | `LookupValues` | 34 | ⚙️ | Vocabularies (BlockerCategory, BlockerOwner, Classification, VelocityImpact, Milestone) |
 | | `CapacityConfigurations` | 5 | ⚙️ | Per-role capacity limit |
-| | `Regions` / `Segments` / `Skills` / `Tools` | 5 / 8 / 10 / 12 | ⚙️ (Segments, Skills, Tools) | Masters (`Tools` = legacy list, see `MigrationTools`) |
-| | `Roles` / `RolePermissions` | 8 / 39 | 🗄️ | Resource role catalog + permission matrix (not enforced) |
-| | `StrategicAccountConfigurations` | 15 | 🗄️ | Legacy strategic register (Strategic KPI now uses `Segment='Strategic'`) |
+| | `Regions` / `Segments` / `Skills` | 5 / 8 / 10 | ⚙️ (Segments, Skills) | Masters (tools live in `MigrationTools`) |
+| | `Roles` | 8 | 🗄️ | Resource role catalog |
+| | `ImportProfiles` / `ImportColumnMaps` | 4 / 54 | ⚙️ | FDO file signatures + per-field header candidates (Configuration → Import column maps) |
 | **Governance (FOS)** | `GateDefinitions` / `GateItemDefinitions` | 8 / 54 | ⚙️ (Gate Template page) | 8-gate template + checklist items |
 | | `NominationGateItems` | 72 | Portal | Per-nomination item state (Pending/Done/N/A) |
 | | `NominationBlockers` | 3 | Portal | Blockers incl. `ClockStopped` |
@@ -298,8 +299,9 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
   * `Total Days` = sum of the four stage columns (111/112 rows exact) ≈ business days from actual start (median 0.93×).
   * Stages can be skipped (0 days) or overlap, so Total Days is not an exact start→end business-day count.
 * `days = StageAgeDays ?? 0` — the **current stage's** column only. Never derived from update recency and never
-  adjusted. `EffectiveAgeDays = days`. Only the current-stage column is imported; Total Days / other stage columns
-  are not stored for in-flight rows.
+  adjusted. `EffectiveAgeDays = days`. All four FDO stage columns + Total Days are also stored
+  (`FdoStage1Days..4`, `FdoTotalDays` → DTO `fdoStageDays[]`, `fdoTotalDays`) and shown in the Summary hover as
+  "FDO days by stage: S1 0 · S2 22 · S3 0 · S4 36 = 58" so the SLA traces back to FDO.
 * Worked example — Stage 2, Total Days 35:
 
   | S1 | S2 | Target (S2) | Over | Tier |
@@ -558,7 +560,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | H5 | ~~Strategic tier thresholds~~ — now ⚙️ (6A-4) | `SettingsCatalog` | 60/90/120 | done |
 | H6 | "Standard Factory" sentinel ⇒ not strategic | `NominationService`, `NominationDto`, `NominationsController` fallback, `LookupSeed` | string | P1 |
 | H7 | Withdraw guard / `MapStatus` / `IsActivelyExecuting` | `NominationImportService` | Declined→Withdrawn; executing/finalize | P1 |
-| H8 | FDO file detection signatures | `DataRefreshService.DetectFileKind` | header names + order | P2 |
+| H8 | ~~FDO file detection signatures~~ — now ⚙️ `ImportProfiles` + `ImportColumnMaps` (6B-5) | Configuration → Import column maps | 4 profiles · 54 fields | done |
 | H9 | ~~Wave-type keyword classification~~ — now ⚙️ domain **WaveType** (applied on import) | Classification Rules page | 8 rules | done |
 | H10 | ~~Tool-name normalization map~~ — now ⚙️ domain **ToolAlias** (targets validated against the tool master) | Classification Rules page | 13 rules | done |
 | H11 | Activity keywords — now ⚙️ domain **Activity**; *remaining:* assessment/execution activity sets + 7/6/5/4 level derivation in `ToolActivityClassifier` | `ToolActivityClassifier` | 14 rules; level rule | P2 |
@@ -592,7 +594,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | I7 | ~~Capacity thresholds / default limit / training threshold had no UI~~ — **fixed (6A-4)**: Configuration → Operational thresholds | — | — |
 | I8 | ✅ *Resolved (6C-7)* — `StageTargetDays1..4` are the SLA limit; the cadence counts days past them | — | — |
 | I9 | ✅ *Resolved (6C-3)* — the capability rollup unions manual `NominationToolUsages` (explicit activity) with imported `NominationToolUsageFacts` (normalized tool, inferred activity) | — | — |
-| I10 | Legacy tables still present: `Tools` (vs `MigrationTools`), `StrategicAccountConfigurations` (vs `Segment='Strategic'`), `RolePermissions` (not enforced), `ResourceAccounts` (not the capacity basis) | Confusion about which table is the source of truth | Mark as deprecated. Migrate or remove after review |
+| I10 | ✅ *Resolved (6C-4)* — `Tools`, `StrategicAccountConfigurations`, `RolePermissions` dropped; `ResourceAccounts` kept as the person↔account mapping only (no counts derived from it) | — | — |
 | I11 | ~~Many controllers anonymous~~ — **fixed (6C-1)**: fallback policy requires sign-in everywhere; Admin/Lead on ingestion + master-data edits, Admin on destructive/config ops; verified anonymous → 401, SA on admin ops → 403 | — | Next: per-user ownership checks (e.g. SA may only edit own nominations) |
 | I12 | ✅ *Resolved (6C-5)* — `ResourceAccounts` is additive; `EngagementFacts` import is additive/idempotent (no wipe) | — | — |
 | I13 | ✅ *Resolved (6C-2)* — FY is computed on the server (`NominationDto.FiscalYear`); `?fy=` on `GET /api/nominations` and the nominations export; the grid export passes the selected FY | — | — |

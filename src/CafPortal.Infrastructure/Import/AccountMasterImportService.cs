@@ -27,10 +27,11 @@ public class AccountMasterImportService(AppDbContext db, ILogger<AccountMasterIm
             return 0;
 
         var h = ExcelHelpers.MapHeaders(rows[0]);
-        var colSegment = ExcelHelpers.FindColumn(h, "Segment");
-        var colTpid = ExcelHelpers.FindColumn(h, "TPID", "TP ID");
-        var colCustomer = ExcelHelpers.FindColumn(h, "Customer Name", "Customer", "Account Name");
-        var colExtId = ExcelHelpers.FindColumn(h, "Account ID", "AccountId");
+        const string K = CafPortal.Application.Common.ImportProfiles.Accounts;
+        var colSegment = ExcelHelpers.Col(h, K, "Segment");
+        var colTpid = ExcelHelpers.Col(h, K, "Tpid");
+        var colCustomer = ExcelHelpers.Col(h, K, "Customer");
+        var colExtId = ExcelHelpers.Col(h, K, "AccountId");
         if (colCustomer is null && colTpid is null)
             return 0;
 

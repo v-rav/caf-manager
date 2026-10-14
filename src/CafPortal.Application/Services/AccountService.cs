@@ -40,8 +40,7 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
                 Cftl = a.Cftl,
                 AccountOwner = a.AccountOwner,
                 CustomerPoc = a.CustomerPoc,
-                BackupOwner = a.BackupOwner,
-                ResourceCount = _db.ResourceAccounts.Count(ra => ra.AccountId == a.AccountId)
+                BackupOwner = a.BackupOwner
             })
             .ToListAsync(ct);
     }
@@ -90,7 +89,6 @@ public class AccountService(IApplicationDbContext db, ICapacityRebuildService ca
             AccountOwner = account.AccountOwner,
             CustomerPoc = account.CustomerPoc,
             BackupOwner = account.BackupOwner,
-            ResourceCount = resources.Count,
             AssignedResources = resources,
             RecentActivity = recent,
             OwnershipHistory = history

@@ -75,6 +75,8 @@ public static class DbInitializer
         await KeywordRuleStore.LoadAsync(db, ct);
         await StatusRuleStore.SeedAsync(db, ct);
         await StatusRuleStore.LoadAsync(db, ct);
+        await ImportProfileStore.SeedAsync(db, ct);
+        await ImportProfileStore.LoadAsync(db, ct);
 
         if (workbookExists && !hasResources)
         {

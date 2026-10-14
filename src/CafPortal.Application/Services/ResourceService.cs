@@ -47,12 +47,11 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
                 Resource = r,
                 Capacity = _db.CapacityFacts.Where(c => c.ResourceId == r.ResourceId)
                     .OrderByDescending(c => c.Id).FirstOrDefault(),
-                FallbackCount = _db.ResourceAccounts.Count(ra => ra.ResourceId == r.ResourceId),
                 OnLeave = _db.LeaveFacts.Any(l => l.ResourceId == r.ResourceId && l.LeaveDate == today)
             })
             .ToListAsync(ct);
 
-        return rows.Select(x => MapResource(x.Resource, x.Capacity, x.FallbackCount, x.OnLeave)).ToList();
+        return rows.Select(x => MapResource(x.Resource, x.Capacity, x.OnLeave)).ToList();
     }
 
     public async Task<ResourceDetailDto?> GetByIdAsync(int id, CancellationToken ct = default)
@@ -64,7 +63,6 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
 
         var capacity = await _db.CapacityFacts.AsNoTracking()
             .Where(c => c.ResourceId == id).OrderByDescending(c => c.Id).FirstOrDefaultAsync(ct);
-        var fallbackCount = await _db.ResourceAccounts.CountAsync(ra => ra.ResourceId == id, ct);
         var onLeave = await _db.LeaveFacts.AnyAsync(l => l.ResourceId == id && l.LeaveDate == today, ct);
 
         var accounts = await _db.ResourceAccounts.AsNoTracking()
@@ -81,7 +79,7 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
             .Select(l => new LeaveDto(l.Id, l.ResourceId, resource.Name, resource.Region, l.LeaveDate, l.LeaveType))
             .ToListAsync(ct);
 
-        var baseDto = MapResource(resource, capacity, fallbackCount, onLeave);
+        var baseDto = MapResource(resource, capacity, onLeave);
         return new ResourceDetailDto
         {
             ResourceId = baseDto.ResourceId,
@@ -203,10 +201,10 @@ public class ResourceService(IApplicationDbContext db, ICapacityRebuildService c
             resource.OnboardingStatus = onboarding;
     }
 
-    private static ResourceDto MapResource(Domain.Entities.Resource r, Domain.Entities.CapacityFact? capacity,
-        int fallbackCount, bool onLeave)
+    private static ResourceDto MapResource(Domain.Entities.Resource r, Domain.Entities.CapacityFact? capacity, bool onLeave)
     {
-        var accountCount = capacity?.AccountCount ?? fallbackCount;
+        // Workload comes only from the nomination-derived CapacityFact; no fact = no active accounts.
+        var accountCount = capacity?.AccountCount ?? 0;
         var limit = capacity?.CapacityLimit ?? r.CapacityLimit;
         var utilization = capacity?.UtilizationPercent
             ?? (limit > 0 ? Math.Round(accountCount / (double)limit * 100, 2) : 0);

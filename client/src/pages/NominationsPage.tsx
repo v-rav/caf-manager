@@ -730,7 +730,9 @@ export function NominationsPage() {
                     const tone = staleTone[n.staleTier]
                     const details = (n.remarks ?? '').replace(/\s+/g, ' ').trim()
                     const age = n.stageAgeDays ?? n.daysSinceUpdate
-                    const paused = age - n.effectiveAgeDays
+                    const breakdown = (n.fdoStageDays ?? []).some((d) => d != null)
+                      ? (n.fdoStageDays ?? []).map((d, i) => `S${i + 1} ${d ?? '–'}`).join(' · ') + (n.fdoTotalDays != null ? ` = ${n.fdoTotalDays}` : '')
+                      : null
                     const action = recommendedAction(n.staleTier, age)
                     return (
                       <Tooltip
@@ -742,7 +744,8 @@ export function NominationsPage() {
                             {n.blockedSince && <div><b>Blocked since:</b> {n.blockedSince}</div>}
                             {n.followUpDate && <div><b>Follow-up:</b> {n.followUpDate}</div>}
                             <div><b>Age in stage:</b> {age} days{n.stageTargetDays ? ` / target ${n.stageTargetDays}` : ''}{n.staleTier ? ` · SLA ${n.staleTier}` : ''}</div>
-                            {paused > 0 && <div><b>SLA clock:</b> {n.clockStopped ? 'stopped' : 'ran'} · {paused}d not counted · {n.effectiveAgeDays}d effective</div>}
+                            {breakdown && <div><b>FDO days by stage:</b> {breakdown}</div>}
+                            {n.clockStopped && <div><b>SLA clock:</b> paused (clock-stop blocker open)</div>}
                             {n.openBlockerCount > 0 && <div><b>Open blockers:</b> {n.openBlockerCount}</div>}
                             {action && <div style={{ color: 'var(--colorPaletteRedForeground1)' }}><b>Next step:</b> {action}</div>}
                             {n.waves.length > 0 && <div><b>Waves:</b> {n.waves.map((w) => w.waveType).join(', ')}</div>}

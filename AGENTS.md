@@ -82,6 +82,8 @@ import the **web app is the system of record**.
     `Total Days` = sum of the four stage columns (≈ business days actual start → now/end). The SLA uses **only the
     current stage's column** — e.g. Stage 2 with Total 35 = S1 8 + S2 27 → 27 vs target 10 = 17 over → Defer.
     `NominationService` uses the FDO value as-is (no fallback, no adjustment) and it drives the stale tier.
+    All four stage columns + `Total Days` are also stored (`FdoStage1Days..4`, `FdoTotalDays`) and shown in the
+    Summary hover ("FDO days by stage: S1 … = Total").
     > ✅ **PV-01 resolved:** the age is days-in-stage; the SLA limit is the **per-stage target** and the
     > Warn/Escalate/Defer cadence counts **days past that target** (see Stale cadence).
 - **TPID** lives on `Account` (external master key), surfaced onto `NominationDto.Tpid` via
@@ -180,7 +182,9 @@ import the **web app is the system of record**.
 - **Nominations are NEVER hard-deleted by imports.** Absent-from-drop rows are soft-set `Withdrawn`;
   hard delete is a manual, user-only action from the UI. Do not add auto-purge of nominations.
 - **Smart in-app upload** (Nominations page **and** GHCP Adoption page → **Upload**): `POST /api/admin/upload-auto` (multipart)
-  buffers the workbook, sniffs its header row (`DataRefreshService.DetectFileKind`), and routes it to the
+  buffers the workbook, sniffs its header row (signatures from the editable **`ImportProfiles`** table, tried in detect
+  order; each importer reads header candidates from **`ImportColumnMaps`** — Configuration → **Import column maps**,
+  `api/import-profiles`, Admin), and routes it to the
   right importer — **Nomination Wize Tool Usage** (`Tool Name` + `Category` + `Created Date`/`Offering Name and Phase` →
   `ToolUsageImportService`, wipe-and-reload of `NominationToolUsageFacts`), **Detail View** (stage day-counts / `Linked to ID` / `Nomination Approval Status` →
   nominations upsert-merge), **Summary of All Offerings** (`Factory Offering` + `Total ACR`/`Offering Id`/
@@ -340,7 +344,7 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   `GET /api/governance/milestone-types`, `POST/DELETE .../governance/milestones`.
 - **Editable lookup master** — one generic `LookupValue` table (category + value + order) powers all governance
   vocabularies: **BlockerCategory · BlockerOwner · Classification · VelocityImpact · Milestone** — plus the existing
-  Tool/Skill/Segment configs. Seeded idempotently per category by `LookupSeed`; admin CRUD via
+  Skill/Segment configs (the legacy Tool vocabulary was retired — tools live in the Capability Masters). Seeded idempotently per category by `LookupSeed`; admin CRUD via
   `GET/POST/PUT/DELETE /api/configuration/lookups`; edited in **Configuration** (add/rename/delete panels).
   Vocab endpoints (`blocker-categories/owners`, `nominations/vocab`, `milestone-types`) read from it (fallback to
   defaults). `ILookupService.ValuesAsync(category)`. Existing rows keep their stored string, so editing/deleting a

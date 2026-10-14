@@ -24,8 +24,6 @@ public class RoleConfigurationMap : IEntityTypeConfiguration<RoleConfiguration>
         builder.Property(x => x.RoleName).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(300);
         builder.HasIndex(x => x.RoleName).IsUnique();
-        builder.HasMany(x => x.Permissions).WithOne(p => p.Role)
-            .HasForeignKey(p => p.RoleConfigurationId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -62,6 +60,32 @@ public class StatusRuleMap : IEntityTypeConfiguration<StatusRule>
     }
 }
 
+public class ImportProfileMap : IEntityTypeConfiguration<ImportProfile>
+{
+    public void Configure(EntityTypeBuilder<ImportProfile> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Kind).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.Label).HasMaxLength(120).IsRequired();
+        builder.Property(x => x.Signature).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.UpdatedBy).HasMaxLength(120);
+        builder.HasIndex(x => x.Kind).IsUnique();
+    }
+}
+
+public class ImportColumnMapMap : IEntityTypeConfiguration<ImportColumnMap>
+{
+    public void Configure(EntityTypeBuilder<ImportColumnMap> builder)
+    {
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Kind).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.Field).HasMaxLength(60).IsRequired();
+        builder.Property(x => x.Candidates).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.UpdatedBy).HasMaxLength(120);
+        builder.HasIndex(x => new { x.Kind, x.Field }).IsUnique();
+    }
+}
+
 public class KeywordRuleMap : IEntityTypeConfiguration<KeywordRule>
 {
     public void Configure(EntityTypeBuilder<KeywordRule> builder)
@@ -73,16 +97,6 @@ public class KeywordRuleMap : IEntityTypeConfiguration<KeywordRule>
         builder.Property(x => x.Target).HasMaxLength(120).IsRequired();
         builder.Property(x => x.UpdatedBy).HasMaxLength(120);
         builder.HasIndex(x => new { x.Domain, x.Priority });
-    }
-}
-
-public class ToolConfigurationMap : IEntityTypeConfiguration<ToolConfiguration>
-{
-    public void Configure(EntityTypeBuilder<ToolConfiguration> builder)
-    {
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
-        builder.HasIndex(x => x.Name).IsUnique();
     }
 }
 
@@ -126,28 +140,6 @@ public class MigrationToolActivityMap : IEntityTypeConfiguration<MigrationToolAc
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => new { x.ToolId, x.ActivityId }).IsUnique();
         builder.HasIndex(x => x.ToolId);
-    }
-}
-
-public class RolePermissionMap : IEntityTypeConfiguration<RolePermission>
-{
-    public void Configure(EntityTypeBuilder<RolePermission> builder)
-    {
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.PermissionKey).HasMaxLength(100).IsRequired();
-        builder.HasIndex(x => new { x.RoleConfigurationId, x.PermissionKey }).IsUnique();
-    }
-}
-
-public class StrategicAccountConfigurationMap : IEntityTypeConfiguration<StrategicAccountConfiguration>
-{
-    public void Configure(EntityTypeBuilder<StrategicAccountConfiguration> builder)
-    {
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.AccountName).HasMaxLength(200).IsRequired();
-        builder.HasIndex(x => x.AccountName);
-        builder.HasOne(x => x.Account).WithMany()
-            .HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.SetNull);
     }
 }
 

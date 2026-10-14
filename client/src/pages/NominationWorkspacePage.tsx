@@ -73,7 +73,7 @@ export function NominationWorkspacePage() {
   useEffect(() => { api.blockerCategories().then((c) => { setCategories(c); setRc((v) => v || c[0] || '') }).catch(() => {}) }, [])
   useEffect(() => { api.blockerOwners().then(setOwners).catch(() => {}) }, [])
   useEffect(() => { api.milestoneTypes().then((t) => { setMsTypes(t); setMsKey((v) => v || t[0] || '') }).catch(() => {}) }, [])
-  useEffect(() => { api.tools().then((t) => setTools(t.map((x) => x.name))).catch(() => {}) }, [])
+  useEffect(() => { api.migrationTools().then((t) => setTools(t.filter((x) => x.active).map((x) => x.name))).catch(() => {}) }, [])
   useEffect(() => { api.migrationTools().then((t) => { setCapTools(t); setCuTool((v) => v || t[0]?.id || '') }).catch(() => {}) }, [])
   useEffect(() => { api.migrationActivities().then(setCapActs).catch(() => {}) }, [])
 

@@ -2,6 +2,7 @@ import axios from 'axios'
 import type {
   StatusRuleRow,
   StatusRulesResponse,
+  ImportProfilesResponse,
   KeywordRuleInput,
   KeywordRulePreview,
   KeywordRulesResponse,
@@ -228,11 +229,6 @@ export const api = {
   updateSegment: (id: number, name: string) =>
     http.put<SegmentOption>(`/api/configuration/segments/${id}`, { name }).then((r) => r.data),
 
-  tools: () => http.get<SegmentOption[]>('/api/configuration/tools').then((r) => r.data),
-  addTool: (name: string) => http.post<SegmentOption>('/api/configuration/tools', { name }).then((r) => r.data),
-  updateTool: (id: number, name: string) =>
-    http.put<SegmentOption>(`/api/configuration/tools/${id}`, { name }).then((r) => r.data),
-
   skills: () => http.get<SegmentOption[]>('/api/configuration/skills').then((r) => r.data),
   addSkill: (name: string) => http.post<SegmentOption>('/api/configuration/skills', { name }).then((r) => r.data),
   updateSkill: (id: number, name: string) =>
@@ -305,6 +301,10 @@ export const api = {
   // Classification rules (Admin) — data-driven keyword maps with impact preview.
   keywordRules: () =>
     http.get<KeywordRulesResponse>('/api/keyword-rules').then((r) => r.data),
+  importProfiles: () => http.get<ImportProfilesResponse>('/api/import-profiles').then((r) => r.data),
+  saveImportProfile: (id: number, body: { label: string; detectOrder: number; signature: string }) =>
+    http.put(`/api/import-profiles/profiles/${id}`, body),
+  saveImportColumn: (id: number, candidates: string) => http.put(`/api/import-profiles/columns/${id}`, { candidates }),
   createKeywordRule: (body: KeywordRuleInput) =>
     http.post('/api/keyword-rules', body).then((r) => r.data),
   updateKeywordRule: (id: number, body: KeywordRuleInput) =>

@@ -30,12 +30,7 @@ public class ConfigurationController(
         => Ok(await db.Roles.AsNoTracking()
             .Where(r => r.ActiveFlag)
             .OrderBy(r => r.SortOrder)
-            .Select(r => new
-            {
-                r.RoleName,
-                r.Description,
-                Permissions = r.Permissions.Where(p => p.Granted).Select(p => p.PermissionKey)
-            })
+            .Select(r => new { r.RoleName, r.Description })
             .ToListAsync(ct));
 
     /// <summary>Optimal active-account capacity each role type can handle.</summary>
@@ -150,40 +145,6 @@ public class ConfigurationController(
     }
 
     public record SegmentUpsert(string Name);
-
-    /// <summary>Controlled tool-name vocabulary.</summary>
-    [HttpGet("tools")]
-    public async Task<IActionResult> GetTools(CancellationToken ct)
-        => Ok(await db.Tools.AsNoTracking().Where(t => t.ActiveFlag)
-            .OrderBy(t => t.SortOrder).Select(t => new { t.Id, t.Name, t.SortOrder }).ToListAsync(ct));
-
-    [HttpPost("tools")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> AddTool([FromBody] VocabUpsert input, CancellationToken ct)
-    {
-        var name = input.Name?.Trim();
-        if (string.IsNullOrEmpty(name)) return BadRequest("Tool name is required.");
-        if (await db.Tools.AnyAsync(t => t.Name == name, ct)) return Conflict($"Tool '{name}' already exists.");
-        var maxSort = await db.Tools.AnyAsync(ct) ? await db.Tools.MaxAsync(t => t.SortOrder, ct) : 0;
-        var tool = new ToolConfiguration { Name = name, SortOrder = maxSort + 1 };
-        db.Tools.Add(tool);
-        await db.SaveChangesAsync(ct);
-        return Ok(new { tool.Id, tool.Name, tool.SortOrder });
-    }
-
-    [HttpPut("tools/{id:int}")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> UpdateTool(int id, [FromBody] VocabUpsert input, CancellationToken ct)
-    {
-        var name = input.Name?.Trim();
-        if (string.IsNullOrEmpty(name)) return BadRequest("Tool name is required.");
-        var tool = await db.Tools.FirstOrDefaultAsync(t => t.Id == id, ct);
-        if (tool is null) return NotFound();
-        if (await db.Tools.AnyAsync(t => t.Name == name && t.Id != id, ct)) return Conflict($"Tool '{name}' already exists.");
-        tool.Name = name;
-        await db.SaveChangesAsync(ct);
-        return Ok(new { tool.Id, tool.Name, tool.SortOrder });
-    }
 
     /// <summary>Controlled skill vocabulary.</summary>
     [HttpGet("skills")]

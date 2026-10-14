@@ -24,6 +24,12 @@ public class Nomination : AuditableEntity
     public string? ApprovalStatus { get; set; }
     /// <summary>Days spent in the current migration stage (from that stage's day-count column in the export).</summary>
     public int? StageAgeDays { get; set; }
+    // FDO per-stage business-day columns (1 Validating … 4 Executing Migration) and their FDO "Total Days" sum.
+    public int? FdoStage1Days { get; set; }
+    public int? FdoStage2Days { get; set; }
+    public int? FdoStage3Days { get; set; }
+    public int? FdoStage4Days { get; set; }
+    public int? FdoTotalDays { get; set; }
     public string? CurrentState { get; set; }
     public string? SolutionArchitect { get; set; }
     public string? CftlPrimary { get; set; }

@@ -19,6 +19,8 @@ public class NominationDto
     public string? ApprovalStatus { get; set; }
     /// <summary>Days spent in the current migration stage (from the stage's day-count column).</summary>
     public int? StageAgeDays { get; set; }
+    public int?[] FdoStageDays { get; set; } = new int?[4];
+    public int? FdoTotalDays { get; set; }
     public string? CurrentState { get; set; }
     public string? SolutionArchitect { get; set; }
     public string? CftlPrimary { get; set; }

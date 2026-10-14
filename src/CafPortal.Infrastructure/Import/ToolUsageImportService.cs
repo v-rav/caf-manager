@@ -24,13 +24,14 @@ public class ToolUsageImportService(AppDbContext db, ILogger<ToolUsageImportServ
             return 0;
 
         var headers = ExcelHelpers.MapHeaders(rows[0]);
-        var colAccountId = ExcelHelpers.FindColumn(headers, "Account ID", "AccountId");
-        var colTpid = ExcelHelpers.FindColumn(headers, "TPID", "TP ID");
-        var colTaskId = ExcelHelpers.FindColumn(headers, "Task ID", "Task Id");
-        var colDetails = ExcelHelpers.FindColumn(headers, "Details");
-        var colCategory = ExcelHelpers.FindColumn(headers, "Category");
-        var colTool = ExcelHelpers.FindColumn(headers, "Tool Name");
-        var colCreated = ExcelHelpers.FindColumn(headers, "Created Date");
+        const string K = CafPortal.Application.Common.ImportProfiles.ToolUsage;
+        var colAccountId = ExcelHelpers.Col(headers, K, "AccountId");
+        var colTpid = ExcelHelpers.Col(headers, K, "Tpid");
+        var colTaskId = ExcelHelpers.Col(headers, K, "TaskId");
+        var colDetails = ExcelHelpers.Col(headers, K, "Details");
+        var colCategory = ExcelHelpers.Col(headers, K, "Category");
+        var colTool = ExcelHelpers.Col(headers, K, "ToolName");
+        var colCreated = ExcelHelpers.Col(headers, K, "CreatedDate");
 
         // Task Id -> internal nomination id, for 1-to-many linkage.
         var taskToNom = await _db.Nominations

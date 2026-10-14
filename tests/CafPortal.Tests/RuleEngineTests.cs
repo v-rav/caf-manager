@@ -214,6 +214,47 @@ public class ScoringTests
         => Assert.Equal(expected, ToolActivityClassifier.EffectiveLevel(stored, attached, activities));
 }
 
+public class ImportProfilesTests
+{
+    private static HashSet<string> H(params string[] h) => new(h, StringComparer.OrdinalIgnoreCase);
+
+    [Fact]
+    public void Detects_each_fdo_workbook_by_signature()
+    {
+        Assert.Equal("nominations", ImportProfiles.Detect(H("TPID", "Task Id", "Migration Status", "1 - Validating & Initial Scope"))?.Kind);
+        Assert.Equal("toolusage", ImportProfiles.Detect(H("Account ID", "TPID", "Task ID", "Details", "Category", "Tool Name", "Created Date"))?.Kind);
+        Assert.Equal("offerings", ImportProfiles.Detect(H("TPID", "Customer Name", "Factory Offering", "Total ACR"))?.Kind);
+        // Shares TPID/Customer with Offerings but lacks Factory Offering → account master.
+        Assert.Equal("accounts", ImportProfiles.Detect(H("Segment", "TPID", "Customer Name", "Account ID"))?.Kind);
+        Assert.Null(ImportProfiles.Detect(H("Foo", "Bar")));
+    }
+
+    [Fact]
+    public void Signature_clauses_and_alternatives()
+    {
+        Assert.True(ImportProfiles.Matches("A;B|C", H("A", "C")));
+        Assert.False(ImportProfiles.Matches("A;B|C", H("A")));
+        Assert.False(ImportProfiles.Matches("", H("A")));
+    }
+
+    [Fact]
+    public void Column_candidates_come_from_snapshot_with_default_fallback()
+    {
+        Assert.Contains("Total Days", ImportProfiles.Candidates("nominations", "TotalDays"));
+        try
+        {
+            ImportProfiles.Load(ImportProfiles.DefaultProfiles,
+                new[] { new ImportColumnItem("nominations", "TotalDays", "Days Total|Total Business Days", 10) });
+            Assert.Equal(new[] { "Days Total", "Total Business Days" }, ImportProfiles.Candidates("nominations", "TotalDays"));
+            Assert.Contains("Migration Status", ImportProfiles.Candidates("nominations", "MigrationStatus")); // default fallback
+        }
+        finally
+        {
+            ImportProfiles.Load(ImportProfiles.DefaultProfiles, ImportProfiles.DefaultColumns);
+        }
+    }
+}
+
 public class NameMatchingTests
 {
     [Fact]

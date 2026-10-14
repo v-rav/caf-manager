@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Domain.Entities;
 using CafPortal.Domain.Enums;
 using CafPortal.Infrastructure.Persistence;
@@ -34,27 +35,29 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             return 0;
 
         var h = ExcelHelpers.MapHeaders(rows[0]);
-        var colTpid = ExcelHelpers.FindColumn(h, "TPID", "TP ID");
-        var colTaskId = ExcelHelpers.FindColumn(h, "Task Id", "TaskId");
-        var colExtId = ExcelHelpers.FindColumn(h, "Account ID", "AccountId");
-        var colCustomer = ExcelHelpers.FindColumn(h, "Customer Name", "Customer", "Account Name");
-        var colOffering = ExcelHelpers.FindColumn(h, "Offering Name", "Offering", "Wave");
-        var colNominated = ExcelHelpers.FindColumn(h, "Nominated date", "Nominated", "Wave Created");
-        var colMigration = ExcelHelpers.FindColumn(h, "Migration Status");
-        var colStage1 = ExcelHelpers.FindColumn(h, "Validating & Initial Scope", "1 - Validating");
-        var colStage2 = ExcelHelpers.FindColumn(h, "Executing Pre-Requisites", "2 - Executing Pre");
-        var colStage3 = ExcelHelpers.FindColumn(h, "Finalize Scope", "3 - Finalize");
-        var colStage4 = ExcelHelpers.FindColumn(h, "Executing Migration", "4 - Executing Migration");
-        var colApproval = ExcelHelpers.FindColumn(h, "Approval Status", "Nomination Approval");
-        var colRegion = ExcelHelpers.FindColumn(h, "Region", "Area");
-        var colSummary = ExcelHelpers.FindColumn(h, "Status Summary");
-        var colNextAction = ExcelHelpers.FindColumn(h, "Next Best Action");
-        var colCurrentState = ExcelHelpers.FindColumn(h, "Current State");
-        var colSolutionArchitect = ExcelHelpers.FindColumn(h, "Solution Architect Hierarchy - Solution Architect", "Solution Architect");
-        var colCftl = ExcelHelpers.FindColumn(h, "CFTL Primary Hierarchy - CFTL Primary", "CFTL Primary");
-        var colProjectCoordinator = ExcelHelpers.FindColumn(h, "Project Coordinator Hierarchy - Project Coordinator", "Project Coordinator");
+        const string K = ImportProfiles.Nominations;
+        var colTpid = ExcelHelpers.Col(h, K, "Tpid");
+        var colTaskId = ExcelHelpers.Col(h, K, "TaskId");
+        var colExtId = ExcelHelpers.Col(h, K, "AccountId");
+        var colCustomer = ExcelHelpers.Col(h, K, "Customer");
+        var colOffering = ExcelHelpers.Col(h, K, "Offering");
+        var colNominated = ExcelHelpers.Col(h, K, "Nominated");
+        var colMigration = ExcelHelpers.Col(h, K, "MigrationStatus");
+        var colStage1 = ExcelHelpers.Col(h, K, "Stage1Days");
+        var colStage2 = ExcelHelpers.Col(h, K, "Stage2Days");
+        var colStage3 = ExcelHelpers.Col(h, K, "Stage3Days");
+        var colStage4 = ExcelHelpers.Col(h, K, "Stage4Days");
+        var colTotalDays = ExcelHelpers.Col(h, K, "TotalDays");
+        var colApproval = ExcelHelpers.Col(h, K, "Approval");
+        var colRegion = ExcelHelpers.Col(h, K, "Region");
+        var colSummary = ExcelHelpers.Col(h, K, "StatusSummary");
+        var colNextAction = ExcelHelpers.Col(h, K, "NextAction");
+        var colCurrentState = ExcelHelpers.Col(h, K, "CurrentState");
+        var colSolutionArchitect = ExcelHelpers.Col(h, K, "SolutionArchitect");
+        var colCftl = ExcelHelpers.Col(h, K, "Cftl");
+        var colProjectCoordinator = ExcelHelpers.Col(h, K, "ProjectCoordinator");
         // Wave linkage: "Linked to" (names) + "Linked to ID" (ids), each a ';'-separated list of related waves.
-        var colLinkedId = ExcelHelpers.FindColumn(h, "Linked to ID", "Linked to Id");
+        var colLinkedId = ExcelHelpers.Col(h, K, "LinkedToId");
         int? colLinkedTo = null;
         foreach (var kv in h)
             if (kv.Value != colLinkedId && kv.Key.Contains("Linked to", StringComparison.OrdinalIgnoreCase)) { colLinkedTo = kv.Value; break; }
@@ -141,6 +144,11 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
             nom.MigrationStatus = migration;
             nom.ApprovalStatus = approval;
             nom.StageAgeDays = stageAge;
+            nom.FdoStage1Days = stageDays[0];
+            nom.FdoStage2Days = stageDays[1];
+            nom.FdoStage3Days = stageDays[2];
+            nom.FdoStage4Days = stageDays[3];
+            nom.FdoTotalDays = ParseDays(ExcelHelpers.GetString(row, colTotalDays));
             nom.CurrentState = Truncate(Clean(ExcelHelpers.GetString(row, colCurrentState)), 2000);
             // Revive: a row present in this drop was wrongly withdrawn (e.g. absent from an earlier partial
             // drop). Un-withdraw it symmetrically; MapStatus keeps FDO-declined/settled rows settled.

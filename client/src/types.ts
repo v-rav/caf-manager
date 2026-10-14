@@ -177,7 +177,6 @@ export interface Account {
   tpid?: string
   externalAccountId?: string
   aliases?: string
-  resourceCount: number
   projectManager?: string
   solutionArchitect?: string
   cftl?: string
@@ -276,6 +275,8 @@ export interface Nomination {
   stageLabel?: string
   isSettled?: boolean
   stageTargetDays?: number
+  fdoStageDays?: (number | null)[]
+  fdoTotalDays?: number | null
   fiscalYear?: number
   effectiveStartDate?: string | null
   isUpcoming?: boolean
@@ -541,6 +542,10 @@ export interface StatusRuleRow {
   selectable: boolean
   sortOrder: number
 }
+
+export interface ImportProfileRow { id: number; kind: string; label: string; detectOrder: number; signature: string }
+export interface ImportColumnRow { id: number; kind: string; field: string; candidates: string; default?: string | null }
+export interface ImportProfilesResponse { profiles: ImportProfileRow[]; columns: ImportColumnRow[] }
 
 export interface StatusRulesResponse {
   rules: StatusRuleRow[]

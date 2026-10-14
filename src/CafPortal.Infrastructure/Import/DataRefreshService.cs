@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Application.Dtos;
 using CafPortal.Domain.Entities;
 using CafPortal.Domain.Entities.Configuration;
@@ -244,23 +245,8 @@ public class DataRefreshService(
         return set;
     }
 
-    // Signature match on distinctive columns (order matters: Offerings & Account master share TPID/Customer).
-    private static string DetectFileKind(HashSet<string> h)
-    {
-        // Nomination Wize Tool Usage — raw per-nomination tool-usage rows (Category + Tool Name + Created Date).
-        if (h.Contains("Tool Name") && h.Contains("Category") && (h.Contains("Created Date") || h.Contains("Offering Name and Phase")))
-            return "toolusage";
-        // Summary of All Offerings — the ~100-col value/enrichment workbook.
-        if (h.Contains("Factory Offering") && (h.Contains("Total ACR") || h.Contains("Offering Id") || h.Contains("Is Tool Attached")))
-            return "offerings";
-        // FDO Detail View — the operational pipeline (per-stage day-counts + FDO linkage/approval).
-        if (h.Contains("1 - Validating & Initial Scope") || h.Contains("Nomination Approval Status") || h.Contains("Linked to ID"))
-            return "nominations";
-        // Nominations In-Flight — the narrow account master (Segment / TPID / Customer Name / Account ID).
-        if (h.Contains("Segment") && h.Contains("TPID") && (h.Contains("Customer Name") || h.Contains("Account ID")))
-            return "accounts";
-        return "unknown";
-    }
+    // Signature match from the data-driven import profiles (Configuration → Import column maps), tried in detect order.
+    private static string DetectFileKind(HashSet<string> h) => ImportProfiles.Detect(h)?.Kind ?? "unknown";
 
     // Loads the Nomination Wize Tool Usage export (wipe-and-reload of the raw per-nomination usage rows).
     private async Task<DataRefreshResultDto> ImportToolUsageAsync(Stream content, CancellationToken ct)
@@ -352,7 +338,7 @@ public class DataRefreshService(
                 .Where(g => g.Count() > 1)
                 .ToList();
 
-            int merged = 0, skipped = 0, noms = 0, links = 0, waves = 0, engs = 0, owns = 0, strat = 0;
+            int merged = 0, skipped = 0, noms = 0, links = 0, waves = 0, engs = 0, owns = 0;
             foreach (var g in groups)
             {
                 var tpidHolders = g.Where(a => !string.IsNullOrWhiteSpace(a.Tpid)).ToList();
@@ -381,8 +367,6 @@ public class DataRefreshService(
                     { if (apply) e.AccountId = survivor.AccountId; engs++; }
                     foreach (var o in await _db.OwnershipHistory.Where(x => x.AccountId == cas.AccountId).ToListAsync(ct))
                     { if (apply) o.AccountId = survivor.AccountId; owns++; }
-                    foreach (var s in await _db.StrategicAccountConfigurations.Where(x => x.AccountId == cas.AccountId).ToListAsync(ct))
-                    { if (apply) s.AccountId = survivor.AccountId; strat++; }
 
                     foreach (var link in await _db.ResourceAccounts.Where(x => x.AccountId == cas.AccountId).ToListAsync(ct))
                     {
@@ -425,7 +409,7 @@ public class DataRefreshService(
                 await _capacityRebuild.RebuildAllAsync(ct);
             }
             result.Success = true;
-            result.Messages.Add($"{(apply ? "Merged" : "Preview")}: {merged} account(s), {skipped} group(s) skipped. Re-pointed noms={noms}, links={links}, waves={waves}, engagements={engs}, ownership={owns}, strategic={strat}.");
+            result.Messages.Add($"{(apply ? "Merged" : "Preview")}: {merged} account(s), {skipped} group(s) skipped. Re-pointed noms={noms}, links={links}, waves={waves}, engagements={engs}, ownership={owns}.");
         }
         catch (Exception ex)
         {
@@ -456,7 +440,7 @@ public class DataRefreshService(
             var skippedReferenced = allNoTpid.Count(a => referenced.Contains(a.AccountId));
             var targets = allNoTpid.Where(a => !referenced.Contains(a.AccountId)).ToList();
 
-            int parked = 0, noms = 0, links = 0, owns = 0, engs = 0, waves = 0, strat = 0, strategicFlagged = 0;
+            int parked = 0, noms = 0, links = 0, owns = 0, engs = 0, waves = 0, strategicFlagged = 0;
             foreach (var a in targets)
             {
                 var resourceLinks = await _db.ResourceAccounts.Where(x => x.AccountId == a.AccountId)
@@ -465,10 +449,9 @@ public class DataRefreshService(
                 var waveCount = await _db.WaveLinks.CountAsync(x => x.AccountId == a.AccountId, ct);
                 var engCount = await _db.EngagementFacts.CountAsync(x => x.AccountId == a.AccountId, ct);
                 var ownRows = await _db.OwnershipHistory.Where(x => x.AccountId == a.AccountId).ToListAsync(ct);
-                var stratRows = await _db.StrategicAccountConfigurations.Where(x => x.AccountId == a.AccountId).ToListAsync(ct);
 
                 noms += nomIds.Count; links += resourceLinks.Count; waves += waveCount;
-                engs += engCount; owns += ownRows.Count; strat += stratRows.Count;
+                engs += engCount; owns += ownRows.Count;
                 if (a.StrategicFlag) strategicFlagged++;
 
                 if (apply)
@@ -502,7 +485,6 @@ public class DataRefreshService(
                     foreach (var n in await _db.Nominations.Where(x => x.AccountId == a.AccountId).ToListAsync(ct)) n.AccountId = null;
                     foreach (var w in await _db.WaveLinks.Where(x => x.AccountId == a.AccountId).ToListAsync(ct)) w.AccountId = null;
                     foreach (var e in await _db.EngagementFacts.Where(x => x.AccountId == a.AccountId).ToListAsync(ct)) e.AccountId = null;
-                    _db.StrategicAccountConfigurations.RemoveRange(stratRows);
                     _db.OwnershipHistory.RemoveRange(ownRows);
                     _db.ResourceAccounts.RemoveRange(await _db.ResourceAccounts.Where(x => x.AccountId == a.AccountId).ToListAsync(ct));
                     _db.Accounts.Remove(a);
@@ -519,7 +501,7 @@ public class DataRefreshService(
             result.Success = true;
             result.Messages.Add($"{(apply ? "Parked" : "Preview")}: {parked} no-TPID account(s) ({strategicFlagged} strategic-flagged); " +
                 $"kept {skippedReferenced} referenced by a nomination (no orphans). " +
-                $"Detached resourceLinks={links}, ownership={owns}, engagements={engs}, waves={waves}, strategicCfg={strat}.");
+                $"Detached resourceLinks={links}, ownership={owns}, engagements={engs}, waves={waves}.");
         }
         catch (Exception ex)
         {
@@ -634,29 +616,30 @@ public class DataRefreshService(
             }
 
             var h = ExcelHelpers.MapHeaders(rowsUsed[0]);
-            var colTpid = ExcelHelpers.FindColumn(h, "TPID", "TP ID");
-            var colTask = ExcelHelpers.FindColumn(h, "Task ID", "Task Id");
-            var colSegment = ExcelHelpers.FindColumn(h, "Segment");
-            var colPath = ExcelHelpers.FindColumn(h, "Primary Migration Path");
-            var colPartner = ExcelHelpers.FindColumn(h, "Partner Name");
-            var colCores = ExcelHelpers.FindColumn(h, "Total Cores");
-            var colTool = ExcelHelpers.FindColumn(h, "Is Tool Attached");
-            var colAuto = ExcelHelpers.FindColumn(h, "Is Automation Used");
-            var colMode = ExcelHelpers.FindColumn(h, "Mode Of Access");
-            var colTotalAcr = ExcelHelpers.FindColumn(h, "Total ACR");
-            var colNnrAcr = ExcelHelpers.FindColumn(h, "NNR ACR");
-            var colNominated = ExcelHelpers.FindColumn(h, "Nom. Created Date", "Nomination Created Date", "Account Nominated date");
-            var colApprovalDate = ExcelHelpers.FindColumn(h, "Nom. Approval Date", "Nomination Approval Date");
-            var colActualStart = ExcelHelpers.FindColumn(h, "Actual Start Date");
-            var colActualEnd = ExcelHelpers.FindColumn(h, "Actual End Date");
-            var colPlannedStart = ExcelHelpers.FindColumn(h, "Planned Start Date");
-            var colPlannedEnd = ExcelHelpers.FindColumn(h, "Planned End Date");
+            const string K = ImportProfiles.Offerings;
+            var colTpid = ExcelHelpers.Col(h, K, "Tpid");
+            var colTask = ExcelHelpers.Col(h, K, "TaskId");
+            var colSegment = ExcelHelpers.Col(h, K, "Segment");
+            var colPath = ExcelHelpers.Col(h, K, "PrimaryMigrationPath");
+            var colPartner = ExcelHelpers.Col(h, K, "PartnerName");
+            var colCores = ExcelHelpers.Col(h, K, "TotalCores");
+            var colTool = ExcelHelpers.Col(h, K, "IsToolAttached");
+            var colAuto = ExcelHelpers.Col(h, K, "IsAutomationUsed");
+            var colMode = ExcelHelpers.Col(h, K, "ModeOfAccess");
+            var colTotalAcr = ExcelHelpers.Col(h, K, "TotalAcr");
+            var colNnrAcr = ExcelHelpers.Col(h, K, "NnrAcr");
+            var colNominated = ExcelHelpers.Col(h, K, "NominatedDate");
+            var colApprovalDate = ExcelHelpers.Col(h, K, "ApprovalDate");
+            var colActualStart = ExcelHelpers.Col(h, K, "ActualStartDate");
+            var colActualEnd = ExcelHelpers.Col(h, K, "ActualEndDate");
+            var colPlannedStart = ExcelHelpers.Col(h, K, "PlannedStartDate");
+            var colPlannedEnd = ExcelHelpers.Col(h, K, "PlannedEndDate");
             // Extra columns used when creating Completed nominations for rows not already in our DB.
-            var colCustomer = ExcelHelpers.FindColumn(h, "Customer Name", "Customer");
-            var colOffering = ExcelHelpers.FindColumn(h, "Factory Offering", "Offering Name and Phase", "Offering");
-            var colMigration = ExcelHelpers.FindColumn(h, "Migration Status");
-            var colCurrent = ExcelHelpers.FindColumn(h, "Current State");
-            var colRegion = ExcelHelpers.FindColumn(h, "WW Region", "Area", "Region");
+            var colCustomer = ExcelHelpers.Col(h, K, "Customer");
+            var colOffering = ExcelHelpers.Col(h, K, "Offering");
+            var colMigration = ExcelHelpers.Col(h, K, "MigrationStatus");
+            var colCurrent = ExcelHelpers.Col(h, K, "CurrentState");
+            var colRegion = ExcelHelpers.Col(h, K, "Region");
             if (colTpid is null || colTask is null)
             {
                 result.Success = false;
@@ -893,19 +876,11 @@ public class DataRefreshService(
         return count;
     }
 
-    /// <summary>Flags imported accounts as strategic when their canonical name matches the strategic config list.</summary>
+    /// <summary>Flags accounts as strategic when their FDO segment is "Strategic" (the canonical source; additive).</summary>
     private async Task SyncStrategicFlagsAsync(CancellationToken ct)
     {
-        var strategicNames = await _db.StrategicAccountConfigurations.AsNoTracking()
-            .Where(c => c.StrategicFlag)
-            .Select(c => c.AccountName)
-            .ToListAsync(ct);
-        if (strategicNames.Count == 0)
-            return;
-
-        var set = new HashSet<string>(strategicNames, StringComparer.OrdinalIgnoreCase);
-        var accounts = await _db.Accounts.Where(a => !a.StrategicFlag).ToListAsync(ct);
-        foreach (var account in accounts.Where(a => set.Contains(a.AccountName)))
+        var accounts = await _db.Accounts.Where(a => !a.StrategicFlag && a.Segment == "Strategic").ToListAsync(ct);
+        foreach (var account in accounts)
         {
             account.StrategicFlag = true;
             if (account.PriorityWeight < 2)

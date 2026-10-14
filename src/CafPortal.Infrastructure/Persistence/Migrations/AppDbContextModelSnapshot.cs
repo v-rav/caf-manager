@@ -284,6 +284,90 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.ToTable("CapacityConfigurations");
                 });
 
+            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.ImportColumnMap", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Candidates")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Field")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("UpdatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "Field")
+                        .IsUnique();
+
+                    b.ToTable("ImportColumnMaps");
+                });
+
+            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.ImportProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DetectOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Signature")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("UpdatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind")
+                        .IsUnique();
+
+                    b.ToTable("ImportProfiles");
+                });
+
             modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.KeywordRule", b =>
                 {
                     b.Property<int>("Id")
@@ -543,37 +627,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.ToTable("Roles");
                 });
 
-            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.RolePermission", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("CreatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("Granted")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("PermissionKey")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("RoleConfigurationId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset?>("UpdatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoleConfigurationId", "PermissionKey")
-                        .IsUnique();
-
-                    b.ToTable("RolePermissions");
-                });
-
             modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.SegmentConfiguration", b =>
                 {
                     b.Property<int>("Id")
@@ -680,78 +733,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("StatusRules");
-                });
-
-            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.StrategicAccountConfiguration", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("AccountId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AccountName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("CreatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("ExecutiveVisibilityFlag")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PriorityWeight")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("RiskFlag")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("StrategicFlag")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset?>("UpdatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccountId");
-
-                    b.HasIndex("AccountName");
-
-                    b.ToTable("StrategicAccountConfigurations");
-                });
-
-            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.ToolConfiguration", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("ActiveFlag")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("CreatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset?>("UpdatedUtc")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Tools");
                 });
 
             modelBuilder.Entity("CafPortal.Domain.Entities.EngagementFact", b =>
@@ -1416,6 +1397,21 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("FdoStage1Days")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FdoStage2Days")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FdoStage3Days")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FdoStage4Days")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FdoTotalDays")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateOnly?>("FollowUpDate")
                         .HasColumnType("TEXT");
 
@@ -1914,27 +1910,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.Navigation("Resource");
                 });
 
-            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.RolePermission", b =>
-                {
-                    b.HasOne("CafPortal.Domain.Entities.Configuration.RoleConfiguration", "Role")
-                        .WithMany("Permissions")
-                        .HasForeignKey("RoleConfigurationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Role");
-                });
-
-            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.StrategicAccountConfiguration", b =>
-                {
-                    b.HasOne("CafPortal.Domain.Entities.Account", "Account")
-                        .WithMany()
-                        .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Account");
-                });
-
             modelBuilder.Entity("CafPortal.Domain.Entities.EngagementFact", b =>
                 {
                     b.HasOne("CafPortal.Domain.Entities.Account", "Account")
@@ -2101,11 +2076,6 @@ namespace CafPortal.Infrastructure.Persistence.Migrations
                     b.Navigation("OwnershipHistory");
 
                     b.Navigation("ResourceAccounts");
-                });
-
-            modelBuilder.Entity("CafPortal.Domain.Entities.Configuration.RoleConfiguration", b =>
-                {
-                    b.Navigation("Permissions");
                 });
 
             modelBuilder.Entity("CafPortal.Domain.Entities.Governance.GateDefinition", b =>

@@ -27,14 +27,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<RegionConfiguration> Regions => Set<RegionConfiguration>();
     public DbSet<RoleConfiguration> Roles => Set<RoleConfiguration>();
-    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<SegmentConfiguration> Segments => Set<SegmentConfiguration>();
     public DbSet<LookupValue> LookupValues => Set<LookupValue>();
     public DbSet<KeywordRule> KeywordRules => Set<KeywordRule>();
+    public DbSet<ImportProfile> ImportProfiles => Set<ImportProfile>();
+    public DbSet<ImportColumnMap> ImportColumnMaps => Set<ImportColumnMap>();
     public DbSet<StatusRule> StatusRules => Set<StatusRule>();
-    public DbSet<ToolConfiguration> Tools => Set<ToolConfiguration>();
     public DbSet<SkillConfiguration> Skills => Set<SkillConfiguration>();
-    public DbSet<StrategicAccountConfiguration> StrategicAccountConfigurations => Set<StrategicAccountConfiguration>();
     public DbSet<CapacityConfiguration> CapacityConfigurations => Set<CapacityConfiguration>();
     public DbSet<ApplicationSetting> ApplicationSettings => Set<ApplicationSetting>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();

@@ -53,10 +53,6 @@ public interface ICapacityService
     Task<IReadOnlyList<CapacityRowDto>> GetAsync(string? region, CancellationToken ct = default);
 }
 
-public interface IStrategicAccountService
-{
-    Task<IReadOnlyList<StrategicAccountDto>> GetAsync(string? region, CancellationToken ct = default);
-}
 
 public interface ILeaveService
 {
