@@ -290,10 +290,11 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
   `validating`→1 · `pre-requisite|prerequisite|pre requisite`→2 · `finalize`→3 · `executing migration`→4 · else 0.
 * **Labels (🔒):** 1 Validating · 2 Executing Pre-Requisites · 3 Finalize Scope · 4 Executing Migration.
 
-### 5.2 Age, clock-stop and effective age
-* `days = StageAgeDays ?? daysSince(UpdatedUtc ?? CreatedUtc)`
-* `clockStoppedDays = Σ over blockers with ClockStopped: (ResolvedUtc ?? now) − BlockedSinceUtc`
-* `EffectiveAgeDays = max(0, days − min(days, clockStoppedDays))`; `ClockStopped = any open clock-stop blocker`.
+### 5.2 Age (FDO is the single source of truth)
+* `days = StageAgeDays ?? 0` — the FDO business-day count in the current stage (counted from stage entry; verified
+  against 111 completed waves: stage counts sum to Total Days and track business days start→end). Never derived from
+  update recency and never adjusted. `EffectiveAgeDays = days`.
+* `ClockStopped = any open clock-stop blocker` → the SLA tier is **paused** (empty) while it is open.
 
 ### 5.3 SLA stale tier (Warn / Escalate / Defer)
 * **Applies to Stages 2–4 only (🔒)** and only to non-settled, started rows.

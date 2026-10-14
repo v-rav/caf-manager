@@ -29,9 +29,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
         var items = await query.OrderByDescending(n => n.OpenedDate).ToListAsync(ct);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        // Clock-stopped blockers pause the SLA clock: subtract their elapsed window from the stage age.
+        // A live clock-stopped blocker pauses the SLA tier (the FDO day-count is never adjusted).
         var nomIds = items.Select(n => n.Id).ToList();
-        var nowUtc = DateTime.UtcNow;
         var stops = await _db.NominationBlockers.AsNoTracking()
             .Where(b => b.ClockStopped && nomIds.Contains(b.NominationId))
             .Select(b => new { b.NominationId, b.BlockedSinceUtc, b.ResolvedUtc })
@@ -110,21 +109,10 @@ public class NominationService(IApplicationDbContext db) : INominationService
 
         return items.Select(n =>
         {
-            var lastTouch = n.UpdatedUtc ?? n.CreatedUtc;
-            var updateDays = Math.Max(0, today.DayNumber - DateOnly.FromDateTime(lastTouch.UtcDateTime).DayNumber);
-            // Age = days in the current migration stage when available; else fall back to update recency.
-            var days = n.StageAgeDays ?? updateDays;
-            // Sum clock-stopped windows (open → now, resolved → resolved), capped so effective age stays >= 0.
-            var clockStoppedDays = 0;
-            var clockStopped = false;
-            if (stopsByNom.TryGetValue(n.Id, out var wins))
-                foreach (var w in wins)
-                {
-                    var end = w.ResolvedUtc ?? nowUtc;
-                    clockStoppedDays += Math.Max(0, (int)(end - w.BlockedSinceUtc).TotalDays);
-                    if (w.ResolvedUtc is null) clockStopped = true;
-                }
-            var effectiveDays = Math.Max(0, days - Math.Min(days, clockStoppedDays));
+            // Age = FDO business-day count in the current stage (single source of truth; never derived or adjusted).
+            var days = n.StageAgeDays ?? 0;
+            var clockStopped = stopsByNom.TryGetValue(n.Id, out var wins) && wins.Any(w => w.ResolvedUtc is null);
+            var effectiveDays = days;
             var classification = NominationRules.ClassificationOrDefault(n.Classification);
             var isStrategic = NominationRules.IsStrategic(classification);
             var inFlightDays = Math.Max(0, today.DayNumber - (n.NominatedDate ?? n.OpenedDate).DayNumber);
@@ -214,7 +202,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 MsiRisk = msi.Risk,
                 MsiGhcp = msi.Ghcp,
                 MsiSignoff = msi.Signoff,
-                StaleTier = isUpcoming ? string.Empty : NominationRules.StaleTier(stage, NominationRules.IsSettled(n.Status),
+                // A live clock-stop (customer-side blocker) pauses the SLA tier; the FDO day-count itself is untouched.
+                StaleTier = isUpcoming || clockStopped ? string.Empty : NominationRules.StaleTier(stage, NominationRules.IsSettled(n.Status),
                     effectiveDays, NominationRules.StageTarget(settings, stage), warn, escalate, defer),
                 StageTargetDays = NominationRules.StageTarget(settings, stage),
                 DbLinked = dbLinked,

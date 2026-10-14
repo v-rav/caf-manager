@@ -282,8 +282,9 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   **Readiness + MSI** cards. Account cell on `/nominations` links here.
 - **Blockers & clock-aware SLA (P2)** — `NominationBlocker` (category · **clock-stopped** · owner · ETA · notes ·
   raised/resolved-by). Raise/resolve in the workspace; **Governance Board** at `/governance` (open blockers, KPIs,
-  by-category, aging table, resolve). **Clock-aware SLA**: `NominationService` subtracts clock-stopped windows from
-  stage age → `EffectiveAgeDays`; `StaleTier` runs off effective age (a live clock-stop freezes it). Grid shows a
+  by-category, aging table, resolve). **SLA clock = FDO**: age is the FDO business-day count in the current stage
+  (`StageAgeDays`, single source of truth — never derived or adjusted; `EffectiveAgeDays` = that value). A live
+  clock-stop blocker **pauses the SLA tier** (no Warn/Escalate/Defer) instead of altering days. Grid shows a
   **Paused** chip. `GET /api/governance/blockers|blocker-categories|blocker-owners`.
 - **Audit log (P2)** — append-only `NominationEvent` (type · field · old→new · by · at). Logged on gate-item change,
   blocker raise/resolve, milestone add. **Timeline** panel on the workspace; `GET .../governance/events`.
