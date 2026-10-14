@@ -77,8 +77,11 @@ import the **web app is the system of record**.
   - **Age = days in the current stage** (`Nomination.StageAgeDays`), imported from that stage's
     day-count column in `Detail View.xlsx`: "1 - Validating & Initial Scope", "2 - Executing
     Pre-Requisites", "3 - Finalize Scope", "4 - Executing Migration" (values like "9 days").
-    `NominationService` uses it as the age basis (falls back to update-recency) and it drives the
-    stale tier.
+    **FDO semantics (verified on 111 completed waves):** `Migration Status` = the current stage; each stage column =
+    **business days spent in that stage**, counted from the day the wave **entered that stage** (not from actual start);
+    `Total Days` = sum of the four stage columns (≈ business days actual start → now/end). The SLA uses **only the
+    current stage's column** — e.g. Stage 2 with Total 35 = S1 8 + S2 27 → 27 vs target 10 = 17 over → Defer.
+    `NominationService` uses the FDO value as-is (no fallback, no adjustment) and it drives the stale tier.
     > ✅ **PV-01 resolved:** the age is days-in-stage; the SLA limit is the **per-stage target** and the
     > Warn/Escalate/Defer cadence counts **days past that target** (see Stale cadence).
 - **TPID** lives on `Account` (external master key), surfaced onto `NominationDto.Tpid` via

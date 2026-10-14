@@ -291,9 +291,22 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 * **Labels (🔒):** 1 Validating · 2 Executing Pre-Requisites · 3 Finalize Scope · 4 Executing Migration.
 
 ### 5.2 Age (FDO is the single source of truth)
-* `days = StageAgeDays ?? 0` — the FDO business-day count in the current stage (counted from stage entry; verified
-  against 111 completed waves: stage counts sum to Total Days and track business days start→end). Never derived from
-  update recency and never adjusted. `EffectiveAgeDays = days`.
+* **FDO semantics** (verified against 111 completed waves in `Detail View.xlsx`):
+  * `Migration Status` = the **current stage** (1–4).
+  * Each stage column (`1 - Validating & Initial Scope` … `4 - Executing Migration`) = **business days spent in that
+    stage**, counted from the day the wave **entered that stage** — not from the actual start date.
+  * `Total Days` = sum of the four stage columns (111/112 rows exact) ≈ business days from actual start (median 0.93×).
+  * Stages can be skipped (0 days) or overlap, so Total Days is not an exact start→end business-day count.
+* `days = StageAgeDays ?? 0` — the **current stage's** column only. Never derived from update recency and never
+  adjusted. `EffectiveAgeDays = days`. Only the current-stage column is imported; Total Days / other stage columns
+  are not stored for in-flight rows.
+* Worked example — Stage 2, Total Days 35:
+
+  | S1 | S2 | Target (S2) | Over | Tier |
+  |---|---|---|---|---|
+  | 8 | 27 | 10 | 17 | Defer |
+  | 30 | 5 | 10 | — | none (within target) |
+  | 0 (skipped) | 35 | 10 | 25 | Defer |
 * `ClockStopped = any open clock-stop blocker` → the SLA tier is **paused** (empty) while it is open.
 
 ### 5.3 SLA stale tier (Warn / Escalate / Defer)
