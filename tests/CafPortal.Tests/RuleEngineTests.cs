@@ -151,6 +151,14 @@ public class NominationRulesTests
     }
 
     [Theory]
+    [InlineData(null, "Strategic", "Strategic Account")]      // FDO segment default
+    [InlineData("Strategic Pilot", "Strategic", "Strategic Pilot")] // manual classification wins
+    [InlineData(null, "Upper Majors", "Standard Factory")]
+    [InlineData("", null, "Standard Factory")]
+    public void Classification_defaults_from_fdo_segment(string? manual, string? segment, string expected)
+        => Assert.Equal(expected, NominationRules.ClassificationOrDefault(manual, segment));
+
+    [Theory]
     [InlineData(null, false)]
     [InlineData("", false)]
     [InlineData("standard factory", false)]

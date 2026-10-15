@@ -101,7 +101,7 @@ export function StrategicRegisterPage() {
           rows={rows}
           rowKey={(n) => n.id}
           defaultSort={{ key: 'days', dir: 'desc' }}
-          emptyMessage="No strategic-classified nominations. Set a classification in the Nominations grid."
+          emptyMessage="No strategic nominations. Strategic = a non-Standard classification, or (when none is set) an FDO Strategic segment (Classification Rules → Default classification)."
           columns={[
             { key: 'account', header: 'Account', sortValue: (n) => n.accountName ?? '', render: (n) => <Link onClick={() => navigate(`/nominations/${n.id}`)}>{n.accountName ?? `Nomination ${n.id}`}</Link> },
             { key: 'class', header: 'Classification', sortValue: (n) => n.classification },

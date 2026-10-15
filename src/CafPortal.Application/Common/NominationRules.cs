@@ -46,6 +46,11 @@ public static class NominationRules
     public static string ClassificationOrDefault(string? classification) =>
         string.IsNullOrWhiteSpace(classification) ? StandardClassification : classification!;
 
+    /// <summary>Manual classification, else the SegmentClass rule for the FDO account segment, else Standard Factory.</summary>
+    public static string ClassificationOrDefault(string? classification, string? segment) =>
+        !string.IsNullOrWhiteSpace(classification) ? classification!
+        : KeywordRules.First(KeywordRules.SegmentClass, segment) ?? StandardClassification;
+
     public static bool IsStrategic(string? classification) =>
         !ClassificationOrDefault(classification).Equals(StandardClassification, StringComparison.OrdinalIgnoreCase);
 

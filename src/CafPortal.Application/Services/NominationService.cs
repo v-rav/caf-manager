@@ -113,7 +113,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
             var days = n.StageAgeDays ?? 0;
             var clockStopped = stopsByNom.TryGetValue(n.Id, out var wins) && wins.Any(w => w.ResolvedUtc is null);
             var effectiveDays = days;
-            var classification = NominationRules.ClassificationOrDefault(n.Classification);
+            var classification = NominationRules.ClassificationOrDefault(n.Classification, n.Account?.Segment);
             var isStrategic = NominationRules.IsStrategic(classification);
             var inFlightDays = Math.Max(0, today.DayNumber - (n.NominatedDate ?? n.OpenedDate).DayNumber);
             var strategicTier = StrategicTier(isStrategic, n.Status, inFlightDays, green, amber, red);

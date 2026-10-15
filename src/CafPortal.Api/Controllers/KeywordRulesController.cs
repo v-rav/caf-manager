@@ -127,6 +127,8 @@ public class KeywordRulesController(IApplicationDbContext db, ICurrentUser curre
             KeywordRules.Activity => db.NominationToolUsageFacts.Select(u => (u.ToolName ?? "") + " " + (u.Details ?? "")),
             KeywordRules.WaveType => db.WaveLinks.Where(w => w.Source == "FDO").Select(w => w.Reference),
             KeywordRules.BlockerReason => db.Nominations.Select(n => n.Remarks ?? n.CurrentState),
+            KeywordRules.SegmentClass => db.Nominations.Where(n => n.Classification == null || n.Classification == "")
+                .Select(n => n.Account != null ? n.Account.Segment : null),
             _ => Enumerable.Empty<string?>().AsQueryable(),
         };
         var values = await source.Where(v => v != null && v != "").ToListAsync(ct);
@@ -139,6 +141,8 @@ public class KeywordRulesController(IApplicationDbContext db, ICurrentUser curre
             .OrderBy(t => t.Name).Select(t => t.Name).ToArrayAsync(ct),
         KeywordRules.Activity => await db.MigrationActivities.AsNoTracking().Where(a => a.ActiveFlag)
             .OrderBy(a => a.SortOrder).Select(a => a.Name).ToArrayAsync(ct),
+        KeywordRules.SegmentClass => await db.LookupValues.AsNoTracking().Where(l => l.Category == "Classification")
+            .OrderBy(l => l.SortOrder).Select(l => l.Value).ToArrayAsync(ct),
         _ => d.FixedTargets,
     };
 

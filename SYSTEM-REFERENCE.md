@@ -320,7 +320,9 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
   Escalate → second reminder, Defer → Customer Deferred, plus a ">6 weeks in stage" rule (`DEFER_WEEKS_DAYS = 42`).
 
 ### 5.4 Strategic classification & time-threshold tier
-* `Classification = n.Classification ?? "Standard Factory"`; `IsStrategic = Classification ≠ "Standard Factory"` (🔒 string).
+* `Classification = n.Classification ?? SegmentClass rule(FDO Account.Segment) ?? "Standard Factory"` (⚙️ Classification
+  Rules → Default classification; default rule Strategic → "Strategic Account"). `IsStrategic = Classification ≠ "Standard Factory"`.
+  Note: Dashboard "SLA (Standard)" cards exclude strategic rows, so Strategic-segment waves are not in those counts.
 * `DaysInFlight = today − (NominatedDate ?? OpenedDate)`.
 * Tier: ≤Green · ≤Amber · ≤Red · >Red = Exec, from `StrategicGreenDays/AmberDays/RedDays` (⚙️ 60/90/120, Configuration →
   Operational thresholds, ordering-validated).

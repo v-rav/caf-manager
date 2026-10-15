@@ -18,7 +18,8 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             .Select(n => new
             {
                 n.Id, n.AccountName, Tpid = n.Account != null ? n.Account.Tpid : null, n.GhcpAdoptionLevel, n.IsToolAttached,
-                n.Classification, n.MigrationStatus, n.StageAgeDays, n.ProjectCoordinator, n.CftlPrimary, n.SolutionArchitect, n.ShortName,
+                n.Classification, Segment = n.Account != null ? n.Account.Segment : null,
+                n.MigrationStatus, n.StageAgeDays, n.ProjectCoordinator, n.CftlPrimary, n.SolutionArchitect, n.ShortName,
             })
             .FirstOrDefaultAsync(ct);
         if (nom is null) return null;
@@ -72,7 +73,7 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
         return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, effectiveGhcp,
             await SettingsCatalog.ReadAsync(_db, ct)) with
         {
-            Classification = nom.Classification,
+            Classification = NominationRules.ClassificationOrDefault(nom.Classification, nom.Segment),
             Stage = StageNum(nom.MigrationStatus),
             Pm = nom.ProjectCoordinator,
             Cftl = nom.CftlPrimary,

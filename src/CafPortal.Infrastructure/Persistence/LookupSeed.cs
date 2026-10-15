@@ -24,6 +24,7 @@ public static class LookupSeed
         (Classification, new[]
         {
             "Standard Factory", "Strategic Pilot", "Lighthouse Engagement", "Innovation / POC", "Recovery Engagement",
+            "Strategic Account",
         }),
         (VelocityImpact, new[] { "Low", "Medium", "High", "Critical" }),
         (Milestone, new[]

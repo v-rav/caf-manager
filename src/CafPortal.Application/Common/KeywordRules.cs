@@ -20,6 +20,7 @@ public static class KeywordRules
     public const string Activity = "Activity";
     public const string ContainerPath = "ContainerPath";
     public const string BlockerReason = "BlockerReason";
+    public const string SegmentClass = "SegmentClass";
 
     public static readonly IReadOnlyList<RuleDomain> Domains = new RuleDomain[]
     {
@@ -39,6 +40,8 @@ public static class KeywordRules
             new[] { "Access Pending", "Landing Zone Pending", "Approval Pending", "Testing/Validation Pending", "Budget/Priority Hold",
                 "Dependency Pending", "Internal Alignment", "Waiting for Customer Action" },
             "Pre-fills the blocker reason in the Manage dialog when a nomination is set to a blocked status. First match wins."),
+        new(SegmentClass, "Default classification (FDO account segment → classification)", "Account Segment (FDO)", false, null,
+            null, "Classification used when none is set on the nomination (a manual classification always wins). Drives the Strategic Register."),
     };
 
     public static RuleDomain? FindDomain(string key) =>
@@ -69,7 +72,8 @@ public static class KeywordRules
             ("validation", "Testing/Validation Pending"), ("budget", "Budget/Priority Hold"), ("priorit", "Budget/Priority Hold"),
             ("cost", "Budget/Priority Hold"), ("depend", "Dependency Pending"), ("blocked by", "Dependency Pending"),
             ("align", "Internal Alignment"), ("internal", "Internal Alignment"), ("customer", "Waiting for Customer Action"),
-            ("client", "Waiting for Customer Action"), ("awaiting", "Waiting for Customer Action") }));
+            ("client", "Waiting for Customer Action"), ("awaiting", "Waiting for Customer Action") }),
+        (SegmentClass, "Exact", new[] { ("Strategic", "Strategic Account") }));
 
     private static List<KeywordRuleItem> Build(params (string Domain, string Match, (string Pattern, string Target)[] Rules)[] sets) =>
         sets.SelectMany(s => s.Rules.Select((r, i) => new KeywordRuleItem(s.Domain, r.Pattern, s.Match, r.Target, (i + 1) * 10))).ToList();

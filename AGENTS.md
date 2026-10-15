@@ -298,7 +298,9 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
 - **Classification & strategic register (P3)** — `Nomination.Classification` (vocab) + `VelocityImpact` +
   strategic **time-threshold tier** (A.13 60/90/120 → Green/Amber/Red/Exec on days-in-flight). Grid **Class** column
   + Classification filter; Manage-dialog fields. **Strategic Investment Register** at `/strategic` (tier KPIs,
-  %-of-active-pipeline, by-classification, aging table). `isStrategic` = classification ≠ Standard Factory.
+  %-of-active-pipeline, by-classification, aging table). `isStrategic` = classification ≠ Standard Factory, where an unset
+  classification defaults from the **FDO account Segment** via KeywordRules domain **SegmentClass** (Strategic → "Strategic
+  Account"); a manual classification always wins.
 - **GHCP adoption (P4)** — `Nomination.GhcpAdoptionLevel` (0–7, A.10, **manual**), Manage-dialog dropdown. **GHCP Adoption**
   page at `/adoption` (licensed L4+ · awaiting L1–3 · used% · tool-attached% · reported usage (FDO) · 0–7 distribution ·
   by-region reported% · reported tool usage · capability utilization · Upload). Levels shown are the **effective** level
@@ -399,7 +401,7 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
     seeds missing keys on startup, renders Configuration → **Operational thresholds**, and validates saves (incl. tier
     ordering). Read defaults from the catalog, never inline literals.
   - **Keyword classification is data**: `KeywordRules` table + engine `Application/Common/KeywordRules.cs` (domains
-    Stage · Health · WaveType · ToolAlias · Activity · ContainerPath · BlockerReason; first-match by priority, Activity = all matches).
+    Stage · Health · WaveType · ToolAlias · Activity · ContainerPath · BlockerReason · SegmentClass; first-match by priority, Activity = all matches).
     Edited on Admin → **Classification Rules** (`/rules`, `KeywordRulesController` at `api/keyword-rules`) with an impact
     preview. `KeywordRules.Defaults` only seeds empty domains; the snapshot reloads at startup and after every edit. Never
     add `text.Contains("...")` classification in code — add a rule/domain instead.
