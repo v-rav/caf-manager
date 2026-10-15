@@ -734,7 +734,7 @@ export function NominationsPage() {
                             {n.followUpDate && <div><b>Follow-up:</b> {n.followUpDate}</div>}
                             <div><b>Age in stage:</b> {age} days{n.stageTargetDays ? ` / target ${n.stageTargetDays}` : ''}{n.staleTier ? ` · SLA ${n.staleTier}` : ''}</div>
                             {breakdown && <div><b>FDO days by stage:</b> {breakdown}</div>}
-                            {n.velocity != null && <div><b>Velocity:</b> {n.velocity.toFixed(2)}× ({n.velocityDays} of {n.velocityTargetDays} target days)</div>}
+                            {n.velocity != null && <div><b>Velocity:</b> {Math.round(n.velocity * 100)}% ({n.velocityTargetDays} target ÷ {n.velocityDays} actual days)</div>}
                             {n.clockStopped && <div><b>SLA clock:</b> paused (clock-stop blocker open)</div>}
                             {n.openBlockerCount > 0 && <div><b>Open blockers:</b> {n.openBlockerCount}</div>}
                             {action && <div style={{ color: 'var(--colorPaletteRedForeground1)' }}><b>Next step:</b> {action}</div>}

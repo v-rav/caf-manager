@@ -159,10 +159,11 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 StageAgeDays = n.StageAgeDays,
                 FdoStageDays = fdoStages,
                 FdoTotalDays = n.FdoTotalDays,
-                Velocity = velocity is { } v ? Math.Round((double)v.Days / v.Target, 2) : null,
+                // Velocity = target ÷ actual (higher = faster); undefined when no days were spent.
+                Velocity = velocity is { Days: > 0 } v ? Math.Round((double)v.Target / v.Days, 2) : null,
                 VelocityDays = velocity?.Days,
                 VelocityTargetDays = velocity?.Target,
-                VelocityTone = velocity is { } vt ? NominationRules.VelocityTone((double)vt.Days / vt.Target, settings) : null,
+                VelocityTone = velocity is { Days: > 0 } vt ? NominationRules.VelocityTone((double)vt.Target / vt.Days, settings) : null,
                 CurrentState = n.CurrentState,
                 SolutionArchitect = n.SolutionArchitect,
                 CftlPrimary = n.CftlPrimary,

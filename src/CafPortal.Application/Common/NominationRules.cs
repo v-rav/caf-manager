@@ -35,10 +35,10 @@ public static class NominationRules
         return target > 0 ? (days, target) : null;
     }
 
-    /// <summary>Badge tone for velocity (days ÷ target): over Red% → danger, over Amber% → warning, else success.</summary>
+    /// <summary>Badge tone for velocity (target ÷ actual, 1.0 = on target, higher = faster).</summary>
     public static string VelocityTone(double velocity, IReadOnlyDictionary<string, double> settings) =>
-        velocity * 100 > settings["VelocityRedFromPct"] ? "danger"
-        : velocity * 100 > settings["VelocityAmberFromPct"] ? "warning" : "success";
+        velocity * 100 < settings["VelocityRedBelowPct"] ? "danger"
+        : velocity * 100 < settings["VelocityAmberBelowPct"] ? "warning" : "success";
 
     /// <summary>Badge tone for how long a blocker has been open (BlockerAgeAmberDays / BlockerAgeRedDays).</summary>
     public static string BlockerAgeTone(int daysBlocked, IReadOnlyDictionary<string, double> settings) =>

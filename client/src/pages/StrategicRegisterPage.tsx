@@ -36,7 +36,7 @@ export function StrategicRegisterPage() {
         { header: 'Account', value: (n) => n.accountName ?? '' },
         { header: 'TPID', value: (n) => n.tpid ?? '' },
         { header: 'Classification', value: (n) => n.classification },
-        { header: 'Velocity (days ÷ target)', value: (n) => n.velocity ?? '' },
+        { header: 'Velocity % (target ÷ actual)', value: (n) => (n.velocity != null ? Math.round(n.velocity * 100) : '') },
         { header: 'SA', value: (n) => n.solutionArchitect ?? '' },
         { header: 'Status', value: (n) => n.status },
         { header: 'Days in flight', value: (n) => n.daysInFlight },
@@ -113,7 +113,7 @@ export function StrategicRegisterPage() {
           columns={[
             { key: 'account', header: 'Account', sortValue: (n) => n.accountName ?? '', render: (n) => <Link onClick={() => navigate(`/nominations/${n.id}`)}>{n.accountName ?? `Nomination ${n.id}`}</Link> },
             { key: 'class', header: 'Classification', sortValue: (n) => n.classification },
-            { key: 'velocity', header: 'Velocity', align: 'center', sortValue: (n) => n.velocity ?? -1, render: (n) => (n.velocity != null ? <Tooltip relationship="description" content={`${n.velocityDays} of ${n.velocityTargetDays} target business days (FDO)`}><Badge appearance="tint" color={n.velocityTone ?? 'informative'}>{n.velocity.toFixed(2)}×</Badge></Tooltip> : '—') },
+            { key: 'velocity', header: 'Velocity', align: 'center', sortValue: (n) => n.velocity ?? -1, render: (n) => (n.velocity != null ? <Tooltip relationship="description" content={`${n.velocityTargetDays} target ÷ ${n.velocityDays} actual business days (FDO) · 100% = on target, higher = faster`}><Badge appearance="tint" color={n.velocityTone ?? 'informative'}>{Math.round(n.velocity * 100)}%</Badge></Tooltip> : '—') },
             { key: 'sa', header: 'SA', sortValue: (n) => n.solutionArchitect ?? '', render: (n) => n.solutionArchitect ?? '—' },
             { key: 'status', header: 'Status', sortValue: (n) => n.status },
             { key: 'days', header: 'Days in flight', align: 'end', sortValue: (n) => n.daysInFlight, render: (n) => `${n.daysInFlight}d` },

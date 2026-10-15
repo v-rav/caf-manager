@@ -312,9 +312,9 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 * `ClockStopped = any open clock-stop blocker` → the SLA tier is **paused** (empty) while it is open.
 
 ### 5.2b Velocity (FDO "Stage Duration vs SLA")
-* **Per nomination:** `Velocity = FDO business days ÷ allocated target days` (completed: all 4 stages, `FdoTotalDays`-equivalent
-  vs Σ `StageTargetDays1..4`; in-flight: stages 1..current). <1 faster, >1 slower. Tone from ⚙️ `VelocityAmberFromPct`
-  (100) / `VelocityRedFromPct` (125). Null without an FDO stage breakdown. Shown in the Strategic Register and the
+* **Per nomination:** `Velocity = allocated target days ÷ FDO business days` (completed: all 4 stages vs Σ `StageTargetDays1..4`;
+  in-flight: stages 1..current), shown as % — 100% = on target, higher = faster, lower = slower; blank when 0 days. Tone from
+  ⚙️ `VelocityAmberBelowPct` (100) / `VelocityRedBelowPct` (80). Null without an FDO stage breakdown. Shown in the Strategic Register and the
   Nominations Summary hover.
 * **Factory panel** (Analytics → Stage Duration vs SLA, `GET /api/analytics/stage-velocity?region=&fy=`): per stage
   target vs average actual + days over/under; overall actual = Σ stage averages, overall target = Σ targets (FDO Power BI

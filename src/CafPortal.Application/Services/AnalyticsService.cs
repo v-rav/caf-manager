@@ -52,10 +52,13 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             }).ToList();
             var overallActual = rows.All(r => r.Actual is null) ? (int?)null : rows.Sum(r => r.Actual ?? 0);
             var overallTarget = targets.Sum();
+            double? vel = overallActual is > 0 ? (double)overallTarget / overallActual.Value : null;
             return new StageVelocitySet
             {
                 Count = set.Count, Stages = rows, OverallTarget = overallTarget,
                 OverallActual = overallActual, OverallOver = overallActual - overallTarget,
+                OverallVelocityPct = vel is { } v ? (int)Math.Round(v * 100, MidpointRounding.AwayFromZero) : null,
+                OverallVelocityTone = vel is { } t ? NominationRules.VelocityTone(t, settings) : null,
             };
         }
 

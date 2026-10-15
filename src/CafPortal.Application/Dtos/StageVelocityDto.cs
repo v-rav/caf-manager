@@ -16,6 +16,9 @@ public class StageVelocitySet
     public int? OverallActual { get; set; }
     /// <summary>Actual − target (positive = days over, negative = days under).</summary>
     public int? OverallOver { get; set; }
+    /// <summary>Target ÷ actual as a whole % (100 = on target, higher = faster).</summary>
+    public int? OverallVelocityPct { get; set; }
+    public string? OverallVelocityTone { get; set; }
 }
 
 public class StageVelocityRow

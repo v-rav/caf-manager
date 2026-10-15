@@ -58,7 +58,7 @@ export interface Effectiveness {
 }
 
 export interface StageVelocityRow { stage: number; label: string; target: number; actual: number | null; over: number | null; count: number }
-export interface StageVelocitySet { count: number; stages: StageVelocityRow[]; overallTarget: number; overallActual: number | null; overallOver: number | null }
+export interface StageVelocitySet { count: number; stages: StageVelocityRow[]; overallTarget: number; overallActual: number | null; overallOver: number | null; overallVelocityPct: number | null; overallVelocityTone: 'success' | 'warning' | 'danger' | null }
 export interface StageVelocity { inFlight: StageVelocitySet; completed: StageVelocitySet }
 
 export interface Analytics {

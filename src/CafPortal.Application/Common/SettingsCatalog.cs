@@ -59,10 +59,10 @@ public static class SettingsCatalog
         new("BlockerAgeRedDays", "Blocker ageing", "Red from (days blocked)", "10", 1, 365, true,
             "Open blockers at or above this age show red"),
 
-        new("VelocityAmberFromPct", "Velocity (days ÷ target)", "Amber above (% of target)", "100", 50, 500, true,
-            "Velocity above this % of the allocated target days shows amber (100 = over target)"),
-        new("VelocityRedFromPct", "Velocity (days ÷ target)", "Red above (% of target)", "125", 50, 500, true,
-            "Velocity above this % of the allocated target days shows red"),
+        new("VelocityAmberBelowPct", "Velocity (target ÷ actual)", "Amber below (%)", "100", 10, 200, true,
+            "Velocity below this % shows amber (100% = exactly on target; higher = faster)"),
+        new("VelocityRedBelowPct", "Velocity (target ÷ actual)", "Red below (%)", "80", 10, 200, true,
+            "Velocity below this % shows red"),
 
         new("LeaveClashWindowDays", "Resourcing", "Leave-clash window (days)", "30", 1, 365, true,
             "Upcoming-leave window used to detect coverage clashes"),
@@ -121,7 +121,7 @@ public static class SettingsCatalog
         ("PartiallyUtilizedThreshold", "OverloadedThreshold", false),
         ("MsiAmberFrom", "MsiGreenAbove", true),
         ("BlockerAgeAmberDays", "BlockerAgeRedDays", true),
-        ("VelocityAmberFromPct", "VelocityRedFromPct", true),
+        ("VelocityRedBelowPct", "VelocityAmberBelowPct", true),
         ("EffSpeedBestDays", "EffSpeedWorstDays", true),
         ("EffMomentumBestDays", "EffMomentumWorstDays", true),
         ("EffAmberFrom", "EffGreenFrom", true),
