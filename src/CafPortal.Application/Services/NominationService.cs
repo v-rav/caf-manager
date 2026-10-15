@@ -123,9 +123,10 @@ public class NominationService(IApplicationDbContext db) : INominationService
             var stage = NominationRules.StageIndex(n.MigrationStatus);
             var isUpcoming = !NominationRules.IsSettled(n.Status) && (n.ActualStartDate ?? n.PlannedStartDate) > upcomingAfter;
             var fdoStages = new[] { n.FdoStage1Days, n.FdoStage2Days, n.FdoStage3Days, n.FdoStage4Days };
-            // Completed waves are measured over all 4 stages; in-flight over the stages reached so far.
-            var velocity = NominationRules.Velocity(fdoStages,
-                n.Status == NominationStatusType.Completed ? 4 : stage ?? 0, settings);
+            // Completed: FDO Total Days vs total allocation (all 4 stage targets); in-flight: stages reached so far.
+            var velocity = n.Status == NominationStatusType.Completed
+                ? NominationRules.Velocity(fdoStages, 4, settings, n.FdoTotalDays)
+                : NominationRules.Velocity(fdoStages, stage ?? 0, settings);
             var effectiveGhcp = ToolActivityClassifier.EffectiveLevel(
                 n.GhcpAdoptionLevel, n.IsToolAttached,
                 activitiesByNom.TryGetValue(n.Id, out var acts) ? acts : System.Array.Empty<string>());

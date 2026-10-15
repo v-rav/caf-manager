@@ -26,13 +26,15 @@ public static class NominationRules
     public static int StageTarget(IReadOnlyDictionary<string, double> settings, int? stage) =>
         stage is >= 1 and <= 4 ? (int)settings[$"StageTargetDays{stage}"] : 0;
 
-    /// <summary>Velocity inputs: (days spent, allocated target days) over stages 1..upToStage from the FDO stage columns.</summary>
-    public static (int Days, int Target)? Velocity(int?[] stageDays, int upToStage, IReadOnlyDictionary<string, double> settings)
+    /// <summary>Velocity inputs: (days spent, allocated target days) over stages 1..upToStage. <paramref name="fdoTotalDays"/>,
+    /// when given, is FDO's own Total Days and replaces the stage sum as the days spent.</summary>
+    public static (int Days, int Target)? Velocity(int?[] stageDays, int upToStage, IReadOnlyDictionary<string, double> settings,
+        int? fdoTotalDays = null)
     {
-        if (upToStage is < 1 or > 4 || stageDays.All(d => d is null)) return null;
+        if (upToStage is < 1 or > 4 || (fdoTotalDays is null && stageDays.All(d => d is null))) return null;
         var days = 0; var target = 0;
         for (var s = 1; s <= upToStage; s++) { days += stageDays[s - 1] ?? 0; target += StageTarget(settings, s); }
-        return target > 0 ? (days, target) : null;
+        return target > 0 ? (fdoTotalDays ?? days, target) : null;
     }
 
     /// <summary>Badge tone for velocity (target ÷ actual, 1.0 = on target, higher = faster).</summary>

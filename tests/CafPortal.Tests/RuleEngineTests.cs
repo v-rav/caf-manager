@@ -142,6 +142,16 @@ public class NominationRulesTests
         => Assert.Equal(expected, NominationRules.StaleTier(stage, settled, days, target, 3, 5, 10));
 
     [Fact]
+    public void Velocity_uses_fdo_total_days_against_total_allocation()
+    {
+        var s = new Dictionary<string, double> { ["StageTargetDays1"] = 10, ["StageTargetDays2"] = 10, ["StageTargetDays3"] = 5, ["StageTargetDays4"] = 25 };
+        Assert.Equal((14, 50), NominationRules.Velocity(new int?[] { 10, 4, 0, 0 }, 4, s, fdoTotalDays: 14));
+        Assert.Equal((63, 50), NominationRules.Velocity(new int?[] { 10, 17, 10, 26 }, 4, s));       // stage sum fallback
+        Assert.Equal((27, 20), NominationRules.Velocity(new int?[] { 8, 19, null, null }, 2, s));    // in-flight: stages 1..2
+        Assert.Null(NominationRules.Velocity(new int?[4], 4, s));
+    }
+
+    [Fact]
     public void Blocker_age_tone_uses_settings()
     {
         var s = new Dictionary<string, double> { ["BlockerAgeAmberDays"] = 5, ["BlockerAgeRedDays"] = 10 };
