@@ -118,7 +118,12 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 ? NominationRules.ClassificationOrDefault(n.Classification, n.Account?.Segment)
                 : NominationRules.StandardClassification;
             var isStrategic = NominationRules.IsStrategic(classification);
-            var inFlightDays = Math.Max(0, today.DayNumber - (n.NominatedDate ?? n.OpenedDate).DayNumber);
+            // Days in flight: FDO Total Days (source of truth); else dates — actual start (else nominated) to actual end
+            // (else today), so completed work stops counting.
+            var flightStart = n.ActualStartDate ?? n.NominatedDate ?? n.OpenedDate;
+            var flightEnd = NominationRules.IsSettled(n.Status) ? n.ActualEndDate ?? today : today;
+            var inFlightDays = n.FdoTotalDays ?? Math.Max(0, flightEnd.DayNumber - flightStart.DayNumber);
+            var inFlightSource = n.FdoTotalDays != null ? "FDO Total Days" : "Dates";
             var strategicTier = StrategicTier(isStrategic, n.Status, inFlightDays, green, amber, red);
             var stage = NominationRules.StageIndex(n.MigrationStatus);
             var isUpcoming = !NominationRules.IsSettled(n.Status) && (n.ActualStartDate ?? n.PlannedStartDate) > upcomingAfter;
@@ -173,6 +178,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 GhcpAdoptionLevel = n.GhcpAdoptionLevel,
                 IsStrategic = isStrategic,
                 DaysInFlight = inFlightDays,
+                DaysInFlightSource = inFlightSource,
                 StrategicTier = strategicTier,
                 BlockedReason = n.BlockedReason?.ToDisplay(),
                 BlockedSince = n.BlockedSince,

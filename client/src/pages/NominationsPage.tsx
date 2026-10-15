@@ -56,7 +56,7 @@ function NominationDetail({ n }: { n: Nomination }) {
       <ReadField label="Classification">{roDash(n.classification)}</ReadField>
       <ReadField label="Velocity impact">{roDash(n.velocityImpact)}</ReadField>
       <ReadField label="Strategic">{n.isStrategic ? `Yes · ${n.strategicTier || '—'}` : 'No'}</ReadField>
-      <ReadField label="Days in flight">{roDays(n.daysInFlight)}</ReadField>
+      <ReadField label="Days in flight">{n.daysInFlight != null ? `${n.daysInFlight}d${n.daysInFlightSource ? ` · ${n.daysInFlightSource}` : ''}` : '—'}</ReadField>
       <ReadField label="MSI">{`${n.msiScore ?? '—'} · ${n.msiBand ?? ''}`}</ReadField>
       <ReadField label="GHCP level">{n.ghcpAdoptionLevel != null ? `${n.ghcpAdoptionLevel}/7` : '—'}</ReadField>
       <ReadField label="Primary path">{roDash(n.primaryMigrationPath)}</ReadField>

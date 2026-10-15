@@ -342,6 +342,7 @@ export interface Nomination {
   ghcpAdoptionLevel?: number
   isStrategic: boolean
   daysInFlight: number
+  daysInFlightSource?: string
   strategicTier: string
   msiScore: number
   msiBand: string

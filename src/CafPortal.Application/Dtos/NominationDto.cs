@@ -41,6 +41,8 @@ public class NominationDto
     public bool IsStrategic { get; set; }
     /// <summary>Days since nomination/open — the strategic-pilot running clock.</summary>
     public int DaysInFlight { get; set; }
+    /// <summary>"FDO Total Days" or "Dates" (actual start → actual end / today).</summary>
+    public string DaysInFlightSource { get; set; } = string.Empty;
     /// <summary>"", "Green", "Amber", "Red" or "Exec" from days-in-flight against the 60/90/120 thresholds.</summary>
     public string StrategicTier { get; set; } = string.Empty;
 

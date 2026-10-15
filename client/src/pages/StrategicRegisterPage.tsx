@@ -116,7 +116,7 @@ export function StrategicRegisterPage() {
             { key: 'velocity', header: 'Velocity', align: 'center', sortValue: (n) => n.velocity ?? -1, render: (n) => (n.velocity != null ? <Tooltip relationship="description" content={`${n.velocityTargetDays} target ÷ ${n.velocityDays} actual business days (FDO) · 100% = on target, higher = faster`}><Badge appearance="tint" color={n.velocityTone ?? 'informative'}>{Math.round(n.velocity * 100)}%</Badge></Tooltip> : '—') },
             { key: 'sa', header: 'SA', sortValue: (n) => n.solutionArchitect ?? '', render: (n) => n.solutionArchitect ?? '—' },
             { key: 'status', header: 'Status', sortValue: (n) => n.status },
-            { key: 'days', header: 'Days in flight', align: 'end', sortValue: (n) => n.daysInFlight, render: (n) => `${n.daysInFlight}d` },
+            { key: 'days', header: 'Days in flight', align: 'end', sortValue: (n) => n.daysInFlight, render: (n) => <Tooltip relationship="description" content={n.daysInFlightSource === 'FDO Total Days' ? 'FDO Total Days (business days)' : 'From dates: actual start → actual end (or today), calendar days'}><span>{n.daysInFlight}d</span></Tooltip> },
             { key: 'tier', header: 'Threshold', sortValue: (n) => n.strategicTier, render: (n) => (n.strategicTier ? <Badge appearance="filled" color={tierTone(n.strategicTier)}>{n.strategicTier}</Badge> : '—') },
           ]}
         />
