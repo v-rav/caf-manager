@@ -1,6 +1,7 @@
 import { Badge, Button, Dropdown, Option, Spinner, Text, Tooltip, tokens } from '@fluentui/react-components'
 import { ArrowClockwiseRegular } from '@fluentui/react-icons'
 import type { ReactNode } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import type { Nomination } from '../types'
 
 /** Coloured badge mapping a capacity/risk status string to an intent. */
@@ -26,6 +27,24 @@ export function StatusBadge({ status }: { status: string }) {
 
 export function Loading({ label = 'Loading…' }: { label?: string }) {
   return <Spinner label={label} style={{ padding: 40 }} />
+}
+
+/** Account name linking to the nomination's SA Workspace. */
+export function NominationLink({ id, name }: { id: number; name?: string | null }) {
+  return <RouterLink to={`/nominations/${id}`}>{name || `Nomination ${id}`}</RouterLink>
+}
+
+/** Standard page title row: title + one-line description on the left, page actions on the right. */
+export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+      <div>
+        <Text as="h1" size={600} weight="bold" style={{ display: 'block', margin: 0 }}>{title}</Text>
+        {subtitle && <Text size={200} style={{ display: 'block', color: tokens.colorNeutralForeground3 }}>{subtitle}</Text>}
+      </div>
+      {actions && <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>{actions}</div>}
+    </div>
+  )
 }
 
 export function ErrorText({ error, onRetry }: { error: string; onRetry?: () => void }) {

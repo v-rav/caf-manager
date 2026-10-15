@@ -84,7 +84,6 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { to: '/effectiveness', label: 'Ownership Effectiveness', icon: <TrophyRegular /> },
       { to: '/strategic', label: 'Strategic Register', icon: <RocketRegular /> },
       { to: '/adoption', label: 'GHCP Adoption', icon: <SparkleRegular /> },
-      { to: '/workspace', label: 'SA Workspace (preview)', icon: <ClipboardTaskListLtrRegular /> },
     ],
   },
   {

@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
 import { Modal } from '../components/Modal'
-import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
+import { ErrorText, FilterSelect, Loading, PageHeader, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
@@ -143,12 +143,10 @@ export function AdoptionPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>GHCP Adoption</div>
-          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>License readiness · adoption maturity 0–7 · tool usage — across active nominations</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+      <PageHeader
+        title="GHCP Adoption"
+        subtitle="License readiness · adoption maturity 0–7 · tool usage — across active nominations"
+        actions={<>
           <FilterSelect
             label="Tooling"
             value={tool}
@@ -161,9 +159,9 @@ export function AdoptionPage() {
               {uploading ? 'Uploading…' : 'Upload'}
             </Button>
           </Tooltip>
-          <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!rows.length}>Export</Button>
-        </div>
-      </div>
+          <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!rows.length}>Export CSV</Button>
+        </>}
+      />
 
       <Modal
         open={!!uploadResult}
@@ -261,7 +259,7 @@ function CapabilitySection({ cap }: { cap: ReturnType<typeof useAsync<Capability
   return (
     <Panel
       title="Migration Capability Utilization"
-      action={<Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportCsv} disabled={!data.totalUsages}>Export</Button>}
+      action={<Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportCsv} disabled={!data.totalUsages}>Export CSV</Button>}
     >
       <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', display: 'block', marginBottom: 12 }}>
         Which migration capability was accelerated by which tool — tools aligned to the master taxonomy and the activity

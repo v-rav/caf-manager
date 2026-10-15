@@ -10,12 +10,8 @@ import { useAsync } from '../hooks'
 import { useAuth } from '../auth'
 import { useRegion } from '../region'
 import { downloadCsv } from '../export'
+import { day, money, num } from '../format'
 import type { AcrCaptureRow, AcrRecoveryEntry } from '../types'
-
-const money = (n: number) =>
-  n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${Math.round(n)}`
-const num = (n: number) => n.toLocaleString()
-const day = (s?: string | null) => (s ? new Date(s).toLocaleDateString() : '—')
 
 const GAP_TONE: Record<string, 'danger' | 'warning' | 'informative'> = {
   'Missing cores': 'danger',
@@ -226,6 +222,7 @@ export function AcrRecoveryPage() {
                 rowKey={(r) => r.id}
                 defaultSort={{ key: 'gapAcr', dir: 'desc' }}
                 columns={shownColumns}
+                emptyMessage="No under-captured containerized nominations for these filters — cores and ACR look complete."
               />
             </Panel>
 

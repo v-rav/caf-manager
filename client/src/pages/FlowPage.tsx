@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
-import { ErrorText, FilterSelect, Loading, Panel, SaWorkloadList } from '../components/common'
+import { ErrorText, FilterSelect, Loading, PageHeader, Panel, SaWorkloadList } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
@@ -118,16 +118,14 @@ export function FlowPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>Migration Flow</div>
-          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>Funnel conversion &amp; drop-off · bottleneck analytics across the migration journey</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+      <PageHeader
+        title="Migration Flow"
+        subtitle="Funnel conversion & drop-off · bottleneck analytics across the migration journey"
+        actions={<>
           <FilterSelect label="Path" value={path} onChange={setPath} options={pathOptions} minWidth={200} />
-          <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!approved.length}>Export</Button>
-        </div>
-      </div>
+          <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!approved.length}>Export CSV</Button>
+        </>}
+      />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
         <KpiCard label="Received" value={funnel.steps[0].count} tone="neutral" />

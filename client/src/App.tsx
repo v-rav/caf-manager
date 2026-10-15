@@ -1,5 +1,5 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import { Spinner } from '@fluentui/react-components'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
+import { Button, Spinner, Text } from '@fluentui/react-components'
 import { Layout } from './components/Layout'
 import { AccountsPage } from './pages/AccountsPage'
 import { AccessPage } from './pages/AccessPage'
@@ -28,7 +28,6 @@ import { PerformancePage } from './pages/PerformancePage'
 import { ReconciliationPage } from './pages/ReconciliationPage'
 import { NameConsistencyPage } from './pages/NameConsistencyPage'
 import { ResourcesPage } from './pages/ResourcesPage'
-import { WorkspaceMockPage } from './pages/WorkspaceMockPage'
 import { AuthProvider, useAuth } from './auth'
 import { RegionProvider } from './region'
 import { FyProvider } from './fy'
@@ -64,10 +63,22 @@ const router = createBrowserRouter([
       { path: 'help', element: <HelpPage /> },
       { path: 'access', element: <AccessPage /> },
       { path: 'backup', element: <BackupPage /> },
-      { path: 'workspace', element: <WorkspaceMockPage /> },
+      // The P0 workspace mock was retired; old bookmarks land on the real nominations grid.
+      { path: 'workspace', element: <Navigate to="/nominations" replace /> },
+      { path: '*', element: <NotFound /> },
     ],
   },
 ])
+
+function NotFound() {
+  return (
+    <div style={{ padding: 40, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+      <Text size={600} weight="bold">Page not found</Text>
+      <Text>This page doesn’t exist or has moved. Use the menu on the left, or go back to the dashboard.</Text>
+      <Button appearance="primary" as="a" href="/">Go to dashboard</Button>
+    </div>
+  )
+}
 
 function AuthGate() {
   const { user, loading } = useAuth()

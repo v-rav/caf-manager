@@ -193,7 +193,7 @@ export function CapacityPage() {
             <SearchBox placeholder="Search resource" value={search} onChange={(_, d) => setSearch(d.value)} style={{ minWidth: 180 }} />
             <FilterSelect label="Status" value={status} options={CAPACITY_STATUSES} onChange={setStatus} minWidth={170} />
             <Button as="a" href={api.exportUrl('capacity', region)} appearance="secondary" icon={<ArrowDownloadRegular />}>
-              Export
+              Export Excel
             </Button>
           </div>
         }

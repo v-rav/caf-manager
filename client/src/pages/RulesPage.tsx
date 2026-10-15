@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { Modal } from '../components/Modal'
-import { ErrorText, Loading, Panel } from '../components/common'
+import { ErrorText, Loading, PageHeader, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import type { KeywordRule, KeywordRuleInput, KeywordRulePreview, RuleDomainInfo } from '../types'
 
@@ -85,13 +85,10 @@ export function RulesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div>
-        <div style={{ fontSize: 22, fontWeight: 700 }}>Classification Rules</div>
-        <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-          Keyword rules that turn raw FDO text into portal classifications. Edits take effect immediately (wave type on the
-          next Detail View import). Preview shows exactly which records would change before you save.
-        </div>
-      </div>
+      <PageHeader
+        title="Classification Rules"
+        subtitle="Keyword rules that turn raw FDO text into portal classifications. Edits take effect immediately (wave type on the next Detail View import). Preview shows exactly which records would change before you save."
+      />
 
       <TabList selectedValue={domainKey} onTabSelect={(_, d) => setDomainKey(String(d.value))}>
         {data.domains.map((d) => (

@@ -5,8 +5,7 @@ import { ErrorText, Loading, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import type { AcrRates } from '../types'
 import { GUIDE_GROUP_INTRO, GUIDE_GROUP_ORDER, pagesInGroup } from '../pageGuide'
-
-const money = (n: number) => `$${Math.round(n).toLocaleString()}`
+import { moneyFull as money } from '../format'
 
 export function HelpPage() {
   const { data: rates, loading, error, reload } = useAsync(() => api.acrRates(), [])

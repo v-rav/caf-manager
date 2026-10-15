@@ -10,6 +10,7 @@ import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
 import { ADOPTION_LEVELS } from '../adoption'
+import { money } from '../format'
 import type { ExecutiveDashboard, Nomination } from '../types'
 
 const CAPACITY_COLORS = ['#107c10', '#eaa300', '#ca5010', '#c50f1f']
@@ -17,9 +18,6 @@ const STAGE_LABELS = ['—', 'Validating', 'Prerequisites', 'Finalize Scope', 'E
 
 const stageIdx = (n: Nomination): number => n.stageIndex ?? 0
 const ghcpLevel = (n: Nomination): number => n.ghcpEffectiveLevel ?? n.ghcpAdoptionLevel ?? 0
-function money(n: number): string {
-  return n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${Math.round(n)}`
-}
 function Bar({ label, count, max }: { label: string; count: number; max: number }) {
   const pct = max ? Math.round((count / max) * 100) : 0
   return (

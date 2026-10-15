@@ -431,8 +431,11 @@ User & Access page**, **CSV exports + light filters on Adoption/Strategic/Flow**
 left nav** (Overview / Delivery / Resourcing / Admin — only the active group expanded, so the sidebar never scrolls),
 and **Migration Capability Utilization** (Tool × Activity masters + per-nomination usage + leadership rollups).
 **Backlog:** `NominationOutcome` value-capture (hours saved · defects · CSAT → real Factory Productivity);
-config-editable strategic time-thresholds; retire the `/workspace` P0 mock
-(kept as reference); Entra auth; API smoke tests.
+config-editable strategic time-thresholds; Entra auth; API smoke tests. (The `/workspace` P0 mock is retired: off the
+nav, the route redirects to `/nominations`, unknown routes show a "Page not found" page.)
+- **UI building blocks** (use these, don't hand-roll): `PageHeader` (title · subtitle · actions) and `NominationLink`
+  (account → SA Workspace) in `components/common.tsx`; `money`/`moneyFull`/`num`/`pct`/`day` in `format.ts`. Export
+  buttons read **"Export CSV"** (client CSV) or **"Export Excel"** (server `.xlsx`).
 - **Migration Capability Utilization** (the GHCP/AppMod/accelerator value story): two portal-owned masters —
   **`MigrationTool`** (Name · Category · Vendor; seeded 15-tool taxonomy — **Assessment** (Azure Migrate, AppCAT) ·
   **GHCP** (GHCP-CI, GHCP Agent Mode, GHCP Custom Prompts, AppMod .NET/Java/CLI, Upgrade Assistant — AppMod is a

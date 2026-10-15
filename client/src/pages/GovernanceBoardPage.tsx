@@ -1,10 +1,10 @@
 import { Badge, Button, Text } from '@fluentui/react-components'
 import { useCallback, useMemo, useState } from 'react'
-import { Link as RouterLink, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { DataTable, type Column } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
-import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
+import { ErrorText, FilterSelect, Loading, NominationLink, PageHeader, Panel } from '../components/common'
 import { downloadCsv } from '../export'
 import { nominationInFy, useFy } from '../fy'
 import { useAsync } from '../hooks'
@@ -69,7 +69,7 @@ export function GovernanceBoardPage() {
 
   const columns: Column<Nomination>[] = [
     { key: 'account', header: 'Account', minWidth: 190, sortValue: (n) => n.accountName ?? '',
-      render: (n) => <RouterLink to={`/nominations/${n.id}`}>{n.accountName ?? `Nomination ${n.id}`}</RouterLink> },
+      render: (n) => <NominationLink id={n.id} name={n.accountName} /> },
     { key: 'stage', header: 'Stage', align: 'center', sortValue: (n) => n.stageIndex ?? 0, render: (n) => n.stageIndex ?? '—' },
     { key: 'health', header: 'Status', sortValue: (n) => n.healthBucket ?? '',
       render: (n) => n.healthBucket && n.healthBucket in HEALTH_COLOR
@@ -114,15 +114,11 @@ export function GovernanceBoardPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <Text size={600} weight="bold">Governance Board</Text>
-          <Text size={200} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
-            In-flight waves that are blocked, waiting, or past their stage target — straight from FDO, worst first.
-          </Text>
-        </div>
-        <Button appearance="primary" onClick={exportRows} disabled={!rows.length}>Export CSV</Button>
-      </div>
+      <PageHeader
+        title="Governance Board"
+        subtitle="In-flight waves that are blocked, waiting, or past their stage target — straight from FDO, worst first."
+        actions={<Button appearance="primary" onClick={exportRows} disabled={!rows.length}>Export CSV</Button>}
+      />
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
         <FilterSelect label="SLA" value={f.tier} options={options.tier} onChange={setDim('tier')} minWidth={120} />
@@ -171,7 +167,7 @@ export function GovernanceBoardPage() {
             rowKey={(b) => b.id}
             pageSize={10}
             columns={[
-              { key: 'account', header: 'Account', sortValue: (b) => b.account ?? '', render: (b) => <RouterLink to={`/nominations/${b.nominationId}`}>{b.account ?? `Nomination ${b.nominationId}`}</RouterLink> },
+              { key: 'account', header: 'Account', sortValue: (b) => b.account ?? '', render: (b) => <NominationLink id={b.nominationId} name={b.account} /> },
               { key: 'category', header: 'Category', sortValue: (b) => b.category },
               { key: 'days', header: 'Days', align: 'end', sortValue: (b) => b.daysBlocked, render: (b) => <Badge appearance="tint" color={b.ageTone ?? 'informative'}>{b.daysBlocked}d</Badge> },
               { key: 'action', header: '', render: (b) => <Button size="small" disabled={busy} onClick={() => void resolve(b)}>Resolve</Button> },

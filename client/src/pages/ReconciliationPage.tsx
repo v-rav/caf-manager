@@ -107,7 +107,7 @@ export function ReconciliationPage() {
           <Button appearance="secondary" onClick={previewClean} disabled={cleaning}>Merge duplicate links</Button>
           <Button appearance="secondary" onClick={previewSeed} disabled={seeding}>Seed assignments</Button>
           <Button as="a" href={api.exportUrl('reconciliation', region)} appearance="primary" icon={<ArrowDownloadRegular />}>
-            Export
+            Export Excel
           </Button>
         </div>
       </div>
@@ -202,6 +202,7 @@ export function ReconciliationPage() {
           rows={rows}
           rowKey={(r) => `${r.resourceId}-${r.accountId}`}
           pageSize={50}
+          emptyMessage="No resource–account links match. Clear the filters, or use Seed assignments to create links from FDO ownership."
           columns={[
             { key: 'resource', header: 'Resource', sortValue: (r) => r.resourceName, render: (r) => r.resourceName },
             { key: 'region', header: 'Region', sortValue: (r) => r.resourceRegion, render: (r) => r.resourceRegion },
@@ -268,6 +269,7 @@ export function ReconciliationPage() {
           rows={gaps?.people ?? []}
           rowKey={(p) => `${p.role}-${p.name}`}
           pageSize={25}
+          emptyMessage="Every FDO PM / CFTL / SA name matches a roster resource."
           columns={[
             { key: 'name', header: 'Name (FDO)', sortValue: (p) => p.name, render: (p) => p.name },
             {

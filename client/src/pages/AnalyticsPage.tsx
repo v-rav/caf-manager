@@ -8,15 +8,11 @@ import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
+import { money, num, pct } from '../format'
 import type { AttainmentBucket, Nomination, TimeBucket } from '../types'
 
 // Heat-band colours reused for the health doughnut (On Track → Blocked → Other).
 const HEALTH_COLORS = ['#107c10', '#eaa300', '#c50f1f', '#8a8886']
-
-const money = (n: number) =>
-  n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${Math.round(n)}`
-const num = (n: number) => n.toLocaleString()
-const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)}%` : '—')
 
 // A titled section with a responsive grid of chart panels.
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -239,7 +235,7 @@ export function AnalyticsPage() {
             {' '}{data.completed} completed) · ACR/Cores from {data.withAcr} enriched records
           </Text>
         </div>
-        <Button as="a" appearance="primary" href={exportHref}>Export</Button>
+        <Button as="a" appearance="primary" href={exportHref}>Export Excel</Button>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>

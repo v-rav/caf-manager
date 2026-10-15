@@ -645,7 +645,7 @@ export function NominationsPage() {
                   appearance="secondary"
                   icon={<ArrowDownloadRegular />}
                 >
-                  Export
+                  Export Excel
                 </Button>
               </div>
             }
@@ -1043,6 +1043,7 @@ export function NominationsPage() {
                   appearance="subtle"
                   size="small"
                   icon={<DeleteRegular />}
+                  aria-label="Unassign resource"
                   onClick={() => unassignResource(a.resourceId)}
                   disabled={busy}
                 />
@@ -1135,7 +1136,7 @@ export function NominationsPage() {
                   {w.waveType}
                 </Badge>
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.reference}</span>
-                <Button appearance="subtle" size="small" icon={<DeleteRegular />} onClick={() => removeWave(w.id)} disabled={busy} />
+                <Button appearance="subtle" size="small" icon={<DeleteRegular />} aria-label="Remove wave link" onClick={() => removeWave(w.id)} disabled={busy} />
               </div>
             ))}
           </div>

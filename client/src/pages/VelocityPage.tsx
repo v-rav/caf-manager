@@ -1,9 +1,8 @@
 import { Badge, Button, Text, Tooltip } from '@fluentui/react-components'
 import { useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { DataTable, type Column } from '../components/DataTable'
-import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
+import { ErrorText, FilterSelect, Loading, NominationLink, PageHeader, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { downloadCsv } from '../export'
 import { useFy, fyLabel, currentFy } from '../fy'
@@ -100,7 +99,7 @@ export function VelocityPage() {
 
   const columns: Column<VelocityWave>[] = [
     { key: 'account', header: 'Account', minWidth: 200, sortValue: (w) => w.accountName ?? '',
-      render: (w) => <RouterLink to={`/nominations/${w.nominationId}`}>{w.accountName ?? '—'}</RouterLink> },
+      render: (w) => <NominationLink id={w.nominationId} name={w.accountName} /> },
     { key: 'set', header: 'Set', sortValue: (w) => w.set },
     { key: 'stage', header: 'Stage', align: 'center', sortValue: (w) => w.stageIndex ?? 0 },
     { key: 'sa', header: 'SA', sortValue: (w) => w.sa ?? '' },
@@ -156,15 +155,11 @@ export function VelocityPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <Text size={600} weight="bold">Velocity Analytics</Text>
-          <Text size={200} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>
-            Velocity = allocated stage days ÷ FDO Total Days (higher = faster) · {region || 'all regions'} · {fy === 'all' ? 'all FY' : fyLabel(fy)}
-          </Text>
-        </div>
-        <Button appearance="primary" onClick={exportRows} disabled={!waves.length}>Export CSV</Button>
-      </div>
+      <PageHeader
+        title="Velocity Analytics"
+        subtitle={`Velocity = allocated stage days ÷ FDO Total Days (higher = faster) · ${region || 'all regions'} · ${fy === 'all' ? 'all FY' : fyLabel(fy)}`}
+        actions={<Button appearance="primary" onClick={exportRows} disabled={!waves.length}>Export CSV</Button>}
+      />
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
         <FilterSelect label="Set" value={set} options={['In-flight', 'Completed']} onChange={setSet} minWidth={120} />
@@ -218,6 +213,7 @@ export function VelocityPage() {
               rowKey={(w) => w.nominationId}
               ariaLabel="Wave velocity"
               defaultSort={{ key: 'vel', dir: 'asc' }}
+              emptyMessage="No waves with FDO stage days match these filters. Try Reset, or upload the latest Detail View."
             />
           </Panel>
         </>

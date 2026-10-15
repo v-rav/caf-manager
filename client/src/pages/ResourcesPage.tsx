@@ -144,7 +144,7 @@ export function ResourcesPage() {
             <FilterSelect label="Active" value={activeFilter} options={['Active', 'Inactive']} onChange={setActiveFilter} minWidth={130} />
             <SearchBox placeholder="Skill" value={skill} onChange={(_, d) => setSkill(d.value)} style={{ minWidth: 140 }} />
             <Button as="a" href={api.exportUrl('resources', region)} appearance="secondary" icon={<ArrowDownloadRegular />}>
-              Export
+              Export Excel
             </Button>
             <Button appearance="primary" icon={<AddRegular />} onClick={openCreate}>
               Add

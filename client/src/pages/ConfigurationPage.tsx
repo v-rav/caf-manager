@@ -435,7 +435,7 @@ function VocabPanel({ title, placeholder, hint, load, add, update }: VocabPanelP
                     onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
                     style={{ minWidth: 160 }}
                   />
-                  <Button size="small" appearance="primary" icon={<SaveRegular />} onClick={saveEdit} disabled={!editName.trim() || busy} />
+                  <Button size="small" appearance="primary" icon={<SaveRegular />} aria-label="Save" onClick={saveEdit} disabled={!editName.trim() || busy} />
                   <Button size="small" appearance="subtle" onClick={() => setEditId(null)} disabled={busy}>
                     Cancel
                   </Button>
@@ -518,7 +518,7 @@ function LookupPanel({ title, category, placeholder, hint }: { title: string; ca
               editId === s.id ? (
                 <div key={s.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <Input value={editVal} onChange={(_, d) => setEditVal(d.value)} onKeyDown={(e) => e.key === 'Enter' && saveEdit()} style={{ minWidth: 160 }} />
-                  <Button size="small" appearance="primary" icon={<SaveRegular />} onClick={saveEdit} disabled={!editVal.trim() || busy} />
+                  <Button size="small" appearance="primary" icon={<SaveRegular />} aria-label="Save" onClick={saveEdit} disabled={!editVal.trim() || busy} />
                   <Button size="small" appearance="subtle" onClick={() => setEditId(null)} disabled={busy}>Cancel</Button>
                 </div>
               ) : (

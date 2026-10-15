@@ -1,11 +1,10 @@
-import { Badge, Button, Link, Tooltip } from '@fluentui/react-components'
+import { Badge, Button, Tooltip } from '@fluentui/react-components'
 import { ArrowDownloadRegular } from '@fluentui/react-icons'
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
-import { ErrorText, FilterSelect, Loading, Panel } from '../components/common'
+import { ErrorText, FilterSelect, Loading, NominationLink, PageHeader, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
@@ -30,7 +29,6 @@ const pickers: Record<Dim, (n: Nomination) => string> = {
 export function StrategicRegisterPage() {
   const { region } = useRegion()
   const { fy } = useFy()
-  const navigate = useNavigate()
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
   const { data: vocab } = useAsync(() => api.nominationVocab(), [])
   const [f, setF] = useState<Record<Dim, string>>(EMPTY)
@@ -95,15 +93,11 @@ export function StrategicRegisterPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>Strategic Investment Register</div>
-          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>Pilots &amp; strategic engagements · time-threshold governance (60/90/120) · excluded from Standard velocity</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-          <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!rows.length}>Export</Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Strategic Investment Register"
+        subtitle="Pilots & strategic engagements · time-threshold governance (60/90/120) · excluded from Standard velocity"
+        actions={<Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!rows.length}>Export CSV</Button>}
+      />
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
         <FilterSelect label="Classification" value={f.cls} options={options.cls} onChange={setDim('cls')} minWidth={180} />
@@ -149,7 +143,7 @@ export function StrategicRegisterPage() {
           defaultSort={{ key: 'days', dir: 'desc' }}
           emptyMessage="No strategic nominations match these filters."
           columns={[
-            { key: 'account', header: 'Account', sortValue: (n) => n.accountName ?? '', render: (n) => <Link onClick={() => navigate(`/nominations/${n.id}`)}>{n.accountName ?? `Nomination ${n.id}`}</Link> },
+            { key: 'account', header: 'Account', sortValue: (n) => n.accountName ?? '', render: (n) => <NominationLink id={n.id} name={n.accountName} /> },
             { key: 'class', header: 'Classification', sortValue: (n) => n.classification },
             { key: 'velocity', header: 'Velocity', align: 'center', sortValue: (n) => n.velocity ?? -1, render: (n) => (n.velocity != null ? <Tooltip relationship="description" content={`${n.velocityTargetDays} target ÷ ${n.velocityDays} actual business days (FDO) · 100% = on target, higher = faster`}><Badge appearance="tint" color={n.velocityTone ?? 'informative'}>{Math.round(n.velocity * 100)}%</Badge></Tooltip> : '—') },
             { key: 'sa', header: 'SA', sortValue: (n) => n.solutionArchitect ?? '', render: (n) => n.solutionArchitect ?? '—' },

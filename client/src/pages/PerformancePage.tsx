@@ -169,7 +169,7 @@ export function PerformancePage() {
                   Add / re-score
                 </Button>
                 <Button as="a" href={api.exportUrl('performance', region)} appearance="secondary" icon={<ArrowDownloadRegular />}>
-                  Export
+                  Export Excel
                 </Button>
               </div>
             }
