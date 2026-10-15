@@ -323,6 +323,11 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 * **Feature flag ⚙️ `ClassificationEnabled`** (Configuration → Operational thresholds → Features; default **0 = parked**). While off,
   every nomination is Standard Factory (`IsStrategic = false`, no strategic tier), the Classification/Velocity fields + filter are
   hidden, the Strategic Register shows a parked notice, and the Manage dialog never overwrites a stored classification.
+* **When on — velocity is Standard-only.** Strategic = FDO Strategic segment (SegmentClass rule) **or** a manual non-Standard
+  classification (a manual "Standard Factory" keeps a strategic-segment wave in Standard). Strategic work gets **no SLA tier**
+  (governed by 60/90/120 days-in-flight instead) and is excluded from velocity averages: Dashboard avg effective age + SLA
+  cards, Migration Flow stage/path avg age, Effectiveness speed / momentum / on-track. It still counts in pipeline totals
+  (active, assigned, delivered, capacity).
 * `Classification = n.Classification ?? SegmentClass rule(FDO Account.Segment) ?? "Standard Factory"` (⚙️ Classification
   Rules → Default classification; default rule Strategic → "Strategic Account"). `IsStrategic = Classification ≠ "Standard Factory"`.
   Note: Dashboard "SLA (Standard)" cards exclude strategic rows, so Strategic-segment waves are not in those counts.

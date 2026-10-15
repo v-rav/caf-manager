@@ -134,7 +134,7 @@ function Operational({ d, m, blk, navigate }: { d: ExecutiveDashboard; m: M; blk
   // Strategic pilots are excluded from Standard SLA denominators.
   const standard = m.active.filter((n) => !n.isStrategic)
   const sla = (t: string) => standard.filter((n) => n.staleTier === t).length
-  const avgAge = m.active.length ? Math.round(m.active.reduce((s, n) => s + n.effectiveAgeDays, 0) / m.active.length) : 0
+  const avgAge = standard.length ? Math.round(standard.reduce((s, n) => s + n.effectiveAgeDays, 0) / standard.length) : 0
   const stageMax = Math.max(1, ...stages.map((s) => s.count))
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -145,7 +145,7 @@ function Operational({ d, m, blk, navigate }: { d: ExecutiveDashboard; m: M; blk
         <KpiCard label="SLA Escalate" value={sla('Escalate')} tone={sla('Escalate') ? 'warning' : 'neutral'} onClick={() => navigate('/nominations?sla=Escalate')} />
         <KpiCard label="SLA Defer" value={sla('Defer')} tone={sla('Defer') ? 'danger' : 'neutral'} onClick={() => navigate('/nominations?sla=Defer')} />
         <KpiCard label="Open blockers" value={blk.length} tone={blk.length ? 'warning' : 'neutral'} onClick={() => navigate('/governance')} />
-        <KpiCard label="Avg effective age" value={`${avgAge}d`} tone={avgAge >= 15 ? 'warning' : 'neutral'} />
+        <KpiCard label="Avg effective age (Standard)" value={`${avgAge}d`} tone={avgAge >= 15 ? 'warning' : 'neutral'} />
         <KpiCard label="Overloaded resources" value={d.overloadedResources} tone={d.overloadedResources ? 'danger' : 'neutral'} onClick={() => navigate('/capacity?status=Overloaded')} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>

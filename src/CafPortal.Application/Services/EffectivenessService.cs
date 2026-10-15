@@ -41,7 +41,7 @@ public class EffectivenessService(INominationService nominations, IApplicationDb
         var roleNoms = scoped.Where(n => OwnerOf(n, role) != null).ToList();
         var delivered = roleNoms.Where(n => n.Status == Completed).ToList();
         var active = roleNoms.Where(n => !n.IsSettled).ToList();
-        var durs = delivered.Where(n => n.DeliveryDays != null).Select(n => n.DeliveryDays!.Value).ToList();
+        var durs = delivered.Where(n => !n.IsStrategic && n.DeliveryDays != null).Select(n => n.DeliveryDays!.Value).ToList();
         return new EffectivenessDto
         {
             Role = role,
@@ -53,7 +53,7 @@ public class EffectivenessService(INominationService nominations, IApplicationDb
             Active = active.Count,
             DeliveredPct = roleNoms.Count > 0 ? R(100.0 * delivered.Count / roleNoms.Count) : 0,
             AvgDeliveryDays = durs.Count > 0 ? R(durs.Average()) : null,
-            AvgActiveAge = active.Count > 0 ? R(active.Average(n => n.EffectiveAgeDays)) : null,
+            AvgActiveAge = active.Any(n => !n.IsStrategic) ? R(active.Where(n => !n.IsStrategic).Average(n => n.EffectiveAgeDays)) : null,
             Rows = rows,
         };
     }
@@ -70,11 +70,14 @@ public class EffectivenessService(INominationService nominations, IApplicationDb
         var blocked = list.Count(n => n.OpenBlockerCount > 0 || n.Status == Blocked);
         var settled = delivered + withdrawn + deferred;
         var deliveredPct = assigned > 0 ? R(100.0 * delivered / assigned) : 0;
-        var durs = completed.Where(n => n.DeliveryDays != null).Select(n => n.DeliveryDays!.Value).ToList();
+        // Velocity (speed, momentum, on-track) is Standard-only; strategic work still counts in assigned/delivered.
+        var velocityActive = activeList.Where(n => !n.IsStrategic).ToList();
+        var durs = completed.Where(n => !n.IsStrategic && n.DeliveryDays != null).Select(n => n.DeliveryDays!.Value).ToList();
         int? avgDeliveryDays = durs.Count > 0 ? R(durs.Average()) : null;
-        int? avgActiveAge = active > 0 ? R(activeList.Average(n => n.EffectiveAgeDays)) : null;
+        int? avgActiveAge = velocityActive.Count > 0 ? R(velocityActive.Average(n => n.EffectiveAgeDays)) : null;
         var avgMsi = R(list.Average(n => n.MsiScore));
-        int? onTrackPct = active > 0 ? R(100.0 * activeList.Count(n => string.IsNullOrEmpty(n.StaleTier)) / active) : null;
+        int? onTrackPct = velocityActive.Count > 0
+            ? R(100.0 * velocityActive.Count(n => string.IsNullOrEmpty(n.StaleTier)) / velocityActive.Count) : null;
         var slaBreaches = activeList.Count(n => !string.IsNullOrEmpty(n.StaleTier));
         var ghcps = list.Select(n => (double)n.GhcpEffectiveLevel).ToList();
         double? avgGhcp = ghcps.Count > 0 ? Math.Round(ghcps.Average(), 1, MidpointRounding.AwayFromZero) : null;

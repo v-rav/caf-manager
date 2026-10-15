@@ -83,7 +83,9 @@ export function FlowPage() {
     const active = approved.filter((n) => !completed(n) && stageIdx(n) >= 1)
     const rows = [1, 2, 3, 4].map((k) => {
       const inStage = active.filter((n) => stageIdx(n) === k)
-      const avgAge = inStage.length ? Math.round(inStage.reduce((s, n) => s + (n.stageAgeDays ?? n.daysSinceUpdate), 0) / inStage.length) : 0
+      // Velocity (avg age) is Standard-only; strategic work still counts toward the stage load.
+      const std = inStage.filter((n) => !n.isStrategic)
+      const avgAge = std.length ? Math.round(std.reduce((s, n) => s + (n.stageAgeDays ?? n.daysSinceUpdate), 0) / std.length) : 0
       return { k, label: STAGE_LABELS[k], count: inStage.length, avgAge, pressure: inStage.length * avgAge }
     })
     const worst = rows.reduce((a, b) => (b.pressure > a.pressure ? b : a), rows[0])
@@ -97,15 +99,15 @@ export function FlowPage() {
   }, [blk.data])
 
   const byPath = useMemo(() => {
-    const m = new Map<string, { count: number; age: number }>()
+    const m = new Map<string, { count: number; age: number; std: number }>()
     for (const n of approved.filter((n) => !completed(n))) {
       const p = n.primaryMigrationPath?.trim() || 'Unspecified'
-      const e = m.get(p) ?? { count: 0, age: 0 }
+      const e = m.get(p) ?? { count: 0, age: 0, std: 0 }
       e.count++
-      e.age += n.stageAgeDays ?? n.daysSinceUpdate
+      if (!n.isStrategic) { e.std++; e.age += n.stageAgeDays ?? n.daysSinceUpdate }
       m.set(p, e)
     }
-    return [...m.entries()].map(([p, e]) => ({ path: p, count: e.count, avgAge: e.count ? Math.round(e.age / e.count) : 0 }))
+    return [...m.entries()].map(([p, e]) => ({ path: p, count: e.count, avgAge: e.std ? Math.round(e.age / e.std) : 0 }))
       .sort((a, b) => b.count - a.count)
   }, [approved])
 

@@ -211,7 +211,8 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 MsiGhcp = msi.Ghcp,
                 MsiSignoff = msi.Signoff,
                 // A live clock-stop (customer-side blocker) pauses the SLA tier; the FDO day-count itself is untouched.
-                StaleTier = isUpcoming || clockStopped ? string.Empty : NominationRules.StaleTier(stage, NominationRules.IsSettled(n.Status),
+                // Strategic work (flag on) is governed by the days-in-flight register, not the Standard SLA cadence.
+                StaleTier = isUpcoming || clockStopped || isStrategic ? string.Empty : NominationRules.StaleTier(stage, NominationRules.IsSettled(n.Status),
                     effectiveDays, NominationRules.StageTarget(settings, stage), warn, escalate, defer),
                 StageTargetDays = NominationRules.StageTarget(settings, stage),
                 DbLinked = dbLinked,
