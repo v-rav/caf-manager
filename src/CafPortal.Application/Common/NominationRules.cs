@@ -51,6 +51,10 @@ public static class NominationRules
         !string.IsNullOrWhiteSpace(classification) ? classification!
         : KeywordRules.First(KeywordRules.SegmentClass, segment) ?? StandardClassification;
 
+    /// <summary>Feature flag (Configuration → Features): while off, classification is parked and everything is Standard.</summary>
+    public static bool ClassificationEnabled(IReadOnlyDictionary<string, double> settings) =>
+        settings.TryGetValue("ClassificationEnabled", out var v) && v >= 1;
+
     public static bool IsStrategic(string? classification) =>
         !ClassificationOrDefault(classification).Equals(StandardClassification, StringComparison.OrdinalIgnoreCase);
 

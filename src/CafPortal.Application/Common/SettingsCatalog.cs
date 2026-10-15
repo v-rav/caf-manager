@@ -11,6 +11,8 @@ public static class SettingsCatalog
 {
     public static readonly IReadOnlyList<SettingDefinition> All = new SettingDefinition[]
     {
+        new("ClassificationEnabled", "Features (1 = on · 0 = off)", "Classification & Strategic Register", "0", 0, 1, true,
+            "Off (parked): every nomination counts as Standard Factory — nothing is excluded from SLA/velocity and the Strategic Register is empty"),
         new("StaleWarnDays", "SLA cadence", "Warn after (days past target)", "3", 1, 365, true,
             "Days past the stage target before a Stage 2–4 nomination is flagged Warn"),
         new("StaleEscalateDays", "SLA cadence", "Escalate after (days past target)", "5", 1, 365, true,

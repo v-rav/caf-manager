@@ -336,6 +336,7 @@ export function NominationsPage() {
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
   const { data: resourceList } = useAsync(() => api.resources({}), [])
   const { data: vocab } = useAsync(() => api.nominationVocab(), [])
+  const classOn = !!vocab?.classificationEnabled
   // Workflow status behaviour + default approval filter (Configuration → Workflow status rules).
   const { data: statusInfo } = useAsync(() => api.statusRules(), [])
   const [currentStateFilter, setCurrentStateFilter] = useState('')
@@ -481,6 +482,9 @@ export function NominationsPage() {
     try {
       await api.updateNomination(editing.id, {
         ...form,
+        // Classification is parked while the feature flag is off — never overwrite a stored value from here.
+        classification: classOn ? form.classification : undefined,
+        velocityImpact: classOn ? form.velocityImpact : undefined,
         blockedReason: isBlocked ? form.blockedReason : undefined,
         blockedSince: isBlocked ? form.blockedSince : undefined,
       })
@@ -622,7 +626,7 @@ export function NominationsPage() {
                 <FilterSelect label="Stage" value={migrationFilter} options={migrationOptions} onChange={setMigrationFilter} minWidth={200} />
                 <FilterSelect label="Status" value={currentStateFilter} options={currentStateOptions} onChange={setCurrentStateFilter} minWidth={200} />
                 <FilterSelect label="SLA breach" value={slaFilter} options={['Warn', 'Escalate', 'Defer']} onChange={setSlaFilter} minWidth={150} />
-                <FilterSelect label="Classification" value={classFilter} options={['Strategic (all)', ...(vocab?.classifications ?? [])]} onChange={setClassFilter} minWidth={170} />
+                {classOn && <FilterSelect label="Classification" value={classFilter} options={['Strategic (all)', ...(vocab?.classifications ?? [])]} onChange={setClassFilter} minWidth={170} />}
                 <FilterSelect label="Links" value={linkFilter} options={LINK_FILTERS} onChange={setLinkFilter} minWidth={150} />
                 <FilterSelect label="GHCP usage" value={ghcpFilter} options={['Reported', 'None']} onChange={setGhcpFilter} minWidth={140} />
                 {!isSa && (<>
@@ -1010,7 +1014,7 @@ export function NominationsPage() {
           </Field>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {classOn && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Field label="Classification">
             <Dropdown
               style={{ width: '100%' }}
@@ -1033,7 +1037,7 @@ export function NominationsPage() {
               {(vocab?.velocityImpacts ?? []).map((v) => <Option key={v} value={v}>{v}</Option>)}
             </Dropdown>
           </Field>
-        </div>
+        </div>}
 
         <Field label="GHCP adoption level">
           <Dropdown

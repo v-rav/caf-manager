@@ -62,6 +62,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
 
         // Gate state for MSI: which item-defs belong to each MSI group, and each nomination's item statuses.
         var settings = await SettingsCatalog.ReadAsync(_db, ct);
+        var classificationOn = NominationRules.ClassificationEnabled(settings);
         var msiModel = MsiModel.From(settings);
         var upcomingAfter = await NominationRules.StartCutoffAsync(_db, ct);
         var gateDefs = await _db.GateDefinitions.AsNoTracking()
@@ -113,7 +114,9 @@ public class NominationService(IApplicationDbContext db) : INominationService
             var days = n.StageAgeDays ?? 0;
             var clockStopped = stopsByNom.TryGetValue(n.Id, out var wins) && wins.Any(w => w.ResolvedUtc is null);
             var effectiveDays = days;
-            var classification = NominationRules.ClassificationOrDefault(n.Classification, n.Account?.Segment);
+            var classification = classificationOn
+                ? NominationRules.ClassificationOrDefault(n.Classification, n.Account?.Segment)
+                : NominationRules.StandardClassification;
             var isStrategic = NominationRules.IsStrategic(classification);
             var inFlightDays = Math.Max(0, today.DayNumber - (n.NominatedDate ?? n.OpenedDate).DayNumber);
             var strategicTier = StrategicTier(isStrategic, n.Status, inFlightDays, green, amber, red);

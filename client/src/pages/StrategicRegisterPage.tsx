@@ -25,6 +25,7 @@ export function StrategicRegisterPage() {
   const { fy } = useFy()
   const navigate = useNavigate()
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
+  const { data: vocab } = useAsync(() => api.nominationVocab(), [])
   const [tier, setTier] = useState('')
 
   const strategic = useMemo(() => (data ?? []).filter((n) => n.isStrategic && nominationInFy(n, fy)), [data, fy])
@@ -63,6 +64,16 @@ export function StrategicRegisterPage() {
 
   if (loading && !data) return <Loading label="Loading strategic register…" />
   if (error) return <ErrorText error={error} onRetry={reload} />
+  if (vocab && !vocab.classificationEnabled)
+    return (
+      <Panel title="Strategic Investment Register — parked">
+        <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+          Classification is currently <b>off</b>, so every nomination counts as <b>Standard Factory</b> and nothing is
+          excluded from SLA or velocity. An Admin can turn it on in <b>Configuration → Operational thresholds →
+          Features → Classification &amp; Strategic Register</b> (1 = on). See Help → Classification for what it does.
+        </div>
+      </Panel>
+    )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

@@ -320,6 +320,9 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
   Escalate → second reminder, Defer → Customer Deferred, plus a ">6 weeks in stage" rule (`DEFER_WEEKS_DAYS = 42`).
 
 ### 5.4 Strategic classification & time-threshold tier
+* **Feature flag ⚙️ `ClassificationEnabled`** (Configuration → Operational thresholds → Features; default **0 = parked**). While off,
+  every nomination is Standard Factory (`IsStrategic = false`, no strategic tier), the Classification/Velocity fields + filter are
+  hidden, the Strategic Register shows a parked notice, and the Manage dialog never overwrites a stored classification.
 * `Classification = n.Classification ?? SegmentClass rule(FDO Account.Segment) ?? "Standard Factory"` (⚙️ Classification
   Rules → Default classification; default rule Strategic → "Strategic Account"). `IsStrategic = Classification ≠ "Standard Factory"`.
   Note: Dashboard "SLA (Standard)" cards exclude strategic rows, so Strategic-segment waves are not in those counts.

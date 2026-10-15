@@ -1,5 +1,6 @@
 using CafPortal.Api.Auth;
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Common;
 using CafPortal.Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,7 +10,7 @@ namespace CafPortal.Api.Controllers;
 [Route("api/[controller]")]
 [Produces("application/json")]
 [SaOwnsNomination]
-public class NominationsController(INominationService nominations, ILookupService lookups) : ControllerBase
+public class NominationsController(INominationService nominations, ILookupService lookups, IApplicationDbContext db) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get([FromQuery] string? region, [FromQuery] string? status, [FromQuery] int? fy, CancellationToken ct)
@@ -25,6 +26,7 @@ public class NominationsController(INominationService nominations, ILookupServic
         var velocity = await lookups.ValuesAsync("VelocityImpact", ct);
         return Ok(new
         {
+            classificationEnabled = NominationRules.ClassificationEnabled(await SettingsCatalog.ReadAsync(db, ct)),
             classifications = classifications.Count > 0 ? classifications : new[] { "Standard Factory", "Strategic Pilot", "Lighthouse Engagement", "Innovation / POC", "Recovery Engagement" },
             velocityImpacts = velocity.Count > 0 ? velocity : new[] { "Low", "Medium", "High", "Critical" },
         });

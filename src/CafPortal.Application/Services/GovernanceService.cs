@@ -70,10 +70,13 @@ public class GovernanceService(IApplicationDbContext db, ICurrentUser currentUse
             nom.GhcpAdoptionLevel, nom.IsToolAttached,
             reported.SelectMany(r => ToolActivityClassifier.Classify(r.ToolName, r.Details)).Distinct().ToList());
 
+        var settings = await SettingsCatalog.ReadAsync(_db, ct);
         return Build(nom.Id, nom.AccountName, nom.Tpid, gates, state, openBlockers, effectiveGhcp,
-            await SettingsCatalog.ReadAsync(_db, ct)) with
+            settings) with
         {
-            Classification = NominationRules.ClassificationOrDefault(nom.Classification, nom.Segment),
+            Classification = NominationRules.ClassificationEnabled(settings)
+                ? NominationRules.ClassificationOrDefault(nom.Classification, nom.Segment)
+                : NominationRules.StandardClassification,
             Stage = StageNum(nom.MigrationStatus),
             Pm = nom.ProjectCoordinator,
             Cftl = nom.CftlPrimary,
