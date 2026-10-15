@@ -50,7 +50,7 @@ function VelocityTrendPanel({ quarters, months }: { quarters: VelocityPeriod[]; 
     </div>
   )
   return (
-    <Panel title="Velocity trend · completed waves (allocated ÷ FDO Total Days)">
+    <Panel title="Average Velocity · completed waves (allocated ÷ avg FDO Total Days)">
       <Row title="Current fiscal year" items={quarters} />
       <Row title="Months" items={months} />
     </Panel>
@@ -64,7 +64,7 @@ function StageVelocityPanel({ title, set }: { title: string; set: StageVelocityS
     { key: 'all', label: 'Overall completion', target: set.overallTarget, actual: set.overallActual, over: set.overallOver },
   ]
   return (
-    <Panel title={`${title} · ${set.count} waves${set.overallVelocityPct != null ? ` · velocity ${set.overallVelocityPct}%` : ''}`}>
+    <Panel title={`${title} · ${set.count} waves${set.overallVelocityPct != null ? ` · Average Velocity ${set.overallVelocityPct}%` : ''}`}>
       {set.count === 0 ? (
         <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No FDO stage-day breakdown yet — it arrives with the next Detail View upload.</Text>
       ) : (
