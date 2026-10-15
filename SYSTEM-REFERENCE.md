@@ -328,8 +328,8 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 * Limit = per-stage target `StageTargetDays{stage}` (⚙️ 10/10/5/25 live). Over = `EffectiveAgeDays − target`;
   `over ≥ StaleDeferDays (10) → Defer`, `≥ StaleEscalateDays (5) → Escalate`, `≥ StaleWarnDays (3) → Warn` (⚙️).
   Computed in `NominationRules.StaleTier` (unit-tested). PV-01 resolved: age = days in stage, cadence = days past target.
-* **Recommended next step** (client, 🔒 `recommendedAction()` in `NominationsPage.tsx`): Warn → remind / mark Blocked,
-  Escalate → second reminder, Defer → Customer Deferred, plus a ">6 weeks in stage" rule (`DEFER_WEEKS_DAYS = 42`).
+* **Recommended next step** (server, `NominationRules.NextStep`, DTO `nextStep`/`isLongStalled`/`daysOverTarget`): Warn → remind / mark Blocked,
+  Escalate → second reminder, Defer → Customer Deferred, plus a ">6 weeks in stage" rule (⚙️ `LongStalledDays` = 42).
 
 ### 5.4 Strategic classification & time-threshold tier
 * **Feature flag ⚙️ `ClassificationEnabled`** (Configuration → Operational thresholds → Features; default **0 = parked**). While off,
@@ -500,8 +500,12 @@ Data: `api.nominations` + vocab + resources. **Scope = FY ∩ Approval filter (d
 `MigrationToolActivity`) · Timeline (`NominationEvents`) · header Readiness + MSI cards.
 
 ### 7.6 Governance Board (`/governance`)
-Open blockers (`/api/governance/blockers`): KPIs (open, clock-stopped, avg days blocked, categories) · by category ·
-aging table (10+ danger, 5+ warning 🔒) · resolve.
+FDO-driven exceptions list (client-side over `/api/nominations`): Approved, started, not-settled waves that are **Blocked/Waiting**
+(`healthBucket`) or carry an SLA tier. Faceted filters SLA · Status · Stage · Reason · SA · PM · CFTL (+ header Region/FY);
+KPIs Needs attention · Blocked · Waiting · Past target · Long-stalled; worst-first table (days in stage / target, server
+`daysOverTarget`, server `nextStep`), row expand = current state + remarks, CSV. Portal-raised blockers are retired (FDO owns
+blockers): raising is removed from the Workspace and the old entries show in a small "Legacy portal blockers" panel (resolve
+only) when any exist.
 
 ### 7.7 Strategic Register (`/strategic`)
 Client-side from nominations where `isStrategic`: KPIs (active, % of pipeline, Amber/Red/Exec) · by classification ·
@@ -591,7 +595,7 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | H14 | ~~Capacity heat-colour mapping~~ — now ⚙️ `HeatAvailable/PartiallyUtilized/FullyUtilized/Overloaded` (0 Green · 1 Amber · 2 Red) | Operational thresholds | 0/1/1/2 | done |
 | H15 | SA auto-link fuzzy threshold | `NameConsistencyService.LinkSolutionArchitectsAsync` | 0.95 | P2 |
 | H16 | ~~Effectiveness weights + speed/momentum targets + tones + formula~~ — now ⚙️ Scoring models (6B-2), computed server-side by `EffectivenessService` (6B-6) | `GET /api/effectiveness` | §5.14 | done |
-| H17 | Recommended-action text + 42-day defer rule | client `NominationsPage.recommendedAction` | Day 3/5/10/42 | P2 |
+| H17 | ~~Recommended-action text + 42-day defer rule~~ — now server `NominationRules.NextStep` + ⚙️ `LongStalledDays` (42) | Operational thresholds | Day 3/5/10 past target, 42 d | done |
 | H18 | ~~Blocker suggestion regexes~~ — now ⚙️ KeywordRules domain **BlockerReason** (23 rules; server `NominationDto.SuggestedBlockerReason`; parity 0 diffs / 1,112) | Classification Rules page | 23 rules | done |
 | H19 | Team assign roles + role eligibility keywords | client `NominationsPage` (`ASSIGN_ROLES`) | SA / Migration Engineer / DevOps | P3 |
 | H20 | Adoption level labels 0–7 | client `adoption.ts` | 8 labels | P3 |

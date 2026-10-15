@@ -1,4 +1,4 @@
-import { Badge, Button, Checkbox, Dropdown, Input, Option, Text, Tooltip } from '@fluentui/react-components'
+import { Badge, Button, Dropdown, Input, Option, Text, Tooltip } from '@fluentui/react-components'
 import {
   ArrowLeftRegular,
   CheckmarkCircleFilled,
@@ -43,12 +43,6 @@ export function NominationWorkspacePage() {
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [categories, setCategories] = useState<string[]>([])
-  const [owners, setOwners] = useState<string[]>([])
-  const [rc, setRc] = useState<string>('')
-  const [rClock, setRClock] = useState(true)
-  const [rOwner, setROwner] = useState('')
-  const [rNotes, setRNotes] = useState('')
   const [busyBlk, setBusyBlk] = useState(false)
   const [events, setEvents] = useState<NominationEvent[]>([])
   const [msTypes, setMsTypes] = useState<string[]>([])
@@ -70,8 +64,6 @@ export function NominationWorkspacePage() {
 
   const loadEvents = () => { api.governanceEvents(nominationId).then(setEvents).catch(() => {}) }
 
-  useEffect(() => { api.blockerCategories().then((c) => { setCategories(c); setRc((v) => v || c[0] || '') }).catch(() => {}) }, [])
-  useEffect(() => { api.blockerOwners().then(setOwners).catch(() => {}) }, [])
   useEffect(() => { api.milestoneTypes().then((t) => { setMsTypes(t); setMsKey((v) => v || t[0] || '') }).catch(() => {}) }, [])
   useEffect(() => { api.migrationTools().then((t) => setTools(t.filter((x) => x.active).map((x) => x.name))).catch(() => {}) }, [])
   useEffect(() => { api.migrationTools().then((t) => { setCapTools(t); setCuTool((v) => v || t[0]?.id || '') }).catch(() => {}) }, [])
@@ -120,16 +112,6 @@ export function NominationWorkspacePage() {
     ? capActs.filter((a) => selCapTool.supportedActivityIds.includes(a.id))
     : capActs
 
-  const raiseBlocker = async () => {
-    if (!rc || busyBlk) return
-    setBusyBlk(true)
-    try {
-      const updated = await api.raiseBlocker(nominationId, { category: rc, clockStopped: rClock, owner: rOwner || null, notes: rNotes || null })
-      setGov(updated)
-      setROwner(''); setRNotes('')
-      loadEvents()
-    } finally { setBusyBlk(false) }
-  }
   const resolveBlocker = async (b: Blocker) => {
     if (busyBlk) return
     setBusyBlk(true)
@@ -346,33 +328,11 @@ export function NominationWorkspacePage() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <Panel title={`Blockers${blockers.length ? ` · ${blockers.length} open` : ''}`}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: blockers.length ? 12 : 0 }}>
-          <div>
-            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Category</Text>
-            <Dropdown value={rc} selectedOptions={[rc]} onOptionSelect={(_, d) => setRc(d.optionValue ?? rc)} style={{ minWidth: 0, width: '100%' }}>
-              {categories.map((c) => <Option key={c} value={c}>{c}</Option>)}
-            </Dropdown>
-          </div>
-          <div>
-            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Owner</Text>
-            <Dropdown value={rOwner} selectedOptions={rOwner ? [rOwner] : []} placeholder="who owns it" onOptionSelect={(_, d) => setROwner(d.optionValue ?? '')} style={{ width: '100%' }}>
-              <Option value="">—</Option>
-              {owners.map((o) => <Option key={o} value={o}>{o}</Option>)}
-            </Dropdown>
-          </div>
-          <div>
-            <Text size={100} style={{ display: 'block', color: 'var(--colorNeutralForeground3)' }}>Notes</Text>
-            <Input value={rNotes} onChange={(_, d) => setRNotes(d.value)} placeholder="context" style={{ width: '100%' }} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-            <Checkbox checked={rClock} onChange={(_, d) => setRClock(!!d.checked)} label="Stops clock" />
-            <Button appearance="primary" disabled={busyBlk || !rc} onClick={() => void raiseBlocker()}>Raise</Button>
-          </div>
-        </div>
-        {blockers.length === 0 ? (
-          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No open blockers.</Text>
-        ) : (
+        {blockers.length > 0 && (
+        <Panel title={`Portal blockers · ${blockers.length} open`}>
+        <Text size={200} style={{ display: 'block', color: 'var(--colorNeutralForeground3)', marginBottom: 8 }}>
+          Blockers are now tracked in FDO (Current State). Resolve these legacy entries once cleared.
+        </Text>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {blockers.map((b) => (
               <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, border: '1px solid var(--colorNeutralStroke2)' }}>
@@ -388,8 +348,8 @@ export function NominationWorkspacePage() {
               </div>
             ))}
           </div>
-        )}
       </Panel>
+        )}
 
       <Panel title={`Milestones${milestones.length ? ` · ${milestones.length}` : ''}`}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: milestones.length ? 12 : 0 }}>

@@ -26,6 +26,21 @@ public static class NominationRules
     public static int StageTarget(IReadOnlyDictionary<string, double> settings, int? stage) =>
         stage is >= 1 and <= 4 ? (int)settings[$"StageTargetDays{stage}"] : 0;
 
+    /// <summary>Long-stalled = SLA-tiered and at least LongStalledDays in the current stage.</summary>
+    public static bool IsLongStalled(string staleTier, int days, IReadOnlyDictionary<string, double> settings) =>
+        !string.IsNullOrEmpty(staleTier) && days >= (int)settings["LongStalledDays"];
+
+    /// <summary>Governance cadence action for a stale Stage 2–4 wave (Day 3 / 5 / 10 past target, >6 weeks); null when none.</summary>
+    public static string? NextStep(string staleTier, bool longStalled) =>
+        longStalled ? "Delayed >6 weeks — move to Customer Deferred & set follow-up"
+        : staleTier switch
+        {
+            "Warn" => "Send reminder, then move to Blocked",
+            "Escalate" => "Send 2nd reminder / escalate",
+            "Defer" => "Final reminder — move to Customer Deferred & set follow-up",
+            _ => null,
+        };
+
     /// <summary>Velocity inputs: (days spent, allocated target days) over stages 1..upToStage. <paramref name="fdoTotalDays"/>,
     /// when given, is FDO's own Total Days and replaces the stage sum as the days spent.</summary>
     public static (int Days, int Target)? Velocity(int?[] stageDays, int upToStage, IReadOnlyDictionary<string, double> settings,

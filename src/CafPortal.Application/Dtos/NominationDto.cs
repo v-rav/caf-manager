@@ -82,6 +82,11 @@ public class NominationDto
     /// <summary>Blocker reason suggested from Remarks (else Current State) by the BlockerReason keyword rules.</summary>
     public string? SuggestedBlockerReason { get; set; }
     public int StageTargetDays { get; set; }
+    public bool IsLongStalled { get; set; }
+    /// <summary>Days past the current stage target (Stage 2–4, in-flight); null otherwise.</summary>
+    public int? DaysOverTarget { get; set; }
+    /// <summary>Governance cadence action for an SLA-tiered wave (null when none).</summary>
+    public string? NextStep { get; set; }
     public int FiscalYear { get; set; }
     // Effective start = ActualStartDate ?? PlannedStartDate; PMs pre-create future waves, so a not-yet-started wave is
     // Upcoming (not active workload) until it falls within WorkloadStartLookaheadDays.

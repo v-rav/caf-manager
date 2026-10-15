@@ -120,8 +120,9 @@ import the **web app is the system of record**.
     (`NominationRules.StaleTier`, on clock-aware effective age; DTO `StageTargetDays`). **Applies to execution
     Stages 2–4 only** (not Stage 1 Validating), never to settled or upcoming waves. The
     documented governance action per tier (Day 3 remind → Blocked, Day 5 2nd remind, Day 10 →
-    Customer Deferred) plus the **>6-week-in-stage** (`DEFER_WEEKS_DAYS=42`) Customer-Deferred rule are
-    surfaced as the "Next step" line in the Summary hover (`recommendedAction()` in `NominationsPage`).
+    Customer Deferred) plus the **>6-week-in-stage** (`LongStalledDays`, default 42) Customer-Deferred rule are
+    computed server-side (`NominationRules.NextStep`, DTO `nextStep`/`isLongStalled`/`daysOverTarget`) and shown as the
+    "Next step" line in the Summary hover and the Governance Board.
 - **Account master data** (single source of truth): `Account` carries identity (`AccountId`, `Tpid`,
     `ExternalAccountId`, `AccountName`, `Segment`, `Region`, `Status`, `StrategicFlag`) + the ownership
     matrix. `AccountMasterImportService` loads **`Nominations In-Flight.xlsx`** (Segment · TPID · Customer
@@ -288,8 +289,9 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
   account **· short-name**, classification + **FDO Stage** + TPID badges, **PM/CFTL/SA · Age · clock-stopped** meta,
   **Readiness + MSI** cards. Account cell on `/nominations` links here.
 - **Blockers & clock-aware SLA (P2)** — `NominationBlocker` (category · **clock-stopped** · owner · ETA · notes ·
-  raised/resolved-by). Raise/resolve in the workspace; **Governance Board** at `/governance` (open blockers, KPIs,
-  by-category, aging table, resolve). **SLA clock = FDO**: age is the FDO business-day count in the current stage
+  raised/resolved-by). **Blockers are now owned by FDO (Current State)** — raising portal blockers was retired (no one used it);
+  existing entries can still be resolved. **Governance Board** at `/governance` is an FDO-driven exceptions list (Blocked /
+  Waiting / past-stage-target waves, faceted SLA·Status·Stage·Reason·SA·PM·CFTL filters, next step, CSV). **SLA clock = FDO**: age is the FDO business-day count in the current stage
   (`StageAgeDays`, single source of truth — never derived or adjusted; `EffectiveAgeDays` = that value). A live
   clock-stop blocker **pauses the SLA tier** (no Warn/Escalate/Defer) instead of altering days. Grid shows a
   **Paused** chip. `GET /api/governance/blockers|blocker-categories|blocker-owners`.

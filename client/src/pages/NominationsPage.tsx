@@ -302,25 +302,6 @@ const staleTone: Record<string, { label: string; color: string; bg: string }> = 
   Defer: { label: 'Defer', color: '#a4262c', bg: '#fde7e9' },
 }
 
-// >6 weeks in an execution stage (customer-driven) → Customer Deferred, per the governance cadence.
-const DEFER_WEEKS_DAYS = 42
-
-// Documented Day 3/5/10 (past the stage target) action for a stale Stage 2–4 nomination (only set when an SLA tier applies).
-function recommendedAction(staleTier: string, ageDays: number): string | null {
-  if (!staleTier) return null
-  if (ageDays >= DEFER_WEEKS_DAYS) return 'Delayed >6 weeks — move to Customer Deferred & set follow-up'
-  switch (staleTier) {
-    case 'Warn':
-      return 'Day 3 — send reminder, then move to Blocked'
-    case 'Escalate':
-      return 'Day 5 — send 2nd reminder'
-    case 'Defer':
-      return 'Day 10 — final reminder, move to Customer Deferred & set follow-up'
-    default:
-      return null
-  }
-}
-
 export function NominationsPage() {
   const { region } = useRegion()
   const { fy } = useFy()
@@ -722,7 +703,7 @@ export function NominationsPage() {
                     const breakdown = (n.fdoStageDays ?? []).some((d) => d != null)
                       ? (n.fdoStageDays ?? []).map((d, i) => `S${i + 1} ${d ?? '–'}`).join(' · ') + (n.fdoTotalDays != null ? ` = ${n.fdoTotalDays}` : '')
                       : null
-                    const action = recommendedAction(n.staleTier, age)
+                    const action = n.nextStep
                     return (
                       <Tooltip
                         relationship="description"

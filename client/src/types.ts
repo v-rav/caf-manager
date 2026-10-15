@@ -317,6 +317,9 @@ export interface Nomination {
   isSettled?: boolean
   suggestedBlockerReason?: string | null
   stageTargetDays?: number
+  isLongStalled?: boolean
+  daysOverTarget?: number | null
+  nextStep?: string | null
   fdoStageDays?: (number | null)[]
   fdoTotalDays?: number | null
   velocity?: number | null

@@ -19,6 +19,8 @@ public static class SettingsCatalog
             "Days past the stage target before escalation"),
         new("StaleDeferDays", "SLA cadence", "Suggest Deferred after (days past target)", "10", 1, 365, true,
             "Days past the stage target before suggesting Customer Deferred"),
+        new("LongStalledDays", "SLA cadence", "Long-stalled after (days in stage)", "42", 1, 365, true,
+            "Days in a Stage 2–4 after which the next step is 'move to Customer Deferred' (governance >6-week rule)"),
 
         new("StageTargetDays1", "Stage targets (SLA limit)", "Stage 1 · Validating (days)", "10", 1, 365, true,
             "Target days in Stage 1 (Stage 1 is not SLA-tiered)"),

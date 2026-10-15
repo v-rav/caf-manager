@@ -146,6 +146,13 @@ public class NominationService(IApplicationDbContext db) : INominationService
             var dbLinked = waveTypes.Contains(WaveType.Db);
             var alzLinked = waveTypes.Contains(WaveType.LandingZone) || waveTypes.Contains(WaveType.Dispatch);
             var securityLinked = waveTypes.Contains(WaveType.Security);
+            // A live clock-stop (customer-side blocker) pauses the SLA tier; the FDO day-count itself is untouched.
+            // Strategic work (flag on) is governed by the days-in-flight register, not the Standard SLA cadence.
+            var staleTier = isUpcoming || clockStopped || isStrategic ? string.Empty : NominationRules.StaleTier(stage, NominationRules.IsSettled(n.Status),
+                effectiveDays, NominationRules.StageTarget(settings, stage), warn, escalate, defer);
+            var longStalled = NominationRules.IsLongStalled(staleTier, effectiveDays, settings);
+            var daysOverTarget = stage is >= 2 && !NominationRules.IsSettled(n.Status) && !isUpcoming
+                ? Math.Max(0, effectiveDays - NominationRules.StageTarget(settings, stage)) : (int?)null;
             return new NominationDto
             {
                 Id = n.Id,
@@ -225,10 +232,10 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 MsiRisk = msi.Risk,
                 MsiGhcp = msi.Ghcp,
                 MsiSignoff = msi.Signoff,
-                // A live clock-stop (customer-side blocker) pauses the SLA tier; the FDO day-count itself is untouched.
-                // Strategic work (flag on) is governed by the days-in-flight register, not the Standard SLA cadence.
-                StaleTier = isUpcoming || clockStopped || isStrategic ? string.Empty : NominationRules.StaleTier(stage, NominationRules.IsSettled(n.Status),
-                    effectiveDays, NominationRules.StageTarget(settings, stage), warn, escalate, defer),
+                StaleTier = staleTier,
+                IsLongStalled = longStalled,
+                DaysOverTarget = daysOverTarget,
+                NextStep = NominationRules.NextStep(staleTier, longStalled),
                 StageTargetDays = NominationRules.StageTarget(settings, stage),
                 DbLinked = dbLinked,
                 AlzLinked = alzLinked,
