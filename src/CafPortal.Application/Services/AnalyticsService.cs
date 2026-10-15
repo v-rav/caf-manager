@@ -33,7 +33,8 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
     {
         var settings = await SettingsCatalog.ReadAsync(_db, ct);
         var targets = Enumerable.Range(1, 4).Select(s => NominationRules.StageTarget(settings, s)).ToArray();
-        var noms = (await _nominations.GetAsync(region, status: null, ct))
+        var all = await _nominations.GetAsync(region, status: null, ct);
+        var noms = all
             .Where(n => (fy is null || n.FiscalYear == fy) && !n.IsStrategic && n.FdoStageDays.Any(d => d != null))
             .ToList();
 
@@ -66,8 +67,35 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
 
         // Completed waves were approved by definition (the completed-only FDO drop carries no approval column).
         var completed = NominationStatusType.Completed.ToDisplay();
+
+        // Period trend: completed Standard waves bucketed by actual end date (not FY-filtered — periods are their own scope).
+        var done = all.Where(n => n.Status == completed && !n.IsStrategic && n.FdoTotalDays != null && n.ActualEndDate != null).ToList();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var allocated = targets.Sum();
+        List<VelocityPeriod> Periods(string granularity, int count, int monthsPerStep)
+        {
+            var current = FiscalCalendar.Bucket(today, granularity).Key;
+            return Enumerable.Range(0, count).Reverse()
+                .Select(i => FiscalCalendar.Bucket(today.AddMonths(-i * monthsPerStep), granularity))
+                .DistinctBy(b => b.Key)
+                .Select(b =>
+                {
+                    var inBucket = done.Where(n => FiscalCalendar.Bucket(n.ActualEndDate!.Value, granularity).Key == b.Key).ToList();
+                    int? avg = inBucket.Count > 0 ? (int)Math.Round(inBucket.Average(n => n.FdoTotalDays!.Value), MidpointRounding.AwayFromZero) : null;
+                    double? v = avg is > 0 ? (double)allocated / avg.Value : null;
+                    return new VelocityPeriod
+                    {
+                        Key = b.Key, Label = b.Label, IsCurrent = b.Key == current, Count = inBucket.Count, AvgDays = avg,
+                        Target = allocated, VelocityPct = v is { } x ? (int)Math.Round(x * 100, MidpointRounding.AwayFromZero) : null,
+                        Tone = v is { } t ? NominationRules.VelocityTone(t, settings) : null,
+                    };
+                }).ToList();
+        }
+
         return new StageVelocityDto
         {
+            ByQuarter = Periods("quarter", 4, 3),
+            ByMonth = Periods("month", 2, 1),
             InFlight = Build(noms.Where(n => !n.IsSettled
                 && string.Equals(n.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)).ToList(), reachedOnly: true),
             Completed = Build(noms.Where(n => n.Status == completed).ToList(), reachedOnly: false),

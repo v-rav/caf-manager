@@ -8,7 +8,7 @@ import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
-import type { AttainmentBucket, Nomination, StageVelocitySet, TimeBucket } from '../types'
+import type { AttainmentBucket, Nomination, StageVelocitySet, TimeBucket, VelocityPeriod } from '../types'
 
 // Heat-band colours reused for the health doughnut (On Track → Blocked → Other).
 const HEALTH_COLORS = ['#107c10', '#eaa300', '#c50f1f', '#8a8886']
@@ -27,6 +27,33 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         {children}
       </div>
     </div>
+  )
+}
+
+// Velocity (allocated ÷ avg FDO Total Days) of waves completed in each period, by actual end date.
+function VelocityTrendPanel({ quarters, months }: { quarters: VelocityPeriod[]; months: VelocityPeriod[] }) {
+  const tone = { success: 'var(--colorPaletteGreenForeground1)', warning: 'var(--colorPaletteDarkOrangeForeground1)', danger: 'var(--colorPaletteRedForeground1)' }
+  const Row = ({ title, items }: { title: string; items: VelocityPeriod[] }) => (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)', marginBottom: 4 }}>{title}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 8 }}>
+        {items.map((p) => (
+          <div key={p.key} style={{ border: `1px solid ${p.isCurrent ? 'var(--colorBrandStroke1)' : 'var(--colorNeutralStroke2)'}`, borderRadius: 6, padding: 8, textAlign: 'center' }}>
+            <div style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)' }}>{p.label}{p.isCurrent ? ' · current' : ''}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: p.tone ? tone[p.tone] : undefined }}>{p.velocityPct != null ? `${p.velocityPct}%` : '—'}</div>
+            <div style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)' }}>
+              {p.count ? `${p.count} waves · avg ${p.avgDays}d / ${p.target}d` : 'no completions'}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+  return (
+    <Panel title="Velocity trend · completed waves (allocated ÷ FDO Total Days)">
+      <Row title="Fiscal quarters" items={quarters} />
+      <Row title="Months" items={months} />
+    </Panel>
   )
 }
 
@@ -294,6 +321,7 @@ export function AnalyticsPage() {
         <Section title="Stage Duration vs SLA (avg. business days, FDO)">
           <StageVelocityPanel title="In-flight" set={velocity.data.inFlight} />
           <StageVelocityPanel title="Completed" set={velocity.data.completed} />
+          <VelocityTrendPanel quarters={velocity.data.byQuarter} months={velocity.data.byMonth} />
         </Section>
       )}
 

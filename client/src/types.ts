@@ -59,7 +59,8 @@ export interface Effectiveness {
 
 export interface StageVelocityRow { stage: number; label: string; target: number; actual: number | null; over: number | null; count: number }
 export interface StageVelocitySet { count: number; stages: StageVelocityRow[]; overallTarget: number; overallActual: number | null; overallOver: number | null; overallVelocityPct: number | null; overallVelocityTone: 'success' | 'warning' | 'danger' | null }
-export interface StageVelocity { inFlight: StageVelocitySet; completed: StageVelocitySet }
+export interface VelocityPeriod { key: string; label: string; isCurrent: boolean; count: number; avgDays: number | null; target: number; velocityPct: number | null; tone: 'success' | 'warning' | 'danger' | null }
+export interface StageVelocity { inFlight: StageVelocitySet; completed: StageVelocitySet; byQuarter: VelocityPeriod[]; byMonth: VelocityPeriod[] }
 
 export interface Analytics {
   totalApproved: number
