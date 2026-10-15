@@ -2,7 +2,7 @@ namespace CafPortal.Application.Dtos;
 
 /// <summary>Velocity page filters (region is passed separately). Empty = all.</summary>
 public record VelocityFilter(int? Fy = null, bool ExcludeStrategic = false, string? Segment = null, string? Path = null,
-    string? Sa = null, string? Pm = null, int? Stage = null, string? Set = null);
+    string? Sa = null, string? Pm = null, int? Stage = null, string? Set = null, string? Classification = null);
 
 /// <summary>FDO-style "Stage Duration vs SLA (Avg. No. of Business Days)": per-stage target vs average actual.</summary>
 public class StageVelocityDto
@@ -46,6 +46,7 @@ public class VelocityOptions
     public List<string> Sas { get; set; } = new();
     public List<string> Pms { get; set; } = new();
     public List<int> Stages { get; set; } = new();
+    public List<string> Classifications { get; set; } = new();
     public int NonStandard { get; set; }
 }
 

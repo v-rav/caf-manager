@@ -52,7 +52,8 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
 
         // skip = the dimension whose own dropdown is being built (faceted options).
         bool Match(NominationDto n, string? skip = null) =>
-            (!f.ExcludeStrategic || !n.IsStrategic)
+            (skip == "class" || !f.ExcludeStrategic || !n.IsStrategic)
+            && (skip == "class" || string.IsNullOrWhiteSpace(f.Classification) || Eq(n.Classification, f.Classification))
             && (skip == "segment" || string.IsNullOrWhiteSpace(f.Segment) || Eq(Seg(n), f.Segment))
             && (skip == "path" || string.IsNullOrWhiteSpace(f.Path) || Eq(Path(n), f.Path))
             && (skip == "sa" || string.IsNullOrWhiteSpace(f.Sa) || Eq(n.SolutionArchitect, f.Sa))
@@ -71,6 +72,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             Paths = Facet("path", Path),
             Sas = Facet("sa", n => n.SolutionArchitect),
             Pms = Facet("pm", n => n.ProjectCoordinator),
+            Classifications = Facet("class", n => n.Classification),
             Stages = inFy.Where(n => Match(n, "stage") && n.StageIndex != null).Select(n => n.StageIndex!.Value).Distinct().Order().ToList(),
             NonStandard = inFy.Count(n => n.IsStrategic),
         };

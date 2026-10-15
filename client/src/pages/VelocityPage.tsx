@@ -1,4 +1,4 @@
-import { Badge, Button, Switch, Text } from '@fluentui/react-components'
+import { Badge, Button, Text } from '@fluentui/react-components'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
@@ -12,6 +12,7 @@ import { useRegion } from '../region'
 import type { StageVelocitySet, VelocityPeriod, VelocityWave } from '../types'
 
 const STAGES = ['1 · Validating', '2 · Pre-Requisites', '3 · Finalize Scope', '4 · Executing Migration']
+const EXCLUDE_NON_STANDARD = 'Exclude Strategic Pilot (non-Standard)'
 const TONE = { success: 'var(--colorPaletteGreenForeground1)', warning: 'var(--colorPaletteDarkOrangeForeground1)', danger: 'var(--colorPaletteRedForeground1)' }
 
 // Velocity (allocated ÷ avg FDO Total Days) of waves completed in each period, by actual end date.
@@ -75,7 +76,7 @@ function StageVelocityPanel({ title, set }: { title: string; set: StageVelocityS
 export function VelocityPage() {
   const { region } = useRegion()
   const { fy } = useFy()
-  const [excludeStrategic, setExcludeStrategic] = useState(false)
+  const [cls, setCls] = useState('')
   const [stage, setStage] = useState('')
   const [segment, setSegment] = useState('')
   const [path, setPath] = useState('')
@@ -84,13 +85,15 @@ export function VelocityPage() {
   const [set, setSet] = useState('')
 
   const stageNo = stage ? STAGES.indexOf(stage) + 1 : undefined
+  const excludeStrategic = cls === EXCLUDE_NON_STANDARD
+  const classification = excludeStrategic ? '' : cls
   const { data, loading, error, reload } = useAsync(
-    () => api.stageVelocity(region, { fy: fy === 'all' ? undefined : fy, excludeStrategic, stage: stageNo, segment, path, sa, pm, set }),
-    [region, fy, excludeStrategic, stageNo, segment, path, sa, pm, set],
+    () => api.stageVelocity(region, { fy: fy === 'all' ? undefined : fy, excludeStrategic, classification, stage: stageNo, segment, path, sa, pm, set }),
+    [region, fy, excludeStrategic, classification, stageNo, segment, path, sa, pm, set],
   )
   const waves = data?.waves ?? []
-  const anyFilter = excludeStrategic || stage || segment || path || sa || pm || set
-  const reset = () => { setExcludeStrategic(false); setStage(''); setSegment(''); setPath(''); setSa(''); setPm(''); setSet('') }
+  const anyFilter = cls || stage || segment || path || sa || pm || set
+  const reset = () => { setCls(''); setStage(''); setSegment(''); setPath(''); setSa(''); setPm(''); setSet('') }
 
   const columns: Column<VelocityWave>[] = [
     { key: 'account', header: 'Account', minWidth: 200, sortValue: (w) => w.accountName ?? '',
@@ -156,10 +159,12 @@ export function VelocityPage() {
         <FilterSelect label="Migration path" value={path} options={o?.paths ?? []} onChange={setPath} minWidth={180} />
         <FilterSelect label="SA" value={sa} options={o?.sas ?? []} onChange={setSa} minWidth={180} />
         <FilterSelect label="PM" value={pm} options={o?.pms ?? []} onChange={setPm} minWidth={180} />
-        <Switch
-          label={`Exclude Strategic Pilot (all non-Standard classifications${o ? ` · ${o.nonStandard}` : ''})`}
-          checked={excludeStrategic}
-          onChange={(_, d) => setExcludeStrategic(d.checked)}
+        <FilterSelect
+          label={`Classification${o ? ` · ${o.nonStandard} non-Standard` : ''}`}
+          value={cls}
+          options={[EXCLUDE_NON_STANDARD, ...(o?.classifications ?? [])]}
+          onChange={setCls}
+          minWidth={220}
         />
         {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
         {loading && data && <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>Updating…</Text>}

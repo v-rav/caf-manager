@@ -309,7 +309,7 @@ export const api = {
     http.get<Effectiveness>('/api/effectiveness', { params: { region, role, fy } }).then((r) => r.data),
   stageVelocity: (region?: string, q: VelocityQuery = {}) =>
     http.get<StageVelocity>('/api/analytics/stage-velocity', {
-      params: { region, ...q, excludeStrategic: q.excludeStrategic || undefined, segment: q.segment || undefined, path: q.path || undefined, sa: q.sa || undefined, pm: q.pm || undefined, set: q.set || undefined },
+      params: { region, ...q, excludeStrategic: q.excludeStrategic || undefined, segment: q.segment || undefined, path: q.path || undefined, sa: q.sa || undefined, pm: q.pm || undefined, set: q.set || undefined, classification: q.classification || undefined },
     }).then((r) => r.data),
   saveImportProfile: (id: number, body: { label: string; detectOrder: number; signature: string }) =>
     http.put(`/api/import-profiles/profiles/${id}`, body),
