@@ -320,7 +320,7 @@ export function AnalyticsPage() {
 
       {velocity.data && (
         <Section title="Stage Duration vs SLA (avg. business days, FDO)" full>
-          <Switch label="Exclude strategic" checked={excludeStrategic} onChange={(_, d) => setExcludeStrategic(d.checked)} />
+          <Switch label="Exclude Strategic / Pilot (all non-Standard classifications)" checked={excludeStrategic} onChange={(_, d) => setExcludeStrategic(d.checked)} />
           <StageVelocityPanel title="In-flight" set={velocity.data.inFlight} />
           <StageVelocityPanel title="Completed" set={velocity.data.completed} />
           <VelocityTrendPanel quarters={velocity.data.byQuarter} months={velocity.data.byMonth} />
