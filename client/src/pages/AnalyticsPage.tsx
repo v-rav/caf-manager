@@ -19,11 +19,11 @@ const num = (n: number) => n.toLocaleString()
 const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)}%` : '—')
 
 // A titled section with a responsive grid of chart panels.
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <Text size={400} weight="semibold">{title}</Text>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: full ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         {children}
       </div>
     </div>
@@ -318,7 +318,7 @@ export function AnalyticsPage() {
       <AttainmentSection region={region} />
 
       {velocity.data && (
-        <Section title="Stage Duration vs SLA (avg. business days, FDO)">
+        <Section title="Stage Duration vs SLA (avg. business days, FDO)" full>
           <StageVelocityPanel title="In-flight" set={velocity.data.inFlight} />
           <StageVelocityPanel title="Completed" set={velocity.data.completed} />
           <VelocityTrendPanel quarters={velocity.data.byQuarter} months={velocity.data.byMonth} />
