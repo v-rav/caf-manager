@@ -161,7 +161,7 @@ public class NominationRulesTests
     }
 
     [Theory]
-    [InlineData(null, "Strategic", "Strategic Account")]      // FDO segment default
+    [InlineData(null, "Strategic", "Standard Factory")]       // segment no longer implies a classification
     [InlineData("Strategic Pilot", "Strategic", "Strategic Pilot")] // manual classification wins
     [InlineData(null, "Upper Majors", "Standard Factory")]
     [InlineData("", null, "Standard Factory")]

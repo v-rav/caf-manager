@@ -73,7 +73,7 @@ public static class KeywordRules
             ("cost", "Budget/Priority Hold"), ("depend", "Dependency Pending"), ("blocked by", "Dependency Pending"),
             ("align", "Internal Alignment"), ("internal", "Internal Alignment"), ("customer", "Waiting for Customer Action"),
             ("client", "Waiting for Customer Action"), ("awaiting", "Waiting for Customer Action") }),
-        (SegmentClass, "Exact", new[] { ("Strategic", "Strategic Account") }));
+        (SegmentClass, "Exact", Array.Empty<(string, string)>()));
 
     private static List<KeywordRuleItem> Build(params (string Domain, string Match, (string Pattern, string Target)[] Rules)[] sets) =>
         sets.SelectMany(s => s.Rules.Select((r, i) => new KeywordRuleItem(s.Domain, r.Pattern, s.Match, r.Target, (i + 1) * 10))).ToList();

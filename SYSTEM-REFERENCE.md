@@ -340,8 +340,8 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
   cards, Migration Flow stage/path avg age, Effectiveness speed / momentum / on-track. It still counts in pipeline totals
   (active, assigned, delivered, capacity).
 * `Classification = n.Classification ?? SegmentClass rule(FDO Account.Segment) ?? "Standard Factory"` (⚙️ Classification
-  Rules → Default classification; default rule Strategic → "Strategic Account"). `IsStrategic = Classification ≠ "Standard Factory"`.
-  Note: Dashboard "SLA (Standard)" cards exclude strategic rows, so Strategic-segment waves are not in those counts.
+  Rules → Default classification; **no default rule** — unset = Standard Factory). `IsStrategic = Classification ≠ "Standard Factory"`.
+  Note: Dashboard "SLA (Standard)" cards exclude strategic rows (manually classified Pilot / Lighthouse / POC / Recovery).
 * `DaysInFlight = today − (NominatedDate ?? OpenedDate)`.
 * Tier: ≤Green · ≤Amber · ≤Red · >Red = Exec, from `StrategicGreenDays/AmberDays/RedDays` (⚙️ 60/90/120, Configuration →
   Operational thresholds, ordering-validated).

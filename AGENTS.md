@@ -298,9 +298,10 @@ entities live in `Domain/Entities/Governance/`; maps in `Persistence/Configurati
 - **Classification & strategic register (P3)** — `Nomination.Classification` (vocab) + `VelocityImpact` +
   strategic **time-threshold tier** (A.13 60/90/120 → Green/Amber/Red/Exec on days-in-flight). Grid **Class** column
   + Classification filter; Manage-dialog fields. **Strategic Investment Register** at `/strategic` (tier KPIs,
-  %-of-active-pipeline, by-classification, aging table). `isStrategic` = classification ≠ Standard Factory, where an unset
-  classification defaults from the **FDO account Segment** via KeywordRules domain **SegmentClass** (Strategic → "Strategic
-  Account"); a manual classification always wins. **Parked by default** behind the `ClassificationEnabled` setting (0 = off →
+  %-of-active-pipeline, by-classification, aging table). `isStrategic` = classification ≠ Standard Factory; classification is
+  **manual** (unset = Standard Factory). The FDO account Segment does **not** imply a classification (the old "Strategic
+  Account" value + its SegmentClass rule were removed — the SegmentClass domain stays empty unless an admin adds a rule).
+  **Parked by default** behind the `ClassificationEnabled` setting (0 = off →
   everything Standard, register shows a parked notice); explained in Help → Classification.
 - **GHCP adoption (P4)** — `Nomination.GhcpAdoptionLevel` (0–7, A.10, **manual**), Manage-dialog dropdown. **GHCP Adoption**
   page at `/adoption` (licensed L4+ · awaiting L1–3 · used% · tool-attached% · reported usage (FDO) · 0–7 distribution ·
