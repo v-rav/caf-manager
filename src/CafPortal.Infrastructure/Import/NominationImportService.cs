@@ -233,10 +233,15 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
         return imported;
     }
 
-    private sealed record FdoSnapshot(string? Mig, string? State, int? Age, string? Sa, string? Cftl, string? Pm, string? Region, string? Tech, string? Name);
+    private sealed record FdoSnapshot(string? Mig, string? State, int? Age, string? Sa, string? Cftl, string? Pm, string? Region, string? Tech, string? Name,
+        string Stages, int? Total);
+
+    private static string StageDays(Nomination n) =>
+        string.Join(" · ", new[] { n.FdoStage1Days, n.FdoStage2Days, n.FdoStage3Days, n.FdoStage4Days }.Select(d => d?.ToString() ?? "–"));
 
     private static FdoSnapshot Snapshot(Nomination n) =>
-        new(n.MigrationStatus, n.CurrentState, n.StageAgeDays, n.SolutionArchitect, n.CftlPrimary, n.ProjectCoordinator, n.Region, n.Technology, n.AccountName);
+        new(n.MigrationStatus, n.CurrentState, n.StageAgeDays, n.SolutionArchitect, n.CftlPrimary, n.ProjectCoordinator, n.Region, n.Technology, n.AccountName,
+            StageDays(n), n.FdoTotalDays);
 
     private static string? DiffFields(FdoSnapshot b, Nomination a)
     {
@@ -245,6 +250,8 @@ public class NominationImportService(AppDbContext db, ILogger<NominationImportSe
         D("Migration Status", b.Mig, a.MigrationStatus);
         D("Current State", b.State, a.CurrentState);
         D("Stage Age (days)", b.Age?.ToString(), a.StageAgeDays?.ToString());
+        D("FDO stage days (S1 · S2 · S3 · S4)", b.Stages, StageDays(a));
+        D("FDO Total Days", b.Total?.ToString(), a.FdoTotalDays?.ToString());
         D("Solution Architect", b.Sa, a.SolutionArchitect);
         D("CFTL", b.Cftl, a.CftlPrimary);
         D("Project Coordinator", b.Pm, a.ProjectCoordinator);

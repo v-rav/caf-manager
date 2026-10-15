@@ -296,7 +296,7 @@ public class NameConsistencyService(IApplicationDbContext db) : INameConsistency
 
     public async Task<OwnershipLinkResultDto> LinkSolutionArchitectsAsync(bool apply, CancellationToken ct = default)
     {
-        const double autoThreshold = 0.95;
+        var autoThreshold = (await SettingsCatalog.ReadAsync(db, ct))["SaAutoLinkPct"] / 100.0;
         var settled = NominationRules.SettledStatuses;
 
         var resources = await db.Resources.AsNoTracking()

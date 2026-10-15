@@ -22,6 +22,11 @@ public static class SettingsCatalog
         new("LongStalledDays", "SLA cadence", "Long-stalled after (days in stage)", "42", 1, 365, true,
             "Days in a Stage 2–4 after which the next step is 'move to Customer Deferred' (governance >6-week rule)"),
 
+        new("AcrLowCoresMax", "ACR recovery", "Flag 'Low cores' at or below (cores)", "16", 1, 1000, true,
+            "Containerized nominations with this many cores or fewer are flagged Low cores on ACR Recovery (likely app-level, not container-level)"),
+        new("SaAutoLinkPct", "Name matching", "SA auto-link similarity (%)", "95", 50, 100, true,
+            "FDO SA names match a roster resource automatically at or above this fuzzy similarity (alias learned, capacity relinked)"),
+
         new("StageTargetDays1", "Stage targets (SLA limit)", "Stage 1 · Validating (days)", "10", 1, 365, true,
             "Target days in Stage 1 (Stage 1 is not SLA-tiered)"),
         new("StageTargetDays2", "Stage targets (SLA limit)", "Stage 2 · Pre-Requisites (days)", "10", 1, 365, true,

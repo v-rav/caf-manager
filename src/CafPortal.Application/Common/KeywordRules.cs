@@ -21,6 +21,7 @@ public static class KeywordRules
     public const string ContainerPath = "ContainerPath";
     public const string BlockerReason = "BlockerReason";
     public const string SegmentClass = "SegmentClass";
+    public const string ActivityPhase = "ActivityPhase";
 
     public static readonly IReadOnlyList<RuleDomain> Domains = new RuleDomain[]
     {
@@ -42,6 +43,9 @@ public static class KeywordRules
             "Pre-fills the blocker reason in the Manage dialog when a nomination is set to a blocked status. First match wins."),
         new(SegmentClass, "Default classification (FDO account segment → classification)", "Account Segment (FDO)", false, null,
             null, "Classification used when none is set on the nomination (a manual classification always wins). Drives the Strategic Register."),
+        new(ActivityPhase, "GHCP level phase (activity → Assessment / Execution)", "Classified activity name", false, null,
+            new[] { "Assessment", "Execution" },
+            "Effective GHCP level: Assessment + Execution = 7, Execution = 6, any reported usage = 5, tool attached = 4. Unmapped activities count as usage only."),
     };
 
     public static RuleDomain? FindDomain(string key) =>
@@ -73,7 +77,10 @@ public static class KeywordRules
             ("cost", "Budget/Priority Hold"), ("depend", "Dependency Pending"), ("blocked by", "Dependency Pending"),
             ("align", "Internal Alignment"), ("internal", "Internal Alignment"), ("customer", "Waiting for Customer Action"),
             ("client", "Waiting for Customer Action"), ("awaiting", "Waiting for Customer Action") }),
-        (SegmentClass, "Exact", Array.Empty<(string, string)>()));
+        (SegmentClass, "Exact", Array.Empty<(string, string)>()),
+        (ActivityPhase, "Exact", new[] { ("Application Assessment", "Assessment"), ("Dependency Analysis", "Assessment"),
+            ("Code Remediation", "Execution"), ("Modernization", "Execution"), ("Version Upgrade", "Execution"),
+            ("Containerization", "Execution"), ("IaC Generation", "Execution"), ("CI Pipeline", "Execution"), ("CD Pipeline", "Execution") }));
 
     private static List<KeywordRuleItem> Build(params (string Domain, string Match, (string Pattern, string Target)[] Rules)[] sets) =>
         sets.SelectMany(s => s.Rules.Select((r, i) => new KeywordRuleItem(s.Domain, r.Pattern, s.Match, r.Target, (i + 1) * 10))).ToList();

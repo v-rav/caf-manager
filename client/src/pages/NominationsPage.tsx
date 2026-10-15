@@ -54,7 +54,6 @@ function NominationDetail({ n }: { n: Nomination }) {
       <ReadField label="Short name">{roDash(n.shortName)}</ReadField>
       <ReadField label="Approval status">{roDash(n.approvalStatus)}</ReadField>
       <ReadField label="Classification">{roDash(n.classification)}</ReadField>
-      <ReadField label="Velocity impact">{roDash(n.velocityImpact)}</ReadField>
       <ReadField label="Strategic">{n.isStrategic ? `Yes · ${n.strategicTier || '—'}` : 'No'}</ReadField>
       <ReadField label="Days in flight">{n.daysInFlight != null ? `${n.daysInFlight}d${n.daysInFlightSource ? ` · ${n.daysInFlightSource}` : ''}` : '—'}</ReadField>
       <ReadField label="MSI">{`${n.msiScore ?? '—'} · ${n.msiBand ?? ''}`}</ReadField>
@@ -465,7 +464,7 @@ export function NominationsPage() {
         ...form,
         // Classification is parked while the feature flag is off — never overwrite a stored value from here.
         classification: classOn ? form.classification : undefined,
-        velocityImpact: classOn ? form.velocityImpact : undefined,
+        velocityImpact: undefined,
         blockedReason: isBlocked ? form.blockedReason : undefined,
         blockedSince: isBlocked ? form.blockedSince : undefined,
       })
@@ -1005,18 +1004,6 @@ export function NominationsPage() {
               onOptionSelect={(_, d) => setForm((f) => ({ ...f, classification: d.optionValue ?? 'Standard Factory' }))}
             >
               {(vocab?.classifications ?? ['Standard Factory']).map((c) => <Option key={c} value={c}>{c}</Option>)}
-            </Dropdown>
-          </Field>
-          <Field label="Velocity impact">
-            <Dropdown
-              style={{ width: '100%' }}
-              placeholder="—"
-              value={form.velocityImpact ?? ''}
-              selectedOptions={form.velocityImpact ? [form.velocityImpact] : []}
-              onOptionSelect={(_, d) => setForm((f) => ({ ...f, velocityImpact: d.optionValue ?? '' }))}
-            >
-              <Option value="">—</Option>
-              {(vocab?.velocityImpacts ?? []).map((v) => <Option key={v} value={v}>{v}</Option>)}
             </Dropdown>
           </Field>
         </div>}

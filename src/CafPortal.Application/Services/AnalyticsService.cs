@@ -264,6 +264,8 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             return (double)((win ? rates.AksWindowsArpuPerCoreMonth : rates.AksLinuxArpuPerCoreMonth) * months);
         }
 
+        var settings = await SettingsCatalog.ReadAsync(_db, ct);
+        var lowCores = (int)settings["AcrLowCoresMax"];
         var rows = new List<AcrCaptureRow>();
         foreach (var n in container)
         {
@@ -271,7 +273,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             var acr = (double)(n.TotalAcr ?? 0m);
             string? gap = cores <= 0 ? "Missing cores"
                 : (n.TotalAcr is null || n.TotalAcr == 0m) ? "Missing ACR"
-                : cores <= 16 ? "Low cores"
+                : cores <= lowCores ? "Low cores"
                 : null;
             if (gap is null) continue;
 

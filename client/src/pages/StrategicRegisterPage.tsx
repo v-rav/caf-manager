@@ -1,6 +1,6 @@
 import { Badge, Button, Link, Tooltip } from '@fluentui/react-components'
 import { ArrowDownloadRegular } from '@fluentui/react-icons'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
@@ -17,16 +17,37 @@ function tierTone(t: string): 'success' | 'warning' | 'danger' | 'brand' {
   return t === 'Exec' || t === 'Red' ? 'danger' : t === 'Amber' ? 'warning' : t === 'Green' ? 'success' : 'brand'
 }
 
+const TIERS = ['Green', 'Amber', 'Red', 'Exec']
+type Dim = 'tier' | 'cls' | 'sa' | 'status'
+const EMPTY: Record<Dim, string> = { tier: '', cls: '', sa: '', status: '' }
+const pickers: Record<Dim, (n: Nomination) => string> = {
+  tier: (n) => n.strategicTier ?? '',
+  cls: (n) => n.classification ?? '',
+  sa: (n) => n.solutionArchitect?.trim() ?? '',
+  status: (n) => n.status ?? '',
+}
+
 export function StrategicRegisterPage() {
   const { region } = useRegion()
   const { fy } = useFy()
   const navigate = useNavigate()
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
   const { data: vocab } = useAsync(() => api.nominationVocab(), [])
-  const [tier, setTier] = useState('')
+  const [f, setF] = useState<Record<Dim, string>>(EMPTY)
+  const setDim = (d: Dim) => (v: string) => setF((s) => ({ ...s, [d]: v }))
 
   const strategic = useMemo(() => (data ?? []).filter((n) => n.isStrategic && nominationInFy(n, fy)), [data, fy])
-  const rows = useMemo(() => (tier ? strategic.filter((n) => n.strategicTier === tier) : strategic), [strategic, tier])
+  const match = useCallback((n: Nomination, skip?: Dim) =>
+    (Object.keys(f) as Dim[]).every((d) => d === skip || !f[d] || pickers[d](n).toLowerCase() === f[d].toLowerCase()), [f])
+  const rows = useMemo(() => strategic.filter((n) => match(n)), [strategic, match])
+  const options = useMemo(() => {
+    const out = {} as Record<Dim, string[]>
+    for (const d of Object.keys(f) as Dim[]) {
+      const vals = new Set(strategic.filter((n) => match(n, d)).map(pickers[d]).filter(Boolean))
+      out[d] = d === 'tier' ? TIERS.filter((t) => vals.has(t)) : [...vals].sort((a, b) => a.localeCompare(b))
+    }
+    return out
+  }, [strategic, match, f])
   const activeAll = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !n.isSettled), [data, fy])
 
   const exportRows = () =>
@@ -47,17 +68,17 @@ export function StrategicRegisterPage() {
     )
 
   const kpis = useMemo(() => {
-    const active = strategic.filter((n) => !n.isSettled)
+    const active = rows.filter((n) => !n.isSettled)
     const tier = (t: string) => active.filter((n) => n.strategicTier === t).length
     const pct = activeAll.length ? Math.round((active.length / activeAll.length) * 100) : 0
-    return { total: strategic.length, active: active.length, pct, green: tier('Green'), amber: tier('Amber'), red: tier('Red'), exec: tier('Exec') }
-  }, [strategic, activeAll])
+    return { total: rows.length, active: active.length, pct, green: tier('Green'), amber: tier('Amber'), red: tier('Red'), exec: tier('Exec') }
+  }, [rows, activeAll])
 
   const byClass = useMemo(() => {
     const m = new Map<string, number>()
-    for (const n of strategic) m.set(n.classification, (m.get(n.classification) ?? 0) + 1)
+    for (const n of rows) m.set(n.classification, (m.get(n.classification) ?? 0) + 1)
     return [...m.entries()].sort((a, b) => b[1] - a[1])
-  }, [strategic])
+  }, [rows])
 
   if (loading && !data) return <Loading label="Loading strategic register…" />
   if (error) return <ErrorText error={error} onRetry={reload} />
@@ -80,10 +101,27 @@ export function StrategicRegisterPage() {
           <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>Pilots &amp; strategic engagements · time-threshold governance (60/90/120) · excluded from Standard velocity</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-          <FilterSelect label="Threshold" value={tier} onChange={setTier} options={['Green', 'Amber', 'Red', 'Exec']} />
           <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!rows.length}>Export</Button>
         </div>
       </div>
+
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+        <FilterSelect label="Classification" value={f.cls} options={options.cls} onChange={setDim('cls')} minWidth={180} />
+        <FilterSelect label="Threshold" value={f.tier} options={options.tier} onChange={setDim('tier')} minWidth={120} />
+        <FilterSelect label="Status" value={f.status} options={options.status} onChange={setDim('status')} minWidth={140} />
+        <FilterSelect label="SA" value={f.sa} options={options.sa} onChange={setDim('sa')} minWidth={180} />
+        {Object.values(f).some(Boolean) && <Button size="small" onClick={() => setF(EMPTY)}>Reset</Button>}
+      </div>
+
+      {strategic.length === 0 && (
+        <Panel title="No strategic engagements yet">
+          <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+            Nothing in this scope is classified as non-Standard. To track a pilot here, open the nomination → <b>Manage</b> and set
+            <b> Classification</b> (Strategic Pilot, Lighthouse Engagement, Innovation / POC, Recovery Engagement). It then leaves
+            Standard SLA/velocity and is governed here by days in flight.
+          </div>
+        </Panel>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
         <KpiCard label="Strategic (active)" value={kpis.active} tone="brand" />
@@ -109,7 +147,7 @@ export function StrategicRegisterPage() {
           rows={rows}
           rowKey={(n) => n.id}
           defaultSort={{ key: 'days', dir: 'desc' }}
-          emptyMessage="No strategic nominations. Strategic = a non-Standard classification, or (when none is set) an FDO Strategic segment (Classification Rules → Default classification)."
+          emptyMessage="No strategic nominations match these filters."
           columns={[
             { key: 'account', header: 'Account', sortValue: (n) => n.accountName ?? '', render: (n) => <Link onClick={() => navigate(`/nominations/${n.id}`)}>{n.accountName ?? `Nomination ${n.id}`}</Link> },
             { key: 'class', header: 'Classification', sortValue: (n) => n.classification },

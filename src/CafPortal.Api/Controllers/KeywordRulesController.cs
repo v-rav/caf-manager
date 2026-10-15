@@ -129,6 +129,7 @@ public class KeywordRulesController(IApplicationDbContext db, ICurrentUser curre
             KeywordRules.BlockerReason => db.Nominations.Select(n => n.Remarks ?? n.CurrentState),
             KeywordRules.SegmentClass => db.Nominations.Where(n => n.Classification == null || n.Classification == "")
                 .Select(n => n.Account != null ? n.Account.Segment : null),
+            KeywordRules.ActivityPhase => db.MigrationActivities.Where(a => a.ActiveFlag).Select(a => (string?)a.Name),
             _ => Enumerable.Empty<string?>().AsQueryable(),
         };
         var values = await source.Where(v => v != null && v != "").ToListAsync(ct);

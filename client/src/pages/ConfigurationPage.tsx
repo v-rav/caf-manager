@@ -112,10 +112,7 @@ export function ConfigurationPage() {
         add={(n) => api.addSkill(n)}
         update={(id, n) => api.updateSkill(id, n)}
       />
-      <LookupPanel title="Blocker categories" category="BlockerCategory" placeholder="New category" hint="Reasons a nomination can be blocked (Workspace → Raise blocker, Governance Board)." />
-      <LookupPanel title="Blocker owners" category="BlockerOwner" placeholder="New owner" hint="Parties that can own a blocker (the Owner dropdown when raising a blocker)." />
       <LookupPanel title="Classifications" category="Classification" placeholder="New classification" hint="Operating-model classifications on a nomination (Standard Factory, Strategic Pilot, …)." />
-      <LookupPanel title="Velocity impact" category="VelocityImpact" placeholder="New level" hint="Strategic-account velocity-impact levels." />
       <LookupPanel title="Milestone types" category="Milestone" placeholder="New milestone" hint="Dated app-factory events captured in the workspace (kick-off, runbook shared, actual migration start, …)." />
       <AcrRatesPanel />
       <OperationsSettingsPanel section="Operations" title="Operational thresholds"

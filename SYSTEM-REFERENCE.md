@@ -592,11 +592,11 @@ Each item is a candidate to move to configuration or data. **P1** means it affec
 | H8 | ~~FDO file detection signatures~~ — now ⚙️ `ImportProfiles` + `ImportColumnMaps` (6B-5) | Configuration → Import column maps | 4 profiles · 54 fields | done |
 | H9 | ~~Wave-type keyword classification~~ — now ⚙️ domain **WaveType** (applied on import) | Classification Rules page | 8 rules | done |
 | H10 | ~~Tool-name normalization map~~ — now ⚙️ domain **ToolAlias** (targets validated against the tool master) | Classification Rules page | 13 rules | done |
-| H11 | Activity keywords — now ⚙️ domain **Activity**; *remaining:* assessment/execution activity sets + 7/6/5/4 level derivation in `ToolActivityClassifier` | `ToolActivityClassifier` | 14 rules; level rule | P2 |
-| H12 | ~~Containerized-path keywords~~ — now ⚙️ domain **ContainerPath**; *remaining:* low-cores ≤16 | `AnalyticsService` | 5 rules; 16 | P2 |
+| H11 | ~~Activity keywords + assessment/execution activity sets~~ — now ⚙️ domains **Activity** + **ActivityPhase** (activity → Assessment/Execution); the 7/6/5/4 level scale is the A.10 definition | Classification Rules page | 14 + 9 rules | done |
+| H12 | ~~Containerized-path keywords + low-cores ≤16~~ — now ⚙️ domain **ContainerPath** + `AcrLowCoresMax` (16) | Operational thresholds → ACR recovery | 5 rules; 16 | done |
 | H13 | ~~Health keywords~~ — now ⚙️ domain **Health** (client colours use the server bucket) | Classification Rules page | 4 rules | done |
 | H14 | ~~Capacity heat-colour mapping~~ — now ⚙️ `HeatAvailable/PartiallyUtilized/FullyUtilized/Overloaded` (0 Green · 1 Amber · 2 Red) | Operational thresholds | 0/1/1/2 | done |
-| H15 | SA auto-link fuzzy threshold | `NameConsistencyService.LinkSolutionArchitectsAsync` | 0.95 | P2 |
+| H15 | ~~SA auto-link fuzzy threshold~~ — now ⚙️ `SaAutoLinkPct` (95) | Operational thresholds → Name matching | 95% | done |
 | H16 | ~~Effectiveness weights + speed/momentum targets + tones + formula~~ — now ⚙️ Scoring models (6B-2), computed server-side by `EffectivenessService` (6B-6) | `GET /api/effectiveness` | §5.14 | done |
 | H17 | ~~Recommended-action text + 42-day defer rule~~ — now server `NominationRules.NextStep` + ⚙️ `LongStalledDays` (42) | Operational thresholds | Day 3/5/10 past target, 42 d | done |
 | H18 | ~~Blocker suggestion regexes~~ — now ⚙️ KeywordRules domain **BlockerReason** (23 rules; server `NominationDto.SuggestedBlockerReason`; parity 0 diffs / 1,112) | Classification Rules page | 23 rules | done |
