@@ -10,8 +10,18 @@ import { useAsync } from '../hooks'
 import { useAuth } from '../auth'
 import { useRegion } from '../region'
 import { downloadCsv } from '../export'
+import { useFacets, useUrlFilters } from '../filters'
 import { day, money, num } from '../format'
 import type { AcrCaptureRow, AcrRecoveryEntry } from '../types'
+
+const KEYS = ['stage', 'status', 'state', 'gap'] as const
+const EMPTY_ROWS: AcrCaptureRow[] = []
+const pickers: Record<(typeof KEYS)[number], (r: AcrCaptureRow) => string> = {
+  stage: (r) => r.stage ?? '',
+  status: (r) => r.status ?? '',
+  state: (r) => r.currentState ?? '',
+  gap: (r) => r.gapType ?? '',
+}
 
 const GAP_TONE: Record<string, 'danger' | 'warning' | 'informative'> = {
   'Missing cores': 'danger',
@@ -42,10 +52,8 @@ export function AcrRecoveryPage() {
   const summary = useAsync(() => api.recoverySummary(region), [region])
   const [applyRow, setApplyRow] = useState<AcrCaptureRow | null>(null)
   const [closeEntry, setCloseEntry] = useState<AcrRecoveryEntry | null>(null)
-  const [stage, setStage] = useState('')
-  const [gap, setGap] = useState('')
-  const [state, setState] = useState('')
-  const [status, setStatus] = useState('')
+  const { f, set: setF, reset, any: anyFilter } = useUrlFilters(KEYS)
+  const facets = useFacets(capture.data?.rows ?? EMPTY_ROWS, pickers, f)
   const [visibleCols, setVisibleCols] = useState<string[]>(DEFAULT_VISIBLE)
   const [reconciling, setReconciling] = useState(false)
 
@@ -90,13 +98,8 @@ export function AcrRecoveryPage() {
       )}
 
       {capture.loading && !data ? <Loading label="Scanning containerized ACR capture…" /> : capture.error ? <ErrorText error={capture.error} onRetry={capture.reload} /> : data ? (() => {
-        const uniq = (xs: (string | null | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x))].sort()
-        const stages = uniq(data.rows.map((r) => r.stage))
-        const gaps = uniq(data.rows.map((r) => r.gapType))
-        const states = uniq(data.rows.map((r) => r.currentState))
-        const statuses = uniq(data.rows.map((r) => r.status))
-        const rows = data.rows.filter((r) =>
-          (!stage || r.stage === stage) && (!gap || r.gapType === gap) && (!state || r.currentState === state) && (!status || r.status === status))
+        const { stage: stages, gap: gaps, state: states, status: statuses } = facets.options
+        const rows = facets.rows
         const filtered = rows.length !== data.rows.length
         const filteredUpside = rows.reduce((s, r) => s + r.gapAcr, 0)
 
@@ -196,10 +199,11 @@ export function AcrRecoveryPage() {
 
             <Panel title="Worklist — biggest ACR upside first" action={<Button appearance="secondary" size="small" onClick={exportCsv} disabled={!rows.length}>Export CSV</Button>}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
-                <FilterSelect label="Stage" value={stage} options={stages} onChange={setStage} minWidth={170} />
-                <FilterSelect label="Status" value={status} options={statuses} onChange={setStatus} minWidth={150} />
-                <FilterSelect label="State" value={state} options={states} onChange={setState} minWidth={150} />
-                <FilterSelect label="Gap" value={gap} options={gaps} onChange={setGap} minWidth={150} />
+                <FilterSelect label="Stage" value={f.stage} options={stages} onChange={setF('stage')} minWidth={170} />
+                <FilterSelect label="Status" value={f.status} options={statuses} onChange={setF('status')} minWidth={150} />
+                <FilterSelect label="State" value={f.state} options={states} onChange={setF('state')} minWidth={150} />
+                <FilterSelect label="Gap" value={f.gap} options={gaps} onChange={setF('gap')} minWidth={150} />
+                {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
                 <Menu checkedValues={{ columns: visibleCols }} onCheckedValueChange={(_, d) => setVisibleCols(d.checkedItems)}>
                   <MenuTrigger disableButtonEnhancement>
                     <Button appearance="secondary" size="small">Columns</Button>

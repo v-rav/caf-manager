@@ -213,6 +213,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 IsBlocked = StatusRules.IsBlocked(n.Status),
                 StatusTone = StatusRules.Tone(n.Status),
                 HealthBucket = NominationRules.HealthBucket(n.CurrentState),
+                HealthTone = NominationRules.HealthTone(NominationRules.HealthBucket(n.CurrentState)),
                 NominatedDate = n.NominatedDate,
                 ApprovalDate = n.ApprovalDate,
                 ActualStartDate = n.ActualStartDate,

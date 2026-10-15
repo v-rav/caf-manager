@@ -333,6 +333,7 @@ export interface Nomination {
   isBlocked?: boolean
   statusTone?: 'success' | 'warning' | 'danger' | 'informative' | 'brand' | 'subtle'
   healthBucket?: string
+  healthTone?: 'success' | 'warning' | 'danger' | 'informative'
   nominatedDate?: string
   approvalDate?: string
   actualStartDate?: string

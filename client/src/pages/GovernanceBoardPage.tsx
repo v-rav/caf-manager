@@ -1,11 +1,11 @@
 import { Badge, Button, Text } from '@fluentui/react-components'
-import { useCallback, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { DataTable, type Column } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
 import { ErrorText, FilterSelect, Loading, NominationLink, PageHeader, Panel } from '../components/common'
 import { downloadCsv } from '../export'
+import { useFacets, useUrlFilters } from '../filters'
 import { nominationInFy, useFy } from '../fy'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
@@ -13,19 +13,16 @@ import type { Blocker, Nomination } from '../types'
 
 const TIERS = ['Warn', 'Escalate', 'Defer']
 const TIER_COLOR = { Warn: 'warning', Escalate: 'severe', Defer: 'danger' } as const
-const HEALTH_COLOR = { Blocked: 'danger', Waiting: 'warning' } as const
-const STAGES = ['1 · Validating', '2 · Pre-Requisites', '3 · Finalize Scope', '4 · Executing Migration']
 
-type Dim = 'tier' | 'health' | 'stage' | 'sa' | 'pm' | 'cftl' | 'reason'
-const EMPTY: Record<Dim, string> = { tier: '', health: '', stage: '', sa: '', pm: '', cftl: '', reason: '' }
-const pickers: Record<Dim, (n: Nomination) => string> = {
-  tier: (n) => n.staleTier ?? '',
-  health: (n) => n.healthBucket ?? '',
-  stage: (n) => (n.stageIndex ? STAGES[n.stageIndex - 1] : ''),
+const KEYS = ['sla', 'status', 'stage', 'reason', 'sa', 'pm', 'cftl'] as const
+const pickers: Record<(typeof KEYS)[number], (n: Nomination) => string> = {
+  sla: (n) => n.staleTier ?? '',
+  status: (n) => n.healthBucket ?? '',
+  stage: (n) => (n.stageIndex ? `${n.stageIndex} · ${n.stageLabel ?? ''}` : ''),
+  reason: (n) => n.suggestedBlockerReason ?? '',
   sa: (n) => n.solutionArchitect?.trim() ?? '',
   pm: (n) => n.projectCoordinator?.trim() ?? '',
   cftl: (n) => n.cftlPrimary?.trim() ?? '',
-  reason: (n) => n.suggestedBlockerReason ?? '',
 }
 
 /** Exceptions board: in-flight waves that are blocked, waiting, or past their stage target — all from FDO data. */
@@ -34,10 +31,8 @@ export function GovernanceBoardPage() {
   const { fy } = useFy()
   const noms = useAsync(() => api.nominations(region), [region])
   const legacy = useAsync(() => api.openBlockers(region), [region])
-  const [params] = useSearchParams()
-  const [f, setF] = useState<Record<Dim, string>>(() => ({ ...EMPTY, tier: params.get('sla') ?? '', health: params.get('status') ?? '' }))
+  const { f, set, reset, any: anyFilter } = useUrlFilters(KEYS)
   const [busy, setBusy] = useState(false)
-  const setDim = (d: Dim) => (v: string) => setF((s) => ({ ...s, [d]: v }))
 
   // Approved, started, not settled — and either blocked/waiting in FDO or already past the stage target.
   const exceptions = useMemo(() => (noms.data ?? []).filter((n) =>
@@ -45,22 +40,9 @@ export function GovernanceBoardPage() {
     && n.approvalStatus?.toLowerCase() === 'approved'
     && (n.healthBucket === 'Blocked' || n.healthBucket === 'Waiting' || !!n.staleTier)), [noms.data, fy])
 
-  const match = useCallback((n: Nomination, skip?: Dim) =>
-    (Object.keys(f) as Dim[]).every((d) => d === skip || !f[d] || pickers[d](n).toLowerCase() === f[d].toLowerCase()), [f])
-  const rows = useMemo(() => exceptions.filter((n) => match(n)), [exceptions, match])
-
-  // Each dropdown lists only values that still exist under the other filters.
-  const options = useMemo(() => {
-    const out = {} as Record<Dim, string[]>
-    for (const d of Object.keys(f) as Dim[]) {
-      const vals = new Set(exceptions.filter((n) => match(n, d)).map(pickers[d]).filter(Boolean))
-      out[d] = d === 'tier' ? TIERS.filter((t) => vals.has(t)) : d === 'stage' ? STAGES.filter((s) => vals.has(s)) : [...vals].sort((a, b) => a.localeCompare(b))
-    }
-    return out
-  }, [exceptions, match, f])
+  const { rows, options } = useFacets(exceptions, pickers, f, { sla: TIERS })
 
   const count = (p: (n: Nomination) => boolean) => rows.filter(p).length
-  const anyFilter = Object.values(f).some(Boolean)
   const resolve = async (b: Blocker) => {
     if (busy) return
     setBusy(true)
@@ -72,8 +54,8 @@ export function GovernanceBoardPage() {
       render: (n) => <NominationLink id={n.id} name={n.accountName} /> },
     { key: 'stage', header: 'Stage', align: 'center', sortValue: (n) => n.stageIndex ?? 0, render: (n) => n.stageIndex ?? '—' },
     { key: 'health', header: 'Status', sortValue: (n) => n.healthBucket ?? '',
-      render: (n) => n.healthBucket && n.healthBucket in HEALTH_COLOR
-        ? <Badge appearance="tint" color={HEALTH_COLOR[n.healthBucket as keyof typeof HEALTH_COLOR]}>{n.healthBucket}</Badge> : (n.healthBucket ?? '—') },
+      render: (n) => n.healthBucket
+        ? <Badge appearance="tint" color={n.healthTone ?? 'informative'}>{n.healthBucket}</Badge> : '—' },
     { key: 'tier', header: 'SLA', sortValue: (n) => TIERS.indexOf(n.staleTier ?? '') + 1,
       render: (n) => n.staleTier ? <Badge appearance="tint" color={TIER_COLOR[n.staleTier as keyof typeof TIER_COLOR] ?? 'informative'}>{n.staleTier}</Badge> : '—' },
     { key: 'days', header: 'Days in stage', align: 'end', sortValue: (n) => n.effectiveAgeDays,
@@ -121,14 +103,14 @@ export function GovernanceBoardPage() {
       />
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-        <FilterSelect label="SLA" value={f.tier} options={options.tier} onChange={setDim('tier')} minWidth={120} />
-        <FilterSelect label="Status" value={f.health} options={options.health} onChange={setDim('health')} minWidth={120} />
-        <FilterSelect label="Stage" value={f.stage} options={options.stage} onChange={setDim('stage')} />
-        <FilterSelect label="Reason" value={f.reason} options={options.reason} onChange={setDim('reason')} minWidth={200} />
-        <FilterSelect label="SA" value={f.sa} options={options.sa} onChange={setDim('sa')} minWidth={180} />
-        <FilterSelect label="PM" value={f.pm} options={options.pm} onChange={setDim('pm')} minWidth={180} />
-        <FilterSelect label="CFTL" value={f.cftl} options={options.cftl} onChange={setDim('cftl')} minWidth={180} />
-        {anyFilter && <Button size="small" onClick={() => setF(EMPTY)}>Reset</Button>}
+        <FilterSelect label="SLA tier" value={f.sla} options={options.sla} onChange={set('sla')} minWidth={120} />
+        <FilterSelect label="Status" value={f.status} options={options.status} onChange={set('status')} minWidth={120} />
+        <FilterSelect label="Stage" value={f.stage} options={options.stage} onChange={set('stage')} />
+        <FilterSelect label="Reason" value={f.reason} options={options.reason} onChange={set('reason')} minWidth={200} />
+        <FilterSelect label="SA" value={f.sa} options={options.sa} onChange={set('sa')} minWidth={180} />
+        <FilterSelect label="PM" value={f.pm} options={options.pm} onChange={set('pm')} minWidth={180} />
+        <FilterSelect label="CFTL" value={f.cftl} options={options.cftl} onChange={set('cftl')} minWidth={180} />
+        {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>

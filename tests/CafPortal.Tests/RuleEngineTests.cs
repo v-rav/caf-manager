@@ -166,6 +166,13 @@ public class NominationRulesTests
         Assert.Null(NominationRules.FdoDaysExpected(14, null, end, s));                     // no start date: can't check
     }
 
+    [Theory]
+    [InlineData("Blocked", "danger")]
+    [InlineData("Waiting", "warning")]
+    [InlineData("On Track", "success")]
+    [InlineData("Other", "informative")]
+    public void Health_tone_maps_bucket(string bucket, string expected) => Assert.Equal(expected, NominationRules.HealthTone(bucket));
+
     [Fact]
     public void Blocker_age_tone_uses_settings()
     {

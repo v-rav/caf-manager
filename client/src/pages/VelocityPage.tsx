@@ -1,10 +1,10 @@
 import { Badge, Button, Text, Tooltip } from '@fluentui/react-components'
-import { useState } from 'react'
 import { api } from '../api'
 import { DataTable, type Column } from '../components/DataTable'
 import { ErrorText, FilterSelect, Loading, NominationLink, PageHeader, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { downloadCsv } from '../export'
+import { useUrlFilters } from '../filters'
 import { useFy, fyLabel, currentFy } from '../fy'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
@@ -13,6 +13,7 @@ import type { StageVelocitySet, VelocityPeriod, VelocityWave } from '../types'
 const STAGES = ['1 · Validating', '2 · Pre-Requisites', '3 · Finalize Scope', '4 · Executing Migration']
 const EXCLUDE_NON_STANDARD = 'Exclude Strategic Pilot (non-Standard)'
 const QUALITY: Record<string, string | undefined> = { 'Exclude ⚠ check FDO days': 'ok', 'Only ⚠ check FDO days': 'suspect' }
+const KEYS = ['cls', 'stage', 'segment', 'path', 'sa', 'pm', 'set', 'quality'] as const
 const TONE = { success: 'var(--colorPaletteGreenForeground1)', warning: 'var(--colorPaletteDarkOrangeForeground1)', danger: 'var(--colorPaletteRedForeground1)' }
 
 // Velocity (allocated ÷ avg FDO Total Days) of waves completed in each period, by actual end date.
@@ -76,14 +77,9 @@ function StageVelocityPanel({ title, set }: { title: string; set: StageVelocityS
 export function VelocityPage() {
   const { region } = useRegion()
   const { fy } = useFy()
-  const [cls, setCls] = useState('')
-  const [stage, setStage] = useState('')
-  const [segment, setSegment] = useState('')
-  const [path, setPath] = useState('')
-  const [sa, setSa] = useState('')
-  const [pm, setPm] = useState('')
-  const [set, setSet] = useState('')
-  const [quality, setQuality] = useState('')
+  const { f, set: setF, reset, any: anyFilter } = useUrlFilters(KEYS)
+  const { cls, stage, segment, path, sa, pm, set, quality } = f
+  const [setCls, setStage, setSegment, setPath, setSa, setPm, setSet, setQuality] = KEYS.map((k) => setF(k))
 
   const stageNo = stage ? STAGES.indexOf(stage) + 1 : undefined
   const excludeStrategic = cls === EXCLUDE_NON_STANDARD
@@ -94,8 +90,6 @@ export function VelocityPage() {
     [region, fy, excludeStrategic, classification, stageNo, segment, path, sa, pm, set, q],
   )
   const waves = data?.waves ?? []
-  const anyFilter = cls || stage || segment || path || sa || pm || set || quality
-  const reset = () => { setCls(''); setStage(''); setSegment(''); setPath(''); setSa(''); setPm(''); setSet(''); setQuality('') }
 
   const columns: Column<VelocityWave>[] = [
     { key: 'account', header: 'Account', minWidth: 200, sortValue: (w) => w.accountName ?? '',

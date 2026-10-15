@@ -49,11 +49,26 @@ type GuideConcept = { term: string; body: string }
 const GUIDE_CONCEPTS: GuideConcept[] = [
   { term: 'Stage vs Status', body: 'Stage (1–4) is which phase of the migration journey a nomination is in — Validating, Executing Pre-Requisites, Finalize Scope, Executing Migration. Status is whether that work is on track or blocked. They are tracked separately.' },
   { term: 'MSI (Migration Success Index)', body: '' },
-  { term: 'SLA & the clock', body: 'Age in stage is the FDO business-day count for the current stage (Migration Status) — counted from the day the wave entered that stage, not from the actual start; FDO Total Days is the sum of all four stage columns. The portal never recalculates it. Stale tiers (Warn / Escalate / Defer) apply to execution stages 2–4. Each stage has a target (Configuration → Stage targets: 10 / 10 / 5 / 23 business days by default); the Warn / Escalate / Defer cadence (3 / 5 / 10 days) counts days past that target. A live clock-stopping blocker pauses the SLA tier — the grid shows a Paused chip.' },
+  { term: 'SLA & the clock', body: 'Age in stage is the FDO business-day count for the current stage (Migration Status) — counted from the day the wave entered that stage, not from the actual start; FDO Total Days is the sum of all four stage columns. The portal never recalculates it. SLA tiers (Warn / Escalate / Defer) apply to execution stages 2–4. Each stage has a target (Configuration → Stage targets: 10 / 10 / 5 / 23 business days by default); the Warn / Escalate / Defer cadence (3 / 5 / 10 days) counts days past that target, and more than 42 days in a stage is “long-stalled”. The Governance Board lists every wave that is blocked, waiting or past target.' },
+  { term: 'Velocity', body: 'Allocated stage days ÷ FDO business days, as a % — 100% = on target, higher = faster. Completed waves use all four stage targets; in-flight waves use the stages they have reached (the current stage only counts the days elapsed so far). Waves whose FDO days are far from their actual start/end dates are flagged “⚠ check FDO days” and can be excluded on Velocity Analytics.' },
   { term: 'Waves', body: 'A nomination may link to Security / DB / Landing-Zone / Dispatch waves. Wave links are informational, not required — no wave type is mandatory. FDO links refresh each drop; portal-added links are preserved.' },
   { term: 'ACR', body: 'Estimated annual Azure consumption a workload will drive once migrated, derived from cores-per-app and rate-per-core thumb-rules (see the FAQ below). Rates are admin-editable.' },
   { term: 'Migration Capability usage', body: 'Which tool (e.g. Azure Migrate, GHCP, AppMod) actually accelerated which activity, captured per nomination in the SA Workspace and rolled up on GHCP Adoption — the value story behind the pipeline.' },
-  { term: 'Classification (parked — feature flag)', body: 'Classification says which operating model a nomination runs under: Standard Factory (default) or a deliberate strategic investment — Strategic Pilot, Lighthouse Engagement, Innovation / POC, Recovery Engagement. Purpose: honest velocity. Non-standard work is excluded from Standard SLA/velocity and instead governed by days-in-flight thresholds (60 / 90 / 120 → Green / Amber / Red / Exec) on the Strategic Investment Register. It is portal-owned (FDO has no such field) and is not the same as the FDO account Segment (a customer tier). The feature is currently parked: Configuration → Operational thresholds → Features → "Classification & Strategic Register" (0 = off, 1 = on). While off, every nomination is Standard Factory, the Classification fields are hidden and the register shows a parked notice; stored classifications are kept and reappear when it is switched on. When on, strategic work = FDO Strategic-segment accounts plus any non-Standard classification (setting a nomination to Standard Factory keeps it in Standard); it gets no SLA tier and is left out of velocity averages (Dashboard avg age, Migration Flow avg age, Effectiveness speed / momentum / on-track) but still counts in pipeline totals.' },
+  { term: 'Classification (parked — feature flag)', body: 'Classification says which operating model a nomination runs under: Standard Factory (default) or a deliberate strategic investment — Strategic Pilot, Lighthouse Engagement, Innovation / POC, Recovery Engagement. Purpose: honest velocity. Non-standard work is excluded from Standard SLA/velocity and instead governed by days-in-flight thresholds (60 / 90 / 120 → Green / Amber / Red / Exec) on the Strategic Investment Register. It is portal-owned (FDO has no such field) and is not the same as the FDO account Segment (a customer tier). The feature is currently parked: Configuration → Operational thresholds → Features → "Classification & Strategic Register" (0 = off, 1 = on). While off, every nomination is Standard Factory, the Classification fields are hidden and the register shows a parked notice; stored classifications are kept and reappear when it is switched on. When on, strategic work = any nomination given a non-Standard classification in the Manage dialog (the FDO segment no longer sets it); it gets no SLA tier and is left out of velocity averages (Dashboard avg age, Migration Flow avg age, Effectiveness speed / momentum / on-track) but still counts in pipeline totals.' },
+]
+
+// One meaning per word across every page.
+const GLOSSARY: GuideConcept[] = [
+  { term: 'Stage', body: 'Migration phase 1–4 from FDO Migration Status: 1 Validating · 2 Executing Pre-Requisites · 3 Finalize Scope · 4 Executing Migration.' },
+  { term: 'Status (health)', body: 'Whether in-flight work is On Track, Waiting or Blocked — derived from the FDO Current State text. Shown as a coloured badge; the full Current State text is in the tooltip / row detail.' },
+  { term: 'Current State', body: 'The raw FDO free-text field the Status is derived from.' },
+  { term: 'SLA tier', body: 'Warn / Escalate / Defer — how many days a Stage 2–4 wave is past its stage target (also called “stale tier” in exports).' },
+  { term: 'In-flight', body: 'Approved, started (not a future wave) and not yet settled (Completed / Closed / Withdrawn / Deferred).' },
+  { term: 'Upcoming', body: 'Approved but with a start date in the future; excluded from workload, capacity and SLA until it starts.' },
+  { term: 'Wave', body: 'One FDO task (a nomination record). An account can have many waves.' },
+  { term: 'PM · CFTL · SA', body: 'Project Coordinator · CFTL primary · Solution Architect — the three FDO ownership roles.' },
+  { term: 'Readiness vs MSI', body: 'Readiness = % of weighted gate items done. MSI = the 0–100 Migration Success Index that combines readiness, scope, delivery, risk, GHCP and sign-off.' },
+  { term: 'FY', body: 'Fiscal year, Jul 1 – Jun 30, labelled by its end year (Jul 2026 – Jun 2027 = FY27).' },
 ]
 
 type GuideStep = { title: string; body: string }
@@ -146,6 +161,17 @@ function UsageGuide() {
               <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {GUIDE_CONCEPTS.map((c) => (
                   <li key={c.term}><Text size={300}><b>{c.term}</b> — {c.term.startsWith('MSI') ? <MsiSummary /> : c.body}</Text></li>
+                ))}
+              </ul>
+            </AccordionPanel>
+          </AccordionItem>
+
+          <AccordionItem value="glossary">
+            <AccordionHeader>Glossary — terms used across the portal</AccordionHeader>
+            <AccordionPanel>
+              <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {GLOSSARY.map((g) => (
+                  <li key={g.term}><Text size={300}><b>{g.term}</b> — {g.body}</Text></li>
                 ))}
               </ul>
             </AccordionPanel>

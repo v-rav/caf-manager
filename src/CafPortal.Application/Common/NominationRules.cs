@@ -131,4 +131,13 @@ public static class NominationRules
     /// <summary>FDO Current State text → health bucket. Keywords: KeywordRules "Health" (no match = Other).</summary>
     public static string HealthBucket(string? currentState) =>
         KeywordRules.First(KeywordRules.Health, currentState) ?? KeywordRules.FindDomain(KeywordRules.Health)!.Fallback!;
+
+    /// <summary>Badge tone for a health bucket (Blocked = danger, Waiting = warning, On Track = success).</summary>
+    public static string HealthTone(string bucket) => bucket switch
+    {
+        "Blocked" => "danger",
+        "Waiting" => "warning",
+        "On Track" => "success",
+        _ => "informative",
+    };
 }

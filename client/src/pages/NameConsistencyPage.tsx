@@ -109,7 +109,7 @@ export function NameConsistencyPage() {
     <div style={{ display: 'grid', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <Text size={600} weight="semibold" block>
+          <Text size={600} weight="bold" block>
             Name Consistency
           </Text>
           <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>

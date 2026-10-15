@@ -188,7 +188,7 @@ export function EffectivenessPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <Text size={600} weight="semibold">Ownership Effectiveness</Text>
+        <Text size={600} weight="bold">Ownership Effectiveness</Text>
         <div style={{ color: 'var(--colorNeutralForeground3)', fontSize: 13, marginTop: 2 }}>
           Delivery scorecard for PM / SA / CFTL owners. Effectiveness is <strong>flow-led for PM/CFTL</strong> (on-track
           health · momentum = days-in-stage · delivery speed · delivered share) and <strong>quality-led for SA</strong>

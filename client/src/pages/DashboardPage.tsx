@@ -14,7 +14,6 @@ import { money } from '../format'
 import type { ExecutiveDashboard, Nomination } from '../types'
 
 const CAPACITY_COLORS = ['#107c10', '#eaa300', '#ca5010', '#c50f1f']
-const STAGE_LABELS = ['—', 'Validating', 'Prerequisites', 'Finalize Scope', 'Executing Migration']
 
 const stageIdx = (n: Nomination): number => n.stageIndex ?? 0
 const ghcpLevel = (n: Nomination): number => n.ghcpEffectiveLevel ?? n.ghcpAdoptionLevel ?? 0
@@ -127,7 +126,11 @@ function Leadership({ d, m, region, navigate }: { d: ExecutiveDashboard; m: M; r
 }
 
 function Operational({ d, m, navigate }: { d: ExecutiveDashboard; m: M; navigate: (p: string) => void }) {
-  const stages = [1, 2, 3, 4].map((k) => ({ k, label: STAGE_LABELS[k], count: m.active.filter((n) => stageIdx(n) === k).length }))
+  const stages = [1, 2, 3, 4].map((k) => ({
+    k,
+    label: m.all.find((n) => stageIdx(n) === k)?.stageLabel || `Stage ${k}`,
+    count: m.active.filter((n) => stageIdx(n) === k).length,
+  }))
   // Strategic pilots are excluded from Standard SLA denominators.
   const standard = m.active.filter((n) => !n.isStrategic)
   const sla = (t: string) => standard.filter((n) => n.staleTier === t).length

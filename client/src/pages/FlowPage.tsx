@@ -1,6 +1,6 @@
 import { Badge, Button } from '@fluentui/react-components'
 import { ArrowDownloadRegular } from '@fluentui/react-icons'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
@@ -9,10 +9,12 @@ import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
 import { downloadCsv } from '../export'
+import { useFacets, useUrlFilters } from '../filters'
 import type { Nomination } from '../types'
 
 const stageIdx = (n: Nomination): number => n.stageIndex ?? 0
-const STAGE_LABELS = ['—', 'Validating', 'Prerequisites', 'Finalize Scope', 'Executing Migration']
+const KEYS = ['path'] as const
+const pickers = { path: (n: Nomination) => n.primaryMigrationPath?.trim() ?? '' }
 
 function FunnelBar({ label, count, top, prev }: { label: string; count: number; top: number; prev?: number }) {
   const pct = top ? Math.round((count / top) * 100) : 0
@@ -34,16 +36,14 @@ export function FlowPage() {
   const { region } = useRegion()
   const { fy } = useFy()
   const noms = useAsync(() => api.nominations(region), [region])
-  const [path, setPath] = useState('')
+  const { f, set, reset, any: anyFilter } = useUrlFilters(KEYS)
 
   const scoped = useMemo(() => (noms.data ?? []).filter((n) => n.status !== 'Withdrawn' && nominationInFy(n, fy)), [noms.data, fy])
-  const pathOptions = useMemo(
-    () => [...new Set(scoped.map((n) => n.primaryMigrationPath?.trim()).filter((p): p is string => !!p))].sort(),
-    [scoped],
-  )
-  const base = useMemo(() => (path ? scoped.filter((n) => (n.primaryMigrationPath?.trim() || '') === path) : scoped), [scoped, path])
+  const { rows: base, options } = useFacets(scoped, pickers, f)
   const approved = useMemo(() => base.filter((n) => (n.approvalStatus ?? '') === 'Approved'), [base])
   const completed = (n: Nomination) => n.status === 'Completed'
+  // Stage names come from the server (`stageLabel`), never a local list.
+  const stageName = (k: number) => scoped.find((n) => n.stageIndex === k)?.stageLabel || `Stage ${k}`
 
   const exportRows = () =>
     downloadCsv<Nomination>(
@@ -86,7 +86,7 @@ export function FlowPage() {
       // Velocity (avg age) is Standard-only; strategic work still counts toward the stage load.
       const std = inStage.filter((n) => !n.isStrategic)
       const avgAge = std.length ? Math.round(std.reduce((s, n) => s + (n.stageAgeDays ?? n.daysSinceUpdate), 0) / std.length) : 0
-      return { k, label: STAGE_LABELS[k], count: inStage.length, avgAge, pressure: inStage.length * avgAge }
+      return { k, label: stageName(k), count: inStage.length, avgAge, pressure: inStage.length * avgAge }
     })
     const worst = rows.reduce((a, b) => (b.pressure > a.pressure ? b : a), rows[0])
     return { rows, worstK: worst?.k }
@@ -122,7 +122,8 @@ export function FlowPage() {
         title="Migration Flow"
         subtitle="Funnel conversion & drop-off · bottleneck analytics across the migration journey"
         actions={<>
-          <FilterSelect label="Path" value={path} onChange={setPath} options={pathOptions} minWidth={200} />
+          <FilterSelect label="Path" value={f.path} onChange={set('path')} options={options.path} minWidth={200} />
+          {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
           <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!approved.length}>Export CSV</Button>
         </>}
       />

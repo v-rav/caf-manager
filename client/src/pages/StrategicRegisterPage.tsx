@@ -1,10 +1,11 @@
 import { Badge, Button, Tooltip } from '@fluentui/react-components'
 import { ArrowDownloadRegular } from '@fluentui/react-icons'
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
 import { ErrorText, FilterSelect, Loading, NominationLink, PageHeader, Panel } from '../components/common'
+import { useFacets, useUrlFilters } from '../filters'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
@@ -17,13 +18,12 @@ function tierTone(t: string): 'success' | 'warning' | 'danger' | 'brand' {
 }
 
 const TIERS = ['Green', 'Amber', 'Red', 'Exec']
-type Dim = 'tier' | 'cls' | 'sa' | 'status'
-const EMPTY: Record<Dim, string> = { tier: '', cls: '', sa: '', status: '' }
-const pickers: Record<Dim, (n: Nomination) => string> = {
-  tier: (n) => n.strategicTier ?? '',
+const KEYS = ['cls', 'tier', 'status', 'sa'] as const
+const pickers: Record<(typeof KEYS)[number], (n: Nomination) => string> = {
   cls: (n) => n.classification ?? '',
-  sa: (n) => n.solutionArchitect?.trim() ?? '',
+  tier: (n) => n.strategicTier ?? '',
   status: (n) => n.status ?? '',
+  sa: (n) => n.solutionArchitect?.trim() ?? '',
 }
 
 export function StrategicRegisterPage() {
@@ -31,21 +31,10 @@ export function StrategicRegisterPage() {
   const { fy } = useFy()
   const { data, loading, error, reload } = useAsync(() => api.nominations(region), [region])
   const { data: vocab } = useAsync(() => api.nominationVocab(), [])
-  const [f, setF] = useState<Record<Dim, string>>(EMPTY)
-  const setDim = (d: Dim) => (v: string) => setF((s) => ({ ...s, [d]: v }))
+  const { f, set, reset, any: anyFilter } = useUrlFilters(KEYS)
 
   const strategic = useMemo(() => (data ?? []).filter((n) => n.isStrategic && nominationInFy(n, fy)), [data, fy])
-  const match = useCallback((n: Nomination, skip?: Dim) =>
-    (Object.keys(f) as Dim[]).every((d) => d === skip || !f[d] || pickers[d](n).toLowerCase() === f[d].toLowerCase()), [f])
-  const rows = useMemo(() => strategic.filter((n) => match(n)), [strategic, match])
-  const options = useMemo(() => {
-    const out = {} as Record<Dim, string[]>
-    for (const d of Object.keys(f) as Dim[]) {
-      const vals = new Set(strategic.filter((n) => match(n, d)).map(pickers[d]).filter(Boolean))
-      out[d] = d === 'tier' ? TIERS.filter((t) => vals.has(t)) : [...vals].sort((a, b) => a.localeCompare(b))
-    }
-    return out
-  }, [strategic, match, f])
+  const { rows, options } = useFacets(strategic, pickers, f, { tier: TIERS })
   const activeAll = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !n.isSettled), [data, fy])
 
   const exportRows = () =>
@@ -100,11 +89,11 @@ export function StrategicRegisterPage() {
       />
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-        <FilterSelect label="Classification" value={f.cls} options={options.cls} onChange={setDim('cls')} minWidth={180} />
-        <FilterSelect label="Threshold" value={f.tier} options={options.tier} onChange={setDim('tier')} minWidth={120} />
-        <FilterSelect label="Status" value={f.status} options={options.status} onChange={setDim('status')} minWidth={140} />
-        <FilterSelect label="SA" value={f.sa} options={options.sa} onChange={setDim('sa')} minWidth={180} />
-        {Object.values(f).some(Boolean) && <Button size="small" onClick={() => setF(EMPTY)}>Reset</Button>}
+        <FilterSelect label="Classification" value={f.cls} options={options.cls} onChange={set('cls')} minWidth={180} />
+        <FilterSelect label="Threshold" value={f.tier} options={options.tier} onChange={set('tier')} minWidth={120} />
+        <FilterSelect label="Status" value={f.status} options={options.status} onChange={set('status')} minWidth={140} />
+        <FilterSelect label="SA" value={f.sa} options={options.sa} onChange={set('sa')} minWidth={180} />
+        {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
       </div>
 
       {strategic.length === 0 && (

@@ -49,7 +49,7 @@ function NominationDetail({ n }: { n: Nomination }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px 16px' }}>
       <ReadField label="Task Id">{roDash(n.externalTaskId)}</ReadField>
-      <ReadField label="Current State">{n.currentState ? <Badge appearance="tint" color={stateColor(n.healthBucket)}>{n.currentState}</Badge> : '—'}</ReadField>
+      <ReadField label="Current State">{n.currentState ? <Badge appearance="tint" color={n.healthTone ?? 'informative'}>{n.currentState}</Badge> : '—'}</ReadField>
       <ReadField label="Age in stage">{roDays(n.stageAgeDays)}</ReadField>
       <ReadField label="Short name">{roDash(n.shortName)}</ReadField>
       <ReadField label="Approval status">{roDash(n.approvalStatus)}</ReadField>
@@ -251,14 +251,6 @@ function migrationStage(migrationStatus?: string): { n: number; label: string } 
   const t = (migrationStatus ?? '').toLowerCase()
   const s = STAGES.find((x) => t.includes(x.match))
   return s ? { n: s.n, label: s.label } : null
-}
-
-// Server health bucket → Badge colour.
-function stateColor(bucket?: string): 'success' | 'warning' | 'danger' | 'informative' {
-  if (bucket === 'Blocked') return 'danger'
-  if (bucket === 'Waiting') return 'warning'
-  if (bucket === 'On Track') return 'success'
-  return 'informative'
 }
 
 const BLOCKER_OPTIONS = [
@@ -684,7 +676,7 @@ export function NominationsPage() {
                   sortValue: (n) => n.currentState ?? '',
                   render: (n) =>
                     n.currentState ? (
-                      <Badge appearance="tint" color={stateColor(n.healthBucket)} size="small">
+                      <Badge appearance="tint" color={n.healthTone ?? 'informative'} size="small">
                         {n.currentState}
                       </Badge>
                     ) : (
@@ -882,7 +874,7 @@ export function NominationsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
               <ReadField label="Current State">
                 {editing.currentState ? (
-                  <Badge appearance="tint" color={stateColor(editing.healthBucket)}>
+                  <Badge appearance="tint" color={editing.healthTone ?? 'informative'}>
                     {editing.currentState}
                   </Badge>
                 ) : (

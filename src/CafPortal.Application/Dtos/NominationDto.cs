@@ -97,6 +97,7 @@ public class NominationDto
     public bool IsBlocked { get; set; }
     public string StatusTone { get; set; } = "informative";
     public string HealthBucket { get; set; } = "Other";
+    public string HealthTone { get; set; } = "informative";
     public DateOnly? NominatedDate { get; set; }
     public DateOnly? ApprovalDate { get; set; }
     public DateOnly? ActualStartDate { get; set; }
