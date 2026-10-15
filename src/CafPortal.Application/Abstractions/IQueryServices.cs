@@ -21,7 +21,7 @@ public interface IAnalyticsService
 
     Task<AcrCaptureDto> GetAcrCaptureAsync(string? region, CancellationToken ct = default);
 
-    Task<StageVelocityDto> GetStageVelocityAsync(string? region, int? fy, bool excludeStrategic = false, CancellationToken ct = default);
+    Task<StageVelocityDto> GetStageVelocityAsync(string? region, VelocityFilter filter, CancellationToken ct = default);
 }
 
 public interface IResourceService

@@ -316,11 +316,12 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
   in-flight: stages 1..current), shown as % — 100% = on target, higher = faster, lower = slower; blank when 0 days. Tone from
   ⚙️ `VelocityAmberBelowPct` (100) / `VelocityRedBelowPct` (80). Null without an FDO stage breakdown. Shown in the Strategic Register and the
   Nominations Summary hover.
-* **Factory panel** (Analytics → Stage Duration vs SLA, `GET /api/analytics/stage-velocity?region=&fy=&excludeStrategic=`):
+* **Velocity Analytics page** (`/velocity`, Overview nav, Admin/Lead; `GET /api/analytics/stage-velocity?region=&fy=&excludeStrategic=&stage=&segment=&path=&sa=&pm=`):
   per stage target vs average actual + days over/under; overall actual = avg FDO Total Days, overall target = Σ targets
   (FDO Power BI convention). Completed = all completed waves (0 = skipped stage); in-flight = Approved, averaged over
-  stages reached. **All waves by default** (matches FDO); the **Exclude strategic** switch limits the panels and the
-  Average Velocity trend to Standard work.
+  stages reached. **All waves by default** (matches FDO); the **Exclude Strategic Pilot** switch limits everything to
+  Standard work. Filters Set · Stage · Segment · Path · SA · PM (+ header Region/FY); Average Velocity per quarter of the
+  selected FY + last/current month; per-wave table (`Waves`) + CSV. Filter vocabularies come back as `Options`.
 
 ### 5.3 SLA stale tier (Warn / Escalate / Defer)
 * **Applies to Stages 2–4 only (🔒)** and only to non-settled, started rows.

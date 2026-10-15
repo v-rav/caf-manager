@@ -1,4 +1,4 @@
-import { Button, Dropdown, Link, Option, Switch, Text } from '@fluentui/react-components'
+import { Button, Dropdown, Link, Option, Text } from '@fluentui/react-components'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
@@ -8,7 +8,7 @@ import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
-import type { AttainmentBucket, Nomination, StageVelocitySet, TimeBucket, VelocityPeriod } from '../types'
+import type { AttainmentBucket, Nomination, TimeBucket } from '../types'
 
 // Heat-band colours reused for the health doughnut (On Track → Blocked → Other).
 const HEALTH_COLORS = ['#107c10', '#eaa300', '#c50f1f', '#8a8886']
@@ -19,73 +19,14 @@ const num = (n: number) => n.toLocaleString()
 const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)}%` : '—')
 
 // A titled section with a responsive grid of chart panels.
-function Section({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <Text size={400} weight="semibold">{title}</Text>
-      <div style={{ display: 'grid', gridTemplateColumns: full ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         {children}
       </div>
     </div>
-  )
-}
-
-// Velocity (allocated ÷ avg FDO Total Days) of waves completed in each period, by actual end date.
-function VelocityTrendPanel({ quarters, months }: { quarters: VelocityPeriod[]; months: VelocityPeriod[] }) {
-  const tone = { success: 'var(--colorPaletteGreenForeground1)', warning: 'var(--colorPaletteDarkOrangeForeground1)', danger: 'var(--colorPaletteRedForeground1)' }
-  const Row = ({ title, items }: { title: string; items: VelocityPeriod[] }) => (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)', marginBottom: 4 }}>{title}</div>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 8 }}>
-        {items.map((p) => (
-          <div key={p.key} style={{ border: `1px solid ${p.isCurrent ? 'var(--colorBrandStroke1)' : 'var(--colorNeutralStroke2)'}`, borderRadius: 6, padding: 8, textAlign: 'center' }}>
-            <div style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)' }}>{p.label}{p.isCurrent ? ' · current' : ''}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: p.tone ? tone[p.tone] : undefined }}>{p.velocityPct != null ? `${p.velocityPct}%` : '—'}</div>
-            <div style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)' }}>
-              {p.isFuture ? 'upcoming' : p.count ? `${p.count} waves · avg ${p.avgDays}d / ${p.target}d` : 'no completions'}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-  return (
-    <Panel title="Average Velocity · completed waves (allocated ÷ avg FDO Total Days)">
-      <Row title="Current fiscal year" items={quarters} />
-      <Row title="Months" items={months} />
-    </Panel>
-  )
-}
-
-// FDO "Stage Duration vs SLA" cards: per-stage target vs average actual, days over/under, plus overall.
-function StageVelocityPanel({ title, set }: { title: string; set: StageVelocitySet }) {
-  const cards = [
-    ...set.stages.map((s) => ({ key: String(s.stage), label: `${s.stage} · ${s.label}`, target: s.target, actual: s.actual, over: s.over })),
-    { key: 'all', label: 'Overall completion', target: set.overallTarget, actual: set.overallActual, over: set.overallOver },
-  ]
-  return (
-    <Panel title={`${title} · ${set.count} waves${set.overallVelocityPct != null ? ` · Average Velocity ${set.overallVelocityPct}%` : ''}`}>
-      {set.count === 0 ? (
-        <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No FDO stage-day breakdown yet — it arrives with the next Detail View upload.</Text>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
-          {cards.map((c) => (
-            <div key={c.key} style={{ border: '1px solid var(--colorNeutralStroke2)', borderRadius: 6, padding: 8, textAlign: 'center' }}>
-              <div style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)', minHeight: 28 }}>{c.label}</div>
-              <div style={{ fontSize: 12 }}>Target <b>{c.target}</b></div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: c.over == null ? undefined : c.over > 0 ? 'var(--colorPaletteRedForeground1)' : 'var(--colorPaletteGreenForeground1)' }}>
-                {c.actual ?? '—'}
-              </div>
-              {c.over != null && (
-                <div style={{ fontSize: 11, color: c.over > 0 ? 'var(--colorPaletteRedForeground1)' : 'var(--colorPaletteGreenForeground1)' }}>
-                  {c.over > 0 ? `${c.over} days over` : c.over < 0 ? `${-c.over} days under` : 'on target'}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </Panel>
   )
 }
 
@@ -268,8 +209,6 @@ function TrendsSection({ region, basis, setBasis, granularity, setGranularity, m
 export function AnalyticsPage() {
   const { region } = useRegion()
   const { data, loading, error, reload } = useAsync(() => api.analytics(region), [region])
-  const [excludeStrategic, setExcludeStrategic] = useState(false)
-  const velocity = useAsync(() => api.stageVelocity(region, undefined, excludeStrategic), [region, excludeStrategic])
 
   const [basis, setBasis] = useState('completed')
   const [granularity, setGranularity] = useState('month')
@@ -318,20 +257,9 @@ export function AnalyticsPage() {
 
       <AttainmentSection region={region} />
 
-      {velocity.data && (
-        <Section title="Stage Duration vs SLA (avg. business days, FDO)" full>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <Switch label="Exclude Strategic Pilot (all non-Standard classifications)" checked={excludeStrategic} onChange={(_, d) => setExcludeStrategic(d.checked)} />
-            <Text size={300}>
-              Total <b>{velocity.data.inFlight.count + velocity.data.completed.count}</b> waves
-              <span style={{ color: 'var(--colorNeutralForeground3)' }}> · {velocity.data.inFlight.count} in-flight · {velocity.data.completed.count} completed</span>
-            </Text>
-          </div>
-          <StageVelocityPanel title="In-flight" set={velocity.data.inFlight} />
-          <StageVelocityPanel title="Completed" set={velocity.data.completed} />
-          <VelocityTrendPanel quarters={velocity.data.byQuarter} months={velocity.data.byMonth} />
-        </Section>
-      )}
+      <Text size={300}>
+        Stage duration vs SLA and Average Velocity moved to <RouterLink to="/velocity">Velocity Analytics</RouterLink>.
+      </Text>
 
       <TrendsSection
         region={region}

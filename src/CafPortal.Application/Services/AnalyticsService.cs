@@ -27,17 +27,44 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
 
     /// <summary>FDO "Stage Duration vs SLA": per-stage average business days vs the stage target (Configuration → Stage
     /// targets). Completed waves average every stage (0 = skipped); in-flight waves average only stages already reached.
-    /// Overall actual = sum of stage averages, overall target = sum of targets (FDO card convention). All waves by default;
-    /// <paramref name="excludeStrategic"/> limits it to Standard work (strategic is governed by days-in-flight).</summary>
-    public async Task<StageVelocityDto> GetStageVelocityAsync(string? region, int? fy, bool excludeStrategic = false, CancellationToken ct = default)
+    /// Overall actual = avg FDO Total Days, overall target = sum of targets (FDO card convention). All waves by default;
+    /// <see cref="VelocityFilter.ExcludeStrategic"/> limits it to Standard work (strategic is governed by days-in-flight).</summary>
+    public async Task<StageVelocityDto> GetStageVelocityAsync(string? region, VelocityFilter f, CancellationToken ct = default)
     {
         var settings = await SettingsCatalog.ReadAsync(_db, ct);
         var targets = Enumerable.Range(1, 4).Select(s => NominationRules.StageTarget(settings, s)).ToArray();
-        var all = (await _nominations.GetAsync(region, status: null, ct))
-            .Where(n => !excludeStrategic || !n.IsStrategic).ToList();
-        var noms = all
-            .Where(n => (fy is null || n.FiscalYear == fy) && n.FdoStageDays.Any(d => d != null))
-            .ToList();
+        var completed = NominationStatusType.Completed.ToDisplay();
+        var scoped = (await _nominations.GetAsync(region, status: null, ct)).Where(n => n.FdoStageDays.Any(d => d != null)).ToList();
+        var accountIds = scoped.Where(n => n.AccountId != null).Select(n => n.AccountId!.Value).Distinct().ToList();
+        var segByAccount = await _db.Accounts.AsNoTracking()
+            .Where(a => accountIds.Contains(a.AccountId))
+            .Select(a => new { a.AccountId, a.Segment })
+            .ToDictionaryAsync(a => a.AccountId, a => a.Segment, ct);
+        string Seg(NominationDto n) => n.AccountId is int id && segByAccount.TryGetValue(id, out var s) && !string.IsNullOrWhiteSpace(s) ? s! : "Unspecified";
+        static string Path(NominationDto n) => string.IsNullOrWhiteSpace(n.PrimaryMigrationPath) ? "Unspecified" : n.PrimaryMigrationPath!;
+        static bool Eq(string? a, string? b) => string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        // In-flight = Approved and not settled; Completed waves were approved by definition (the completed-only FDO drop has no approval column).
+        bool InScope(NominationDto n) => n.Status == completed
+            || (!n.IsSettled && string.Equals(n.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase));
+        var universe = scoped.Where(InScope).ToList();
+        var options = new VelocityOptions
+        {
+            Segments = universe.Select(Seg).Distinct().OrderBy(x => x).ToList(),
+            Paths = universe.Select(Path).Distinct().OrderBy(x => x).ToList(),
+            Sas = universe.Select(n => n.SolutionArchitect?.Trim()).Where(x => !string.IsNullOrEmpty(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList()!,
+            Pms = universe.Select(n => n.ProjectCoordinator?.Trim()).Where(x => !string.IsNullOrEmpty(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList()!,
+            NonStandard = universe.Count(n => n.IsStrategic),
+        };
+
+        // Every filter except FY (the period trend has its own FY scope).
+        var all = universe.Where(n => (!f.ExcludeStrategic || !n.IsStrategic)
+            && (string.IsNullOrWhiteSpace(f.Segment) || Eq(Seg(n), f.Segment))
+            && (string.IsNullOrWhiteSpace(f.Path) || Eq(Path(n), f.Path))
+            && (string.IsNullOrWhiteSpace(f.Sa) || Eq(n.SolutionArchitect, f.Sa))
+            && (string.IsNullOrWhiteSpace(f.Pm) || Eq(n.ProjectCoordinator, f.Pm))
+            && (f.Stage is null || n.StageIndex == f.Stage)).ToList();
+        var noms = all.Where(n => f.Fy is null || n.FiscalYear == f.Fy).ToList();
 
         StageVelocitySet Build(List<NominationDto> set, bool reachedOnly)
         {
@@ -66,9 +93,6 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             };
         }
 
-        // Completed waves were approved by definition (the completed-only FDO drop carries no approval column).
-        var completed = NominationStatusType.Completed.ToDisplay();
-
         // Period trend: completed waves bucketed by actual end date (not FY-filtered — periods are their own scope).
         var done = all.Where(n => n.Status == completed && n.FdoTotalDays != null && n.ActualEndDate != null).ToList();
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -94,15 +118,27 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
                 }).ToList();
         }
 
-        // Quarters of the current fiscal year (FY starts Jul 1); months = last + current.
-        var fyStart = new DateOnly(FiscalCalendar.FiscalYear(today) - 1, 7, 1);
+        // Quarters of the selected (else current) fiscal year (FY starts Jul 1); months = last + current.
+        var fyStart = new DateOnly((f.Fy ?? FiscalCalendar.FiscalYear(today)) - 1, 7, 1);
+        var inFlight = noms.Where(n => n.Status != completed).ToList();
+        var completedSet = noms.Where(n => n.Status == completed).ToList();
         return new StageVelocityDto
         {
             ByQuarter = Periods("quarter", Enumerable.Range(0, 4).Select(q => fyStart.AddMonths(q * 3))),
             ByMonth = Periods("month", new[] { today.AddMonths(-1), today }),
-            InFlight = Build(noms.Where(n => !n.IsSettled
-                && string.Equals(n.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)).ToList(), reachedOnly: true),
-            Completed = Build(noms.Where(n => n.Status == completed).ToList(), reachedOnly: false),
+            InFlight = Build(inFlight, reachedOnly: true),
+            Completed = Build(completedSet, reachedOnly: false),
+            Options = options,
+            Waves = noms.Select(n => new VelocityWave
+            {
+                NominationId = n.Id, AccountName = n.AccountName, Tpid = n.Tpid,
+                Set = n.Status == completed ? "Completed" : "In-flight", StageIndex = n.StageIndex,
+                Segment = Seg(n), Path = Path(n), Sa = n.SolutionArchitect, Pm = n.ProjectCoordinator,
+                Classification = n.Classification, StageDays = n.FdoStageDays, TotalDays = n.FdoTotalDays,
+                TargetDays = n.VelocityTargetDays,
+                VelocityPct = n.Velocity is { } v ? (int)Math.Round(v * 100, MidpointRounding.AwayFromZero) : null,
+                Tone = n.VelocityTone, ActualEndDate = n.ActualEndDate,
+            }).ToList(),
         };
     }
 

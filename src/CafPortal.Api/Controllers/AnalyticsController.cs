@@ -1,4 +1,5 @@
 using CafPortal.Application.Abstractions;
+using CafPortal.Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CafPortal.Api.Controllers;
@@ -33,6 +34,8 @@ public class AnalyticsController(IAnalyticsService analytics) : ControllerBase
         => Ok(await analytics.GetAcrCaptureAsync(region, ct));
 
     [HttpGet("stage-velocity")]
-    public async Task<IActionResult> StageVelocity([FromQuery] string? region, [FromQuery] int? fy = null, [FromQuery] bool excludeStrategic = false, CancellationToken ct = default)
-        => Ok(await analytics.GetStageVelocityAsync(region, fy, excludeStrategic, ct));
+    public async Task<IActionResult> StageVelocity([FromQuery] string? region, [FromQuery] int? fy = null, [FromQuery] bool excludeStrategic = false,
+        [FromQuery] string? segment = null, [FromQuery] string? path = null, [FromQuery] string? sa = null, [FromQuery] string? pm = null,
+        [FromQuery] int? stage = null, CancellationToken ct = default)
+        => Ok(await analytics.GetStageVelocityAsync(region, new VelocityFilter(fy, excludeStrategic, segment, path, sa, pm, stage), ct));
 }

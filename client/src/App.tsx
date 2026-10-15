@@ -8,6 +8,7 @@ import { RulesPage } from './pages/RulesPage'
 import { GateTemplatePage } from './pages/GateTemplatePage'
 import { HelpPage } from './pages/HelpPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
+import { VelocityPage } from './pages/VelocityPage'
 import { AcrRecoveryPage } from './pages/AcrRecoveryPage'
 import { BackupPage } from './pages/BackupPage'
 import { CapacityPage } from './pages/CapacityPage'
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
+      { path: 'velocity', element: <VelocityPage /> },
       { path: 'acr-recovery', element: <AcrRecoveryPage /> },
       { path: 'resources', element: <ResourcesPage /> },
       { path: 'accounts', element: <AccountsPage /> },
