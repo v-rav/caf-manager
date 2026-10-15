@@ -5,7 +5,7 @@ public class StageVelocityDto
 {
     public StageVelocitySet InFlight { get; set; } = new();
     public StageVelocitySet Completed { get; set; } = new();
-    /// <summary>Completed-wave velocity per fiscal quarter (last 4, oldest first) by actual end date.</summary>
+    /// <summary>Completed-wave velocity per quarter of the current fiscal year (Q1–Q4) by actual end date.</summary>
     public List<VelocityPeriod> ByQuarter { get; set; } = new();
     /// <summary>Last month and current month.</summary>
     public List<VelocityPeriod> ByMonth { get; set; } = new();
@@ -16,6 +16,7 @@ public class VelocityPeriod
     public string Key { get; set; } = string.Empty;
     public string Label { get; set; } = string.Empty;
     public bool IsCurrent { get; set; }
+    public bool IsFuture { get; set; }
     public int Count { get; set; }
     public int? AvgDays { get; set; }
     public int Target { get; set; }

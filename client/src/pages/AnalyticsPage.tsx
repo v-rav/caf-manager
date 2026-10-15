@@ -42,7 +42,7 @@ function VelocityTrendPanel({ quarters, months }: { quarters: VelocityPeriod[]; 
             <div style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)' }}>{p.label}{p.isCurrent ? ' · current' : ''}</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: p.tone ? tone[p.tone] : undefined }}>{p.velocityPct != null ? `${p.velocityPct}%` : '—'}</div>
             <div style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)' }}>
-              {p.count ? `${p.count} waves · avg ${p.avgDays}d / ${p.target}d` : 'no completions'}
+              {p.isFuture ? 'upcoming' : p.count ? `${p.count} waves · avg ${p.avgDays}d / ${p.target}d` : 'no completions'}
             </div>
           </div>
         ))}
@@ -51,7 +51,7 @@ function VelocityTrendPanel({ quarters, months }: { quarters: VelocityPeriod[]; 
   )
   return (
     <Panel title="Velocity trend · completed waves (allocated ÷ FDO Total Days)">
-      <Row title="Fiscal quarters" items={quarters} />
+      <Row title="Current fiscal year" items={quarters} />
       <Row title="Months" items={months} />
     </Panel>
   )

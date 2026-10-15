@@ -72,11 +72,11 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         var done = all.Where(n => n.Status == completed && !n.IsStrategic && n.FdoTotalDays != null && n.ActualEndDate != null).ToList();
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var allocated = targets.Sum();
-        List<VelocityPeriod> Periods(string granularity, int count, int monthsPerStep)
+        List<VelocityPeriod> Periods(string granularity, IEnumerable<DateOnly> dates)
         {
-            var current = FiscalCalendar.Bucket(today, granularity).Key;
-            return Enumerable.Range(0, count).Reverse()
-                .Select(i => FiscalCalendar.Bucket(today.AddMonths(-i * monthsPerStep), granularity))
+            var current = FiscalCalendar.Bucket(today, granularity);
+            return dates
+                .Select(d => FiscalCalendar.Bucket(d, granularity))
                 .DistinctBy(b => b.Key)
                 .Select(b =>
                 {
@@ -85,17 +85,20 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
                     double? v = avg is > 0 ? (double)allocated / avg.Value : null;
                     return new VelocityPeriod
                     {
-                        Key = b.Key, Label = b.Label, IsCurrent = b.Key == current, Count = inBucket.Count, AvgDays = avg,
-                        Target = allocated, VelocityPct = v is { } x ? (int)Math.Round(x * 100, MidpointRounding.AwayFromZero) : null,
+                        Key = b.Key, Label = b.Label, IsCurrent = b.Key == current.Key, IsFuture = b.Sort > current.Sort,
+                        Count = inBucket.Count, AvgDays = avg, Target = allocated,
+                        VelocityPct = v is { } x ? (int)Math.Round(x * 100, MidpointRounding.AwayFromZero) : null,
                         Tone = v is { } t ? NominationRules.VelocityTone(t, settings) : null,
                     };
                 }).ToList();
         }
 
+        // Quarters of the current fiscal year (FY starts Jul 1); months = last + current.
+        var fyStart = new DateOnly(FiscalCalendar.FiscalYear(today) - 1, 7, 1);
         return new StageVelocityDto
         {
-            ByQuarter = Periods("quarter", 4, 3),
-            ByMonth = Periods("month", 2, 1),
+            ByQuarter = Periods("quarter", Enumerable.Range(0, 4).Select(q => fyStart.AddMonths(q * 3))),
+            ByMonth = Periods("month", new[] { today.AddMonths(-1), today }),
             InFlight = Build(noms.Where(n => !n.IsSettled
                 && string.Equals(n.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)).ToList(), reachedOnly: true),
             Completed = Build(noms.Where(n => n.Status == completed).ToList(), reachedOnly: false),
