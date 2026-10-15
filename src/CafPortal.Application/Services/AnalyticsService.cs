@@ -50,7 +50,9 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
                     Actual = actual, Over = actual - targets[s - 1], Count = vals.Count,
                 };
             }).ToList();
-            var overallActual = rows.All(r => r.Actual is null) ? (int?)null : rows.Sum(r => r.Actual ?? 0);
+            // Overall actual = average of FDO's own Total Days field (not the sum of stage averages).
+            var totals = set.Where(n => n.FdoTotalDays != null).Select(n => n.FdoTotalDays!.Value).ToList();
+            int? overallActual = totals.Count > 0 ? (int)Math.Round(totals.Average(), MidpointRounding.AwayFromZero) : null;
             var overallTarget = targets.Sum();
             double? vel = overallActual is > 0 ? (double)overallTarget / overallActual.Value : null;
             return new StageVelocitySet
