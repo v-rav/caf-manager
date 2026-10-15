@@ -1,6 +1,7 @@
 import { Badge, Button } from '@fluentui/react-components'
 import { ArrowDownloadRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
 import { ErrorText, FilterSelect, Loading, Panel, SaWorkloadList } from '../components/common'
@@ -8,7 +9,7 @@ import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
 import { downloadCsv } from '../export'
-import type { Blocker, Nomination } from '../types'
+import type { Nomination } from '../types'
 
 const stageIdx = (n: Nomination): number => n.stageIndex ?? 0
 const STAGE_LABELS = ['—', 'Validating', 'Prerequisites', 'Finalize Scope', 'Executing Migration']
@@ -33,7 +34,6 @@ export function FlowPage() {
   const { region } = useRegion()
   const { fy } = useFy()
   const noms = useAsync(() => api.nominations(region), [region])
-  const blk = useAsync(() => api.openBlockers(region), [region])
   const [path, setPath] = useState('')
 
   const scoped = useMemo(() => (noms.data ?? []).filter((n) => n.status !== 'Withdrawn' && nominationInFy(n, fy)), [noms.data, fy])
@@ -92,11 +92,13 @@ export function FlowPage() {
     return { rows, worstK: worst?.k }
   }, [approved])
 
-  const byBlockerCategory = useMemo(() => {
+  // Why in-flight waves are stuck: FDO Current State (Blocked/Waiting) grouped by the suggested reason.
+  const byStuckReason = useMemo(() => {
     const m = new Map<string, number>()
-    for (const b of (blk.data ?? []) as Blocker[]) m.set(b.category, (m.get(b.category) ?? 0) + 1)
+    for (const n of approved.filter((n) => !completed(n) && (n.healthBucket === 'Blocked' || n.healthBucket === 'Waiting')))
+      m.set(n.suggestedBlockerReason ?? 'Unspecified', (m.get(n.suggestedBlockerReason ?? 'Unspecified') ?? 0) + 1)
     return [...m.entries()].sort((a, b) => b[1] - a[1])
-  }, [blk.data])
+  }, [approved])
 
   const byPath = useMemo(() => {
     const m = new Map<string, { count: number; age: number; std: number }>()
@@ -111,7 +113,7 @@ export function FlowPage() {
       .sort((a, b) => b.count - a.count)
   }, [approved])
 
-  if ((noms.loading && !noms.data) || (blk.loading && !blk.data)) return <Loading label="Loading migration flow…" />
+  if (noms.loading && !noms.data) return <Loading label="Loading migration flow…" />
   if (noms.error) return <ErrorText error={noms.error} onRetry={noms.reload} />
 
   return (
@@ -155,12 +157,12 @@ export function FlowPage() {
           </div>
         </Panel>
 
-        <Panel title="Customer dependencies (open blockers by category)">
-          {byBlockerCategory.length === 0 ? (
-            <span style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>No open blockers.</span>
+        <Panel title="Why waves are stuck (FDO blocked / waiting)" action={<RouterLink to="/governance">Governance Board ›</RouterLink>}>
+          {byStuckReason.length === 0 ? (
+            <span style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>Nothing blocked or waiting.</span>
           ) : (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {byBlockerCategory.map(([c, n]) => <Badge key={c} appearance="tint" color="warning">{c} · {n}</Badge>)}
+              {byStuckReason.map(([c, n]) => <Badge key={c} appearance="tint" color="warning">{c} · {n}</Badge>)}
             </div>
           )}
         </Panel>

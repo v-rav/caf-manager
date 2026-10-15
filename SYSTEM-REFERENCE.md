@@ -313,15 +313,18 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
 
 ### 5.2b Velocity (FDO "Stage Duration vs SLA")
 * **Per nomination:** `Velocity = allocated target days ÷ FDO business days` (completed: all 4 stages vs Σ `StageTargetDays1..4`;
-  in-flight: stages 1..current), shown as % — 100% = on target, higher = faster, lower = slower; blank when 0 days. Tone from
+  in-flight: earlier stages in full + **min(target, days so far)** for the current stage, so a partly-elapsed stage isn't
+  credited its whole allowance), shown as % — 100% = on target, higher = faster, lower = slower; blank when 0 days. Tone from
   ⚙️ `VelocityAmberBelowPct` (100) / `VelocityRedBelowPct` (80). Null without an FDO stage breakdown. Shown in the Strategic Register and the
   Nominations Summary hover.
-* **Velocity Analytics page** (`/velocity`, Overview nav, Admin/Lead; `GET /api/analytics/stage-velocity?region=&fy=&excludeStrategic=&stage=&segment=&path=&sa=&pm=`):
-  per stage target vs average actual + days over/under; overall actual = avg FDO Total Days, overall target = Σ targets
-  (FDO Power BI convention). Completed = all completed waves (0 = skipped stage); in-flight = Approved, averaged over
-  stages reached. **All waves by default** (matches FDO); the **Exclude Strategic Pilot** switch limits everything to
-  Standard work. Filters Set · Stage · Segment · Path · SA · PM (+ header Region/FY); Average Velocity per quarter of the
-  selected FY + last/current month; per-wave table (`Waves`) + CSV. Filter vocabularies come back as `Options`.
+* **FDO days check** (`FdoDaysExpected`): when FDO Total Days differs from the business days between actual start and actual
+  end (else today) by more than ⚙️ `FdoDaysGapPct` (50%), the wave is flagged "⚠ check FDO days" (min 10 business days to judge).
+* **Velocity Analytics page** (`/velocity`, Overview nav, Admin/Lead; `GET /api/analytics/stage-velocity?region=&fy=&excludeStrategic=&classification=&stage=&segment=&path=&sa=&pm=&set=&quality=ok|suspect`):
+  per stage target vs average actual + days over/under; set velocity = Σ per-wave allowance ÷ Σ FDO days (completed waves
+  all have the full allowance, so this equals FDO's Σ targets ÷ avg Total Days). Completed = all completed waves (0 = skipped stage); in-flight = Approved, averaged over
+  stages reached. **All waves by default** (matches FDO). Faceted filters Set · Stage · Segment · Path · SA · PM · Classification
+  (incl. "Exclude Strategic Pilot") · **FDO days** (exclude / only flagged) (+ header Region/FY); "⚠ Check FDO days" KPI;
+  Average Velocity per quarter of the selected FY + last/current month; per-wave table (`Waves`) + CSV. Filter vocabularies come back as `Options`.
 
 ### 5.3 SLA stale tier (Warn / Escalate / Defer)
 * **Applies to Stages 2–4 only (🔒)** and only to non-settled, started rows.

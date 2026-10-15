@@ -59,7 +59,9 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             && (skip == "sa" || string.IsNullOrWhiteSpace(f.Sa) || Eq(n.SolutionArchitect, f.Sa))
             && (skip == "pm" || string.IsNullOrWhiteSpace(f.Pm) || Eq(n.ProjectCoordinator, f.Pm))
             && (skip == "stage" || f.Stage is null || n.StageIndex == f.Stage)
-            && (skip == "set" || string.IsNullOrWhiteSpace(f.Set) || Eq(SetOf(n), f.Set));
+            && (skip == "set" || string.IsNullOrWhiteSpace(f.Set) || Eq(SetOf(n), f.Set))
+            && (skip == "quality" || string.IsNullOrWhiteSpace(f.Quality)
+                || (Eq(f.Quality, "ok") && n.FdoDaysExpected is null) || (Eq(f.Quality, "suspect") && n.FdoDaysExpected is not null));
         var inFy = universe.Where(n => f.Fy is null || n.FiscalYear == f.Fy).ToList();
         List<string> Facet(string dim, Func<NominationDto, string?> pick) => inFy.Where(n => Match(n, dim))
             .Select(n => string.Join(' ', (pick(n) ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries)))
@@ -75,6 +77,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
             Classifications = Facet("class", n => n.Classification),
             Stages = inFy.Where(n => Match(n, "stage") && n.StageIndex != null).Select(n => n.StageIndex!.Value).Distinct().Order().ToList(),
             NonStandard = inFy.Count(n => n.IsStrategic),
+            SuspectFdoDays = inFy.Count(n => Match(n, "quality") && n.FdoDaysExpected is not null),
         };
 
         // Every filter except FY and Set (the period trend has its own FY scope and is completed-only).
@@ -94,11 +97,12 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
                     Actual = actual, Over = actual - targets[s - 1], Count = vals.Count,
                 };
             }).ToList();
-            // Overall actual = average of FDO's own Total Days field (not the sum of stage averages).
-            var totals = set.Where(n => n.FdoTotalDays != null).Select(n => n.FdoTotalDays!.Value).ToList();
-            int? overallActual = totals.Count > 0 ? (int)Math.Round(totals.Average(), MidpointRounding.AwayFromZero) : null;
-            var overallTarget = targets.Sum();
-            double? vel = overallActual is > 0 ? (double)overallTarget / overallActual.Value : null;
+            // Overall actual = average of FDO's own Total Days; allocation = average per-wave allowance (completed: all four
+            // targets; in-flight: only the stages reached so far). Velocity = Σ allowance ÷ Σ days.
+            var paired = set.Where(n => n.VelocityDays is > 0 && n.VelocityTargetDays is > 0).ToList();
+            int? overallActual = paired.Count > 0 ? (int)Math.Round(paired.Average(n => n.VelocityDays!.Value), MidpointRounding.AwayFromZero) : null;
+            var overallTarget = paired.Count > 0 ? (int)Math.Round(paired.Average(n => n.VelocityTargetDays!.Value), MidpointRounding.AwayFromZero) : targets.Sum();
+            double? vel = paired.Count > 0 ? (double)paired.Sum(n => n.VelocityTargetDays!.Value) / paired.Sum(n => n.VelocityDays!.Value) : null;
             return new StageVelocitySet
             {
                 Count = set.Count, Stages = rows, OverallTarget = overallTarget,
@@ -152,7 +156,7 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
                 Classification = n.Classification, StageDays = n.FdoStageDays, TotalDays = n.FdoTotalDays,
                 TargetDays = n.VelocityTargetDays,
                 VelocityPct = n.Velocity is { } v ? (int)Math.Round(v * 100, MidpointRounding.AwayFromZero) : null,
-                Tone = n.VelocityTone, ActualEndDate = n.ActualEndDate,
+                Tone = n.VelocityTone, ActualEndDate = n.ActualEndDate, FdoDaysExpected = n.FdoDaysExpected,
             }).ToList(),
         };
     }

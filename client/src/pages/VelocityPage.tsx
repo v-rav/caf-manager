@@ -1,4 +1,4 @@
-import { Badge, Button, Text } from '@fluentui/react-components'
+import { Badge, Button, Text, Tooltip } from '@fluentui/react-components'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
@@ -13,6 +13,7 @@ import type { StageVelocitySet, VelocityPeriod, VelocityWave } from '../types'
 
 const STAGES = ['1 · Validating', '2 · Pre-Requisites', '3 · Finalize Scope', '4 · Executing Migration']
 const EXCLUDE_NON_STANDARD = 'Exclude Strategic Pilot (non-Standard)'
+const QUALITY: Record<string, string | undefined> = { 'Exclude ⚠ check FDO days': 'ok', 'Only ⚠ check FDO days': 'suspect' }
 const TONE = { success: 'var(--colorPaletteGreenForeground1)', warning: 'var(--colorPaletteDarkOrangeForeground1)', danger: 'var(--colorPaletteRedForeground1)' }
 
 // Velocity (allocated ÷ avg FDO Total Days) of waves completed in each period, by actual end date.
@@ -83,17 +84,19 @@ export function VelocityPage() {
   const [sa, setSa] = useState('')
   const [pm, setPm] = useState('')
   const [set, setSet] = useState('')
+  const [quality, setQuality] = useState('')
 
   const stageNo = stage ? STAGES.indexOf(stage) + 1 : undefined
   const excludeStrategic = cls === EXCLUDE_NON_STANDARD
   const classification = excludeStrategic ? '' : cls
+  const q = QUALITY[quality]
   const { data, loading, error, reload } = useAsync(
-    () => api.stageVelocity(region, { fy: fy === 'all' ? undefined : fy, excludeStrategic, classification, stage: stageNo, segment, path, sa, pm, set }),
-    [region, fy, excludeStrategic, classification, stageNo, segment, path, sa, pm, set],
+    () => api.stageVelocity(region, { fy: fy === 'all' ? undefined : fy, excludeStrategic, classification, stage: stageNo, segment, path, sa, pm, set, quality: q }),
+    [region, fy, excludeStrategic, classification, stageNo, segment, path, sa, pm, set, q],
   )
   const waves = data?.waves ?? []
-  const anyFilter = cls || stage || segment || path || sa || pm || set
-  const reset = () => { setCls(''); setStage(''); setSegment(''); setPath(''); setSa(''); setPm(''); setSet('') }
+  const anyFilter = cls || stage || segment || path || sa || pm || set || quality
+  const reset = () => { setCls(''); setStage(''); setSegment(''); setPath(''); setSa(''); setPm(''); setSet(''); setQuality('') }
 
   const columns: Column<VelocityWave>[] = [
     { key: 'account', header: 'Account', minWidth: 200, sortValue: (w) => w.accountName ?? '',
@@ -105,7 +108,17 @@ export function VelocityPage() {
     { key: 'segment', header: 'Segment', sortValue: (w) => w.segment ?? '' },
     { key: 'path', header: 'Path', sortValue: (w) => w.path ?? '' },
     { key: 'days', header: 'S1 · S2 · S3 · S4', render: (w) => w.stageDays.map((d) => d ?? '–').join(' · ') },
-    { key: 'total', header: 'Total days', align: 'end', sortValue: (w) => w.totalDays ?? -1 },
+    { key: 'total', header: 'Total days', align: 'end', sortValue: (w) => w.totalDays ?? -1,
+      render: (w) => (
+        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+          {w.totalDays ?? '—'}
+          {w.fdoDaysExpected != null && (
+            <Tooltip relationship="description" content={`Dates suggest ~${w.fdoDaysExpected} business days (actual start → end/today). FDO stage days look incomplete — ask the SA to correct them in FDO.`}>
+              <Badge appearance="tint" color="warning">⚠ check FDO</Badge>
+            </Tooltip>
+          )}
+        </span>
+      ) },
     { key: 'target', header: 'Allocated', align: 'end', sortValue: (w) => w.targetDays ?? -1 },
     { key: 'vel', header: 'Velocity', align: 'end', sortValue: (w) => w.velocityPct ?? -1,
       render: (w) => w.velocityPct != null
@@ -130,6 +143,7 @@ export function VelocityPage() {
       { header: 'S3 days', value: (w) => w.stageDays[2] ?? '' },
       { header: 'S4 days', value: (w) => w.stageDays[3] ?? '' },
       { header: 'Total days', value: (w) => w.totalDays ?? '' },
+      { header: 'Dates suggest (business days)', value: (w) => w.fdoDaysExpected ?? '' },
       { header: 'Allocated days', value: (w) => w.targetDays ?? '' },
       { header: 'Velocity %', value: (w) => w.velocityPct ?? '' },
       { header: 'Actual end', value: (w) => w.actualEndDate ?? '' },
@@ -166,6 +180,13 @@ export function VelocityPage() {
           onChange={setCls}
           minWidth={220}
         />
+        <FilterSelect
+          label={`FDO days${o ? ` · ${o.suspectFdoDays} to check` : ''}`}
+          value={quality}
+          options={Object.keys(QUALITY)}
+          onChange={setQuality}
+          minWidth={200}
+        />
         {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
         {loading && data && <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>Updating…</Text>}
       </div>
@@ -182,6 +203,8 @@ export function VelocityPage() {
               tone={data.inFlight.overallVelocityTone ?? 'neutral'} />
             <KpiCard label="Completed avg days / allocated" value={data.completed.overallActual != null ? `${data.completed.overallActual}d / ${data.completed.overallTarget}d` : '—'} />
             <KpiCard label="Completed at/above target" value={done.length ? `${atTarget} · ${Math.round((atTarget / done.length) * 100)}%` : '—'} tone="brand" />
+            <KpiCard label="⚠ Check FDO days" value={String(waves.filter((w) => w.fdoDaysExpected != null).length)} tone="warning"
+              onClick={() => setQuality('Only ⚠ check FDO days')} />
           </div>
 
           {(set === '' || set === 'In-flight') && <StageVelocityPanel title="In-flight" set={data.inFlight} />}

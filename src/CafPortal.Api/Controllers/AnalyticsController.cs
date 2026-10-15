@@ -36,6 +36,7 @@ public class AnalyticsController(IAnalyticsService analytics) : ControllerBase
     [HttpGet("stage-velocity")]
     public async Task<IActionResult> StageVelocity([FromQuery] string? region, [FromQuery] int? fy = null, [FromQuery] bool excludeStrategic = false,
         [FromQuery] string? segment = null, [FromQuery] string? path = null, [FromQuery] string? sa = null, [FromQuery] string? pm = null,
-        [FromQuery] int? stage = null, [FromQuery] string? set = null, [FromQuery] string? classification = null, CancellationToken ct = default)
-        => Ok(await analytics.GetStageVelocityAsync(region, new VelocityFilter(fy, excludeStrategic, segment, path, sa, pm, stage, set, classification), ct));
+        [FromQuery] int? stage = null, [FromQuery] string? set = null, [FromQuery] string? classification = null, [FromQuery] string? quality = null,
+        CancellationToken ct = default)
+        => Ok(await analytics.GetStageVelocityAsync(region, new VelocityFilter(fy, excludeStrategic, segment, path, sa, pm, stage, set, classification, quality), ct));
 }

@@ -27,6 +27,8 @@ public class NominationDto
     public int? VelocityDays { get; set; }
     public int? VelocityTargetDays { get; set; }
     public string? VelocityTone { get; set; }
+    /// <summary>Business days between actual start and end (or today) when FDO Total Days is implausibly far from it; else null.</summary>
+    public int? FdoDaysExpected { get; set; }
     public string? CurrentState { get; set; }
     public string? SolutionArchitect { get; set; }
     public string? CftlPrimary { get; set; }

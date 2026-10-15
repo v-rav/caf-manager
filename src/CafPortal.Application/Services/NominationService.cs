@@ -128,9 +128,10 @@ public class NominationService(IApplicationDbContext db) : INominationService
             var stage = NominationRules.StageIndex(n.MigrationStatus);
             var isUpcoming = !NominationRules.IsSettled(n.Status) && (n.ActualStartDate ?? n.PlannedStartDate) > upcomingAfter;
             var fdoStages = new[] { n.FdoStage1Days, n.FdoStage2Days, n.FdoStage3Days, n.FdoStage4Days };
-            // Days = FDO Total Days; allocation = configured stage targets (all 4 when completed, 1..current in flight).
-            var velocity = NominationRules.Velocity(fdoStages,
-                n.Status == NominationStatusType.Completed ? 4 : stage ?? 0, settings, n.FdoTotalDays);
+            // Days = FDO Total Days; allocation = configured stage targets (all 4 when completed; in flight, stages before the
+            // current one in full plus the elapsed part of the current stage).
+            var completedWave = n.Status == NominationStatusType.Completed;
+            var velocity = NominationRules.Velocity(fdoStages, completedWave ? 4 : stage ?? 0, settings, n.FdoTotalDays, inFlight: !completedWave);
             var effectiveGhcp = ToolActivityClassifier.EffectiveLevel(
                 n.GhcpAdoptionLevel, n.IsToolAttached,
                 activitiesByNom.TryGetValue(n.Id, out var acts) ? acts : System.Array.Empty<string>());
@@ -176,6 +177,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 VelocityDays = velocity?.Days,
                 VelocityTargetDays = velocity?.Target,
                 VelocityTone = velocity is { Days: > 0 } vt ? NominationRules.VelocityTone((double)vt.Target / vt.Days, settings) : null,
+                FdoDaysExpected = NominationRules.FdoDaysExpected(n.FdoTotalDays, n.ActualStartDate, flightEnd, settings),
                 CurrentState = n.CurrentState,
                 SolutionArchitect = n.SolutionArchitect,
                 CftlPrimary = n.CftlPrimary,

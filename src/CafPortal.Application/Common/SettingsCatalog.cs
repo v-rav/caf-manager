@@ -65,6 +65,8 @@ public static class SettingsCatalog
             "Velocity below this % shows amber (100% = exactly on target; higher = faster)"),
         new("VelocityRedBelowPct", "Velocity (target ÷ actual)", "Red below (%)", "80", 10, 200, true,
             "Velocity below this % shows red"),
+        new("FdoDaysGapPct", "Velocity (target ÷ actual)", "Flag FDO days off by more than (%)", "50", 10, 500, true,
+            "FDO Total Days differing from the business days between actual start and end (or today) by more than this % are flagged 'check FDO days'"),
 
         new("LeaveClashWindowDays", "Resourcing", "Leave-clash window (days)", "30", 1, 365, true,
             "Upcoming-leave window used to detect coverage clashes"),

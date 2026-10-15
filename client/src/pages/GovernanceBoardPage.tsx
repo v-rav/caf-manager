@@ -1,6 +1,6 @@
 import { Badge, Button, Text } from '@fluentui/react-components'
 import { useCallback, useMemo, useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { DataTable, type Column } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
@@ -34,7 +34,8 @@ export function GovernanceBoardPage() {
   const { fy } = useFy()
   const noms = useAsync(() => api.nominations(region), [region])
   const legacy = useAsync(() => api.openBlockers(region), [region])
-  const [f, setF] = useState<Record<Dim, string>>(EMPTY)
+  const [params] = useSearchParams()
+  const [f, setF] = useState<Record<Dim, string>>(() => ({ ...EMPTY, tier: params.get('sla') ?? '', health: params.get('status') ?? '' }))
   const [busy, setBusy] = useState(false)
   const setDim = (d: Dim) => (v: string) => setF((s) => ({ ...s, [d]: v }))
 

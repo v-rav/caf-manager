@@ -42,13 +42,19 @@ public static class NominationRules
         };
 
     /// <summary>Velocity inputs: (days spent, allocated target days) over stages 1..upToStage. <paramref name="fdoTotalDays"/>,
-    /// when given, is FDO's own Total Days and replaces the stage sum as the days spent.</summary>
+    /// when given, is FDO's own Total Days and replaces the stage sum as the days spent. <paramref name="inFlight"/>: the
+    /// current stage is only partly elapsed, so it is allotted min(target, days so far) rather than its full target.</summary>
     public static (int Days, int Target)? Velocity(int?[] stageDays, int upToStage, IReadOnlyDictionary<string, double> settings,
-        int? fdoTotalDays = null)
+        int? fdoTotalDays = null, bool inFlight = false)
     {
         if (upToStage is < 1 or > 4 || (fdoTotalDays is null && stageDays.All(d => d is null))) return null;
         var days = 0; var target = 0;
-        for (var s = 1; s <= upToStage; s++) { days += stageDays[s - 1] ?? 0; target += StageTarget(settings, s); }
+        for (var s = 1; s <= upToStage; s++)
+        {
+            var spent = stageDays[s - 1] ?? 0;
+            days += spent;
+            target += inFlight && s == upToStage ? Math.Min(StageTarget(settings, s), spent) : StageTarget(settings, s);
+        }
         return target > 0 ? (fdoTotalDays ?? days, target) : null;
     }
 
@@ -56,6 +62,29 @@ public static class NominationRules
     public static string VelocityTone(double velocity, IReadOnlyDictionary<string, double> settings) =>
         velocity * 100 < settings["VelocityRedBelowPct"] ? "danger"
         : velocity * 100 < settings["VelocityAmberBelowPct"] ? "warning" : "success";
+
+    /// <summary>Mon–Fri days from <paramref name="from"/> (inclusive) to <paramref name="to"/> (exclusive).</summary>
+    public static int BusinessDays(DateOnly from, DateOnly to)
+    {
+        if (to <= from) return 0;
+        var total = to.DayNumber - from.DayNumber;
+        var weeks = total / 7;
+        var days = weeks * 5;
+        for (var d = from.AddDays(weeks * 7); d < to; d = d.AddDays(1))
+            if (d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)) days++;
+        return days;
+    }
+
+    /// <summary>Business days FDO should roughly report (actual start → actual end, else today) when FDO Total Days is off by
+    /// more than FdoDaysGapPct; null when it looks consistent or can't be checked.</summary>
+    public static int? FdoDaysExpected(int? fdoTotalDays, DateOnly? actualStart, DateOnly end, IReadOnlyDictionary<string, double> settings)
+    {
+        if (fdoTotalDays is null || actualStart is not DateOnly start) return null;
+        var expected = BusinessDays(start, end);
+        if (expected < 10) return null;
+        var gap = Math.Abs(fdoTotalDays.Value - expected) * 100.0 / expected;
+        return gap > settings["FdoDaysGapPct"] ? expected : null;
+    }
 
     /// <summary>Badge tone for how long a blocker has been open (BlockerAgeAmberDays / BlockerAgeRedDays).</summary>
     public static string BlockerAgeTone(int daysBlocked, IReadOnlyDictionary<string, double> settings) =>

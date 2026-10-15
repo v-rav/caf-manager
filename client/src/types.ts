@@ -60,10 +60,10 @@ export interface Effectiveness {
 export interface StageVelocityRow { stage: number; label: string; target: number; actual: number | null; over: number | null; count: number }
 export interface StageVelocitySet { count: number; stages: StageVelocityRow[]; overallTarget: number; overallActual: number | null; overallOver: number | null; overallVelocityPct: number | null; overallVelocityTone: 'success' | 'warning' | 'danger' | null }
 export interface VelocityPeriod { key: string; label: string; isCurrent: boolean; isFuture: boolean; count: number; avgDays: number | null; target: number; velocityPct: number | null; tone: 'success' | 'warning' | 'danger' | null }
-export interface VelocityWave { nominationId: number; accountName: string | null; tpid: string | null; set: 'In-flight' | 'Completed'; stageIndex: number | null; segment: string | null; path: string | null; sa: string | null; pm: string | null; classification: string; stageDays: (number | null)[]; totalDays: number | null; targetDays: number | null; velocityPct: number | null; tone: 'success' | 'warning' | 'danger' | null; actualEndDate: string | null }
-export interface VelocityOptions { segments: string[]; paths: string[]; sas: string[]; pms: string[]; stages: number[]; classifications: string[]; nonStandard: number }
+export interface VelocityWave { nominationId: number; accountName: string | null; tpid: string | null; set: 'In-flight' | 'Completed'; stageIndex: number | null; segment: string | null; path: string | null; sa: string | null; pm: string | null; classification: string; stageDays: (number | null)[]; totalDays: number | null; targetDays: number | null; velocityPct: number | null; tone: 'success' | 'warning' | 'danger' | null; fdoDaysExpected: number | null; actualEndDate: string | null }
+export interface VelocityOptions { segments: string[]; paths: string[]; sas: string[]; pms: string[]; stages: number[]; classifications: string[]; nonStandard: number; suspectFdoDays: number }
 export interface StageVelocity { inFlight: StageVelocitySet; completed: StageVelocitySet; byQuarter: VelocityPeriod[]; byMonth: VelocityPeriod[]; waves: VelocityWave[]; options: VelocityOptions }
-export interface VelocityQuery { fy?: number; excludeStrategic?: boolean; segment?: string; path?: string; sa?: string; pm?: string; stage?: number; set?: string; classification?: string }
+export interface VelocityQuery { fy?: number; excludeStrategic?: boolean; segment?: string; path?: string; sa?: string; pm?: string; stage?: number; set?: string; classification?: string; quality?: string }
 
 export interface Analytics {
   totalApproved: number
@@ -326,6 +326,7 @@ export interface Nomination {
   velocityDays?: number | null
   velocityTargetDays?: number | null
   velocityTone?: 'success' | 'warning' | 'danger' | null
+  fdoDaysExpected?: number | null
   fiscalYear?: number
   effectiveStartDate?: string | null
   isUpcoming?: boolean

@@ -148,7 +148,22 @@ public class NominationRulesTests
         Assert.Equal((14, 50), NominationRules.Velocity(new int?[] { 10, 4, 0, 0 }, 4, s, fdoTotalDays: 14));
         Assert.Equal((63, 50), NominationRules.Velocity(new int?[] { 10, 17, 10, 26 }, 4, s));       // stage sum fallback
         Assert.Equal((27, 20), NominationRules.Velocity(new int?[] { 8, 19, null, null }, 2, s));    // in-flight: stages 1..2
+        Assert.Equal((11, 13), NominationRules.Velocity(new int?[] { 8, 3, null, null }, 2, s, inFlight: true));   // stage 2 only 3 days in
+        Assert.Equal((27, 20), NominationRules.Velocity(new int?[] { 8, 19, null, null }, 2, s, inFlight: true));  // over target: capped at target
         Assert.Null(NominationRules.Velocity(new int?[4], 4, s));
+    }
+
+    [Fact]
+    public void Fdo_days_flagged_when_far_from_business_days()
+    {
+        Assert.Equal(5, NominationRules.BusinessDays(new DateOnly(2026, 10, 5), new DateOnly(2026, 10, 12)));   // Mon → next Mon
+        var s = new Dictionary<string, double> { ["FdoDaysGapPct"] = 50 };
+        var start = new DateOnly(2026, 4, 1);
+        var end = new DateOnly(2026, 10, 1);
+        var expected = NominationRules.BusinessDays(start, end);
+        Assert.Equal(expected, NominationRules.FdoDaysExpected(14, start, end, s));        // Petroliam-style gap
+        Assert.Null(NominationRules.FdoDaysExpected(expected - 5, start, end, s));          // close enough
+        Assert.Null(NominationRules.FdoDaysExpected(14, null, end, s));                     // no start date: can't check
     }
 
     [Fact]

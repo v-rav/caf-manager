@@ -54,7 +54,6 @@ export function DashboardPage() {
   const [view, setView] = useState('leadership')
   const dash = useAsync(() => api.dashboard(region), [region])
   const noms = useAsync(() => api.nominations(region), [region])
-  const blk = useAsync(() => api.openBlockers(region), [region])
 
   const m: M = useMemo(() => {
     const all = (noms.data ?? []).filter((n) => nominationInFy(n, fy))
@@ -62,7 +61,7 @@ export function DashboardPage() {
     const active = approved.filter((n) => !n.isSettled && !n.isUpcoming)
     const upcoming = approved.filter((n) => n.isUpcoming)
     const completed = approved.filter((n) => n.status === 'Completed')
-    const blocked = active.filter((n) => n.openBlockerCount > 0)
+    const blocked = active.filter((n) => n.healthBucket === 'Blocked')
     const sum = (xs: Nomination[], f: (n: Nomination) => number | undefined) => xs.reduce((s, n) => s + (f(n) ?? 0), 0)
     return { all, approved, active, upcoming, completed, blocked, sum }
   }, [noms.data, fy])
@@ -87,7 +86,7 @@ export function DashboardPage() {
       </TabList>
 
       {view === 'leadership' && <Leadership d={d} m={m} region={region} navigate={navigate} />}
-      {view === 'operational' && <Operational d={d} m={m} blk={blk.data ?? []} navigate={navigate} />}
+      {view === 'operational' && <Operational d={d} m={m} navigate={navigate} />}
       {view === 'adoption' && <Adoption m={m} navigate={navigate} />}
       {view === 'productivity' && <Productivity m={m} />}
     </div>
@@ -104,7 +103,7 @@ function Leadership({ d, m, region, navigate }: { d: ExecutiveDashboard; m: M; r
         <KpiCard label="Total nominations" value={m.all.length} tone="brand" onClick={() => navigate('/nominations')} />
         <KpiCard label="Active" value={m.active.length} onClick={() => navigate('/nominations')} />
         <KpiCard label="Upcoming waves" value={m.upcoming.length} />
-        <KpiCard label="Blocked" value={m.blocked.length} tone={m.blocked.length ? 'warning' : 'neutral'} onClick={() => navigate('/governance')} />
+        <KpiCard label="Blocked" value={m.blocked.length} tone={m.blocked.length ? 'warning' : 'neutral'} onClick={() => navigate('/governance?status=Blocked')} />
         <KpiCard label="Completed" value={m.completed.length} tone="success" />
         <KpiCard label="ACR influenced" value={money(acr)} tone="brand" onClick={() => navigate('/analytics')} />
         <KpiCard label="GHCP adoption rate" value={`${usedRate}%`} tone={usedRate >= 40 ? 'success' : 'brand'} onClick={() => navigate('/adoption')} />
@@ -129,7 +128,7 @@ function Leadership({ d, m, region, navigate }: { d: ExecutiveDashboard; m: M; r
   )
 }
 
-function Operational({ d, m, blk, navigate }: { d: ExecutiveDashboard; m: M; blk: unknown[]; navigate: (p: string) => void }) {
+function Operational({ d, m, navigate }: { d: ExecutiveDashboard; m: M; navigate: (p: string) => void }) {
   const stages = [1, 2, 3, 4].map((k) => ({ k, label: STAGE_LABELS[k], count: m.active.filter((n) => stageIdx(n) === k).length }))
   // Strategic pilots are excluded from Standard SLA denominators.
   const standard = m.active.filter((n) => !n.isStrategic)
@@ -141,10 +140,11 @@ function Operational({ d, m, blk, navigate }: { d: ExecutiveDashboard; m: M; blk
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <KpiCard label="Active" value={m.active.length} />
         <KpiCard label="Upcoming waves" value={m.upcoming.length} />
-        <KpiCard label="SLA Warn (Standard)" value={sla('Warn')} tone={sla('Warn') ? 'warning' : 'neutral'} onClick={() => navigate('/nominations?sla=Warn')} />
-        <KpiCard label="SLA Escalate" value={sla('Escalate')} tone={sla('Escalate') ? 'warning' : 'neutral'} onClick={() => navigate('/nominations?sla=Escalate')} />
-        <KpiCard label="SLA Defer" value={sla('Defer')} tone={sla('Defer') ? 'danger' : 'neutral'} onClick={() => navigate('/nominations?sla=Defer')} />
-        <KpiCard label="Open blockers" value={blk.length} tone={blk.length ? 'warning' : 'neutral'} onClick={() => navigate('/governance')} />
+        <KpiCard label="SLA Warn (Standard)" value={sla('Warn')} tone={sla('Warn') ? 'warning' : 'neutral'} onClick={() => navigate('/governance?sla=Warn')} />
+        <KpiCard label="SLA Escalate" value={sla('Escalate')} tone={sla('Escalate') ? 'warning' : 'neutral'} onClick={() => navigate('/governance?sla=Escalate')} />
+        <KpiCard label="SLA Defer" value={sla('Defer')} tone={sla('Defer') ? 'danger' : 'neutral'} onClick={() => navigate('/governance?sla=Defer')} />
+        <KpiCard label="Blocked / Waiting (FDO)" value={`${m.blocked.length} / ${m.active.filter((n) => n.healthBucket === 'Waiting').length}`}
+          tone={m.blocked.length ? 'warning' : 'neutral'} onClick={() => navigate('/governance')} />
         <KpiCard label="Avg effective age (Standard)" value={`${avgAge}d`} tone={avgAge >= 15 ? 'warning' : 'neutral'} />
         <KpiCard label="Overloaded resources" value={d.overloadedResources} tone={d.overloadedResources ? 'danger' : 'neutral'} onClick={() => navigate('/capacity?status=Overloaded')} />
       </div>
