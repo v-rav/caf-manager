@@ -31,4 +31,8 @@ public class AnalyticsController(IAnalyticsService analytics) : ControllerBase
     [HttpGet("acr-capture")]
     public async Task<IActionResult> AcrCapture([FromQuery] string? region, CancellationToken ct = default)
         => Ok(await analytics.GetAcrCaptureAsync(region, ct));
+
+    [HttpGet("stage-velocity")]
+    public async Task<IActionResult> StageVelocity([FromQuery] string? region, [FromQuery] int? fy = null, CancellationToken ct = default)
+        => Ok(await analytics.GetStageVelocityAsync(region, fy, ct));
 }

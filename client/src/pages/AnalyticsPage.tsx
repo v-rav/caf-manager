@@ -8,7 +8,7 @@ import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
-import type { AttainmentBucket, Nomination, TimeBucket } from '../types'
+import type { AttainmentBucket, Nomination, StageVelocitySet, TimeBucket } from '../types'
 
 // Heat-band colours reused for the health doughnut (On Track → Blocked → Other).
 const HEALTH_COLORS = ['#107c10', '#eaa300', '#c50f1f', '#8a8886']
@@ -27,6 +27,38 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         {children}
       </div>
     </div>
+  )
+}
+
+// FDO "Stage Duration vs SLA" cards: per-stage target vs average actual, days over/under, plus overall.
+function StageVelocityPanel({ title, set }: { title: string; set: StageVelocitySet }) {
+  const cards = [
+    ...set.stages.map((s) => ({ key: String(s.stage), label: `${s.stage} · ${s.label}`, target: s.target, actual: s.actual, over: s.over })),
+    { key: 'all', label: 'Overall completion', target: set.overallTarget, actual: set.overallActual, over: set.overallOver },
+  ]
+  return (
+    <Panel title={`${title} · ${set.count} waves`}>
+      {set.count === 0 ? (
+        <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No FDO stage-day breakdown yet — it arrives with the next Detail View upload.</Text>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
+          {cards.map((c) => (
+            <div key={c.key} style={{ border: '1px solid var(--colorNeutralStroke2)', borderRadius: 6, padding: 8, textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: 'var(--colorNeutralForeground3)', minHeight: 28 }}>{c.label}</div>
+              <div style={{ fontSize: 12 }}>Target <b>{c.target}</b></div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: c.over == null ? undefined : c.over > 0 ? 'var(--colorPaletteRedForeground1)' : 'var(--colorPaletteGreenForeground1)' }}>
+                {c.actual ?? '—'}
+              </div>
+              {c.over != null && (
+                <div style={{ fontSize: 11, color: c.over > 0 ? 'var(--colorPaletteRedForeground1)' : 'var(--colorPaletteGreenForeground1)' }}>
+                  {c.over > 0 ? `${c.over} days over` : c.over < 0 ? `${-c.over} days under` : 'on target'}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Panel>
   )
 }
 
@@ -209,6 +241,7 @@ function TrendsSection({ region, basis, setBasis, granularity, setGranularity, m
 export function AnalyticsPage() {
   const { region } = useRegion()
   const { data, loading, error, reload } = useAsync(() => api.analytics(region), [region])
+  const velocity = useAsync(() => api.stageVelocity(region), [region])
 
   const [basis, setBasis] = useState('completed')
   const [granularity, setGranularity] = useState('month')
@@ -256,6 +289,13 @@ export function AnalyticsPage() {
       </div>
 
       <AttainmentSection region={region} />
+
+      {velocity.data && (
+        <Section title="Stage Duration vs SLA (avg. business days, FDO)">
+          <StageVelocityPanel title="In-flight" set={velocity.data.inFlight} />
+          <StageVelocityPanel title="Completed" set={velocity.data.completed} />
+        </Section>
+      )}
 
       <TrendsSection
         region={region}

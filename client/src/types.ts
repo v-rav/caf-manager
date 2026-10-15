@@ -57,6 +57,10 @@ export interface Effectiveness {
   rows: EffectivenessRow[]
 }
 
+export interface StageVelocityRow { stage: number; label: string; target: number; actual: number | null; over: number | null; count: number }
+export interface StageVelocitySet { count: number; stages: StageVelocityRow[]; overallTarget: number; overallActual: number | null; overallOver: number | null }
+export interface StageVelocity { inFlight: StageVelocitySet; completed: StageVelocitySet }
+
 export interface Analytics {
   totalApproved: number
   inFlight: number
@@ -311,6 +315,10 @@ export interface Nomination {
   stageTargetDays?: number
   fdoStageDays?: (number | null)[]
   fdoTotalDays?: number | null
+  velocity?: number | null
+  velocityDays?: number | null
+  velocityTargetDays?: number | null
+  velocityTone?: 'success' | 'warning' | 'danger' | null
   fiscalYear?: number
   effectiveStartDate?: string | null
   isUpcoming?: boolean

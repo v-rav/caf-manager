@@ -1,4 +1,4 @@
-import { Badge, Button, Link } from '@fluentui/react-components'
+import { Badge, Button, Link, Tooltip } from '@fluentui/react-components'
 import { ArrowDownloadRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -15,9 +15,6 @@ import type { Nomination } from '../types'
 
 function tierTone(t: string): 'success' | 'warning' | 'danger' | 'brand' {
   return t === 'Exec' || t === 'Red' ? 'danger' : t === 'Amber' ? 'warning' : t === 'Green' ? 'success' : 'brand'
-}
-function velocityTone(v?: string): 'informative' | 'warning' | 'danger' {
-  return v === 'Critical' ? 'danger' : v === 'High' ? 'warning' : 'informative'
 }
 
 export function StrategicRegisterPage() {
@@ -39,7 +36,7 @@ export function StrategicRegisterPage() {
         { header: 'Account', value: (n) => n.accountName ?? '' },
         { header: 'TPID', value: (n) => n.tpid ?? '' },
         { header: 'Classification', value: (n) => n.classification },
-        { header: 'Velocity', value: (n) => n.velocityImpact ?? '' },
+        { header: 'Velocity (days ÷ target)', value: (n) => n.velocity ?? '' },
         { header: 'SA', value: (n) => n.solutionArchitect ?? '' },
         { header: 'Status', value: (n) => n.status },
         { header: 'Days in flight', value: (n) => n.daysInFlight },
@@ -116,7 +113,7 @@ export function StrategicRegisterPage() {
           columns={[
             { key: 'account', header: 'Account', sortValue: (n) => n.accountName ?? '', render: (n) => <Link onClick={() => navigate(`/nominations/${n.id}`)}>{n.accountName ?? `Nomination ${n.id}`}</Link> },
             { key: 'class', header: 'Classification', sortValue: (n) => n.classification },
-            { key: 'velocity', header: 'Velocity', sortValue: (n) => n.velocityImpact ?? '', render: (n) => (n.velocityImpact ? <Badge appearance="tint" color={velocityTone(n.velocityImpact)}>{n.velocityImpact}</Badge> : '—') },
+            { key: 'velocity', header: 'Velocity', align: 'center', sortValue: (n) => n.velocity ?? -1, render: (n) => (n.velocity != null ? <Tooltip relationship="description" content={`${n.velocityDays} of ${n.velocityTargetDays} target business days (FDO)`}><Badge appearance="tint" color={n.velocityTone ?? 'informative'}>{n.velocity.toFixed(2)}×</Badge></Tooltip> : '—') },
             { key: 'sa', header: 'SA', sortValue: (n) => n.solutionArchitect ?? '', render: (n) => n.solutionArchitect ?? '—' },
             { key: 'status', header: 'Status', sortValue: (n) => n.status },
             { key: 'days', header: 'Days in flight', align: 'end', sortValue: (n) => n.daysInFlight, render: (n) => `${n.daysInFlight}d` },

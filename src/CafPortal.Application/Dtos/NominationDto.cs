@@ -21,6 +21,12 @@ public class NominationDto
     public int? StageAgeDays { get; set; }
     public int?[] FdoStageDays { get; set; } = new int?[4];
     public int? FdoTotalDays { get; set; }
+    /// <summary>Velocity = FDO business days ÷ allocated target days (completed: all 4 stages; in-flight: stages 1..current).
+    /// &lt;1 faster than target, &gt;1 slower. Null without an FDO stage breakdown.</summary>
+    public double? Velocity { get; set; }
+    public int? VelocityDays { get; set; }
+    public int? VelocityTargetDays { get; set; }
+    public string? VelocityTone { get; set; }
     public string? CurrentState { get; set; }
     public string? SolutionArchitect { get; set; }
     public string? CftlPrimary { get; set; }

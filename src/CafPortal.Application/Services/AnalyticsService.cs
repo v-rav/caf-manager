@@ -1,6 +1,7 @@
 using CafPortal.Application.Abstractions;
 using CafPortal.Application.Common;
 using CafPortal.Application.Dtos;
+using CafPortal.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace CafPortal.Application.Services;
@@ -23,6 +24,50 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         { "1 · Validating", "2 · Pre-Requisites", "3 · Finalize Scope", "4 · Executing Migration" };
 
     private static int? StageIndex(string? migration) => NominationRules.StageIndex(migration);
+
+    /// <summary>FDO "Stage Duration vs SLA": per-stage average business days vs the stage target (Configuration → Stage
+    /// targets). Completed waves average every stage (0 = skipped); in-flight waves average only stages already reached.
+    /// Overall actual = sum of stage averages, overall target = sum of targets (FDO card convention). Standard-only when
+    /// classification is on (strategic work is governed by days-in-flight instead).</summary>
+    public async Task<StageVelocityDto> GetStageVelocityAsync(string? region, int? fy, CancellationToken ct = default)
+    {
+        var settings = await SettingsCatalog.ReadAsync(_db, ct);
+        var targets = Enumerable.Range(1, 4).Select(s => NominationRules.StageTarget(settings, s)).ToArray();
+        var noms = (await _nominations.GetAsync(region, status: null, ct))
+            .Where(n => (fy is null || n.FiscalYear == fy) && !n.IsStrategic && n.FdoStageDays.Any(d => d != null))
+            .ToList();
+
+        StageVelocitySet Build(List<NominationDto> set, bool reachedOnly)
+        {
+            var rows = Enumerable.Range(1, 4).Select(s =>
+            {
+                var vals = set.Where(n => !reachedOnly || (n.StageIndex ?? 0) >= s)
+                    .Select(n => n.FdoStageDays[s - 1] ?? 0).ToList();
+                int? actual = vals.Count > 0 ? (int)Math.Round(vals.Average(), MidpointRounding.AwayFromZero) : null;
+                return new StageVelocityRow
+                {
+                    Stage = s, Label = NominationRules.StageLabel(s), Target = targets[s - 1],
+                    Actual = actual, Over = actual - targets[s - 1], Count = vals.Count,
+                };
+            }).ToList();
+            var overallActual = rows.All(r => r.Actual is null) ? (int?)null : rows.Sum(r => r.Actual ?? 0);
+            var overallTarget = targets.Sum();
+            return new StageVelocitySet
+            {
+                Count = set.Count, Stages = rows, OverallTarget = overallTarget,
+                OverallActual = overallActual, OverallOver = overallActual - overallTarget,
+            };
+        }
+
+        // Completed waves were approved by definition (the completed-only FDO drop carries no approval column).
+        var completed = NominationStatusType.Completed.ToDisplay();
+        return new StageVelocityDto
+        {
+            InFlight = Build(noms.Where(n => !n.IsSettled
+                && string.Equals(n.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)).ToList(), reachedOnly: true),
+            Completed = Build(noms.Where(n => n.Status == completed).ToList(), reachedOnly: false),
+        };
+    }
 
     private static string Health(string? currentState) => NominationRules.HealthBucket(currentState);
 

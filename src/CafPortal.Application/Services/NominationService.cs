@@ -122,6 +122,10 @@ public class NominationService(IApplicationDbContext db) : INominationService
             var strategicTier = StrategicTier(isStrategic, n.Status, inFlightDays, green, amber, red);
             var stage = NominationRules.StageIndex(n.MigrationStatus);
             var isUpcoming = !NominationRules.IsSettled(n.Status) && (n.ActualStartDate ?? n.PlannedStartDate) > upcomingAfter;
+            var fdoStages = new[] { n.FdoStage1Days, n.FdoStage2Days, n.FdoStage3Days, n.FdoStage4Days };
+            // Completed waves are measured over all 4 stages; in-flight over the stages reached so far.
+            var velocity = NominationRules.Velocity(fdoStages,
+                n.Status == NominationStatusType.Completed ? 4 : stage ?? 0, settings);
             var effectiveGhcp = ToolActivityClassifier.EffectiveLevel(
                 n.GhcpAdoptionLevel, n.IsToolAttached,
                 activitiesByNom.TryGetValue(n.Id, out var acts) ? acts : System.Array.Empty<string>());
@@ -153,8 +157,12 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 MigrationStatus = n.MigrationStatus,
                 ApprovalStatus = n.ApprovalStatus,
                 StageAgeDays = n.StageAgeDays,
-                FdoStageDays = new[] { n.FdoStage1Days, n.FdoStage2Days, n.FdoStage3Days, n.FdoStage4Days },
+                FdoStageDays = fdoStages,
                 FdoTotalDays = n.FdoTotalDays,
+                Velocity = velocity is { } v ? Math.Round((double)v.Days / v.Target, 2) : null,
+                VelocityDays = velocity?.Days,
+                VelocityTargetDays = velocity?.Target,
+                VelocityTone = velocity is { } vt ? NominationRules.VelocityTone((double)vt.Days / vt.Target, settings) : null,
                 CurrentState = n.CurrentState,
                 SolutionArchitect = n.SolutionArchitect,
                 CftlPrimary = n.CftlPrimary,

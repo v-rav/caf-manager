@@ -20,6 +20,8 @@ public interface IAnalyticsService
     Task<AttainmentDto> GetAttainmentAsync(string? region, int? fy, CancellationToken ct = default);
 
     Task<AcrCaptureDto> GetAcrCaptureAsync(string? region, CancellationToken ct = default);
+
+    Task<StageVelocityDto> GetStageVelocityAsync(string? region, int? fy, CancellationToken ct = default);
 }
 
 public interface IResourceService

@@ -59,6 +59,11 @@ public static class SettingsCatalog
         new("BlockerAgeRedDays", "Blocker ageing", "Red from (days blocked)", "10", 1, 365, true,
             "Open blockers at or above this age show red"),
 
+        new("VelocityAmberFromPct", "Velocity (days ÷ target)", "Amber above (% of target)", "100", 50, 500, true,
+            "Velocity above this % of the allocated target days shows amber (100 = over target)"),
+        new("VelocityRedFromPct", "Velocity (days ÷ target)", "Red above (% of target)", "125", 50, 500, true,
+            "Velocity above this % of the allocated target days shows red"),
+
         new("LeaveClashWindowDays", "Resourcing", "Leave-clash window (days)", "30", 1, 365, true,
             "Upcoming-leave window used to detect coverage clashes"),
         new("WorkloadStartLookaheadDays", "Resourcing", "Count waves starting within (days)", "0", 0, 180, true,
@@ -116,6 +121,7 @@ public static class SettingsCatalog
         ("PartiallyUtilizedThreshold", "OverloadedThreshold", false),
         ("MsiAmberFrom", "MsiGreenAbove", true),
         ("BlockerAgeAmberDays", "BlockerAgeRedDays", true),
+        ("VelocityAmberFromPct", "VelocityRedFromPct", true),
         ("EffSpeedBestDays", "EffSpeedWorstDays", true),
         ("EffMomentumBestDays", "EffMomentumWorstDays", true),
         ("EffAmberFrom", "EffGreenFrom", true),

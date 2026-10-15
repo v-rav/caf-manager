@@ -26,6 +26,20 @@ public static class NominationRules
     public static int StageTarget(IReadOnlyDictionary<string, double> settings, int? stage) =>
         stage is >= 1 and <= 4 ? (int)settings[$"StageTargetDays{stage}"] : 0;
 
+    /// <summary>Velocity inputs: (days spent, allocated target days) over stages 1..upToStage from the FDO stage columns.</summary>
+    public static (int Days, int Target)? Velocity(int?[] stageDays, int upToStage, IReadOnlyDictionary<string, double> settings)
+    {
+        if (upToStage is < 1 or > 4 || stageDays.All(d => d is null)) return null;
+        var days = 0; var target = 0;
+        for (var s = 1; s <= upToStage; s++) { days += stageDays[s - 1] ?? 0; target += StageTarget(settings, s); }
+        return target > 0 ? (days, target) : null;
+    }
+
+    /// <summary>Badge tone for velocity (days ÷ target): over Red% → danger, over Amber% → warning, else success.</summary>
+    public static string VelocityTone(double velocity, IReadOnlyDictionary<string, double> settings) =>
+        velocity * 100 > settings["VelocityRedFromPct"] ? "danger"
+        : velocity * 100 > settings["VelocityAmberFromPct"] ? "warning" : "success";
+
     /// <summary>Badge tone for how long a blocker has been open (BlockerAgeAmberDays / BlockerAgeRedDays).</summary>
     public static string BlockerAgeTone(int daysBlocked, IReadOnlyDictionary<string, double> settings) =>
         daysBlocked >= settings["BlockerAgeRedDays"] ? "danger"

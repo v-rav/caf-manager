@@ -311,6 +311,16 @@ Each rule lists **where it is computed**, **its inputs**, **its formula**, and *
   | 0 (skipped) | 35 | 10 | 25 | Defer |
 * `ClockStopped = any open clock-stop blocker` → the SLA tier is **paused** (empty) while it is open.
 
+### 5.2b Velocity (FDO "Stage Duration vs SLA")
+* **Per nomination:** `Velocity = FDO business days ÷ allocated target days` (completed: all 4 stages, `FdoTotalDays`-equivalent
+  vs Σ `StageTargetDays1..4`; in-flight: stages 1..current). <1 faster, >1 slower. Tone from ⚙️ `VelocityAmberFromPct`
+  (100) / `VelocityRedFromPct` (125). Null without an FDO stage breakdown. Shown in the Strategic Register and the
+  Nominations Summary hover.
+* **Factory panel** (Analytics → Stage Duration vs SLA, `GET /api/analytics/stage-velocity?region=&fy=`): per stage
+  target vs average actual + days over/under; overall actual = Σ stage averages, overall target = Σ targets (FDO Power BI
+  convention). Completed = all completed waves (0 = skipped stage); in-flight = Approved, averaged over stages reached.
+  Standard-only when the classification flag is on.
+
 ### 5.3 SLA stale tier (Warn / Escalate / Defer)
 * **Applies to Stages 2–4 only (🔒)** and only to non-settled, started rows.
 * Limit = per-stage target `StageTargetDays{stage}` (⚙️ 10/10/5/25 live). Over = `EffectiveAgeDays − target`;
