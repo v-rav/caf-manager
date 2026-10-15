@@ -33,6 +33,6 @@ public class AnalyticsController(IAnalyticsService analytics) : ControllerBase
         => Ok(await analytics.GetAcrCaptureAsync(region, ct));
 
     [HttpGet("stage-velocity")]
-    public async Task<IActionResult> StageVelocity([FromQuery] string? region, [FromQuery] int? fy = null, CancellationToken ct = default)
-        => Ok(await analytics.GetStageVelocityAsync(region, fy, ct));
+    public async Task<IActionResult> StageVelocity([FromQuery] string? region, [FromQuery] int? fy = null, [FromQuery] bool excludeStrategic = false, CancellationToken ct = default)
+        => Ok(await analytics.GetStageVelocityAsync(region, fy, excludeStrategic, ct));
 }

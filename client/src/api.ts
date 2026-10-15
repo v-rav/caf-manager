@@ -306,8 +306,8 @@ export const api = {
   importProfiles: () => http.get<ImportProfilesResponse>('/api/import-profiles').then((r) => r.data),
   effectiveness: (region: string | undefined, role: string, fy?: number) =>
     http.get<Effectiveness>('/api/effectiveness', { params: { region, role, fy } }).then((r) => r.data),
-  stageVelocity: (region?: string, fy?: string) =>
-    http.get<StageVelocity>('/api/analytics/stage-velocity', { params: { region, fy } }).then((r) => r.data),
+  stageVelocity: (region?: string, fy?: string, excludeStrategic?: boolean) =>
+    http.get<StageVelocity>('/api/analytics/stage-velocity', { params: { region, fy, excludeStrategic: excludeStrategic || undefined } }).then((r) => r.data),
   saveImportProfile: (id: number, body: { label: string; detectOrder: number; signature: string }) =>
     http.put(`/api/import-profiles/profiles/${id}`, body),
   saveImportColumn: (id: number, candidates: string) => http.put(`/api/import-profiles/columns/${id}`, { candidates }),

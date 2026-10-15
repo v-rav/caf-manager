@@ -27,15 +27,16 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
 
     /// <summary>FDO "Stage Duration vs SLA": per-stage average business days vs the stage target (Configuration → Stage
     /// targets). Completed waves average every stage (0 = skipped); in-flight waves average only stages already reached.
-    /// Overall actual = sum of stage averages, overall target = sum of targets (FDO card convention). Standard-only when
-    /// classification is on (strategic work is governed by days-in-flight instead).</summary>
-    public async Task<StageVelocityDto> GetStageVelocityAsync(string? region, int? fy, CancellationToken ct = default)
+    /// Overall actual = sum of stage averages, overall target = sum of targets (FDO card convention). All waves by default;
+    /// <paramref name="excludeStrategic"/> limits it to Standard work (strategic is governed by days-in-flight).</summary>
+    public async Task<StageVelocityDto> GetStageVelocityAsync(string? region, int? fy, bool excludeStrategic = false, CancellationToken ct = default)
     {
         var settings = await SettingsCatalog.ReadAsync(_db, ct);
         var targets = Enumerable.Range(1, 4).Select(s => NominationRules.StageTarget(settings, s)).ToArray();
-        var all = await _nominations.GetAsync(region, status: null, ct);
+        var all = (await _nominations.GetAsync(region, status: null, ct))
+            .Where(n => !excludeStrategic || !n.IsStrategic).ToList();
         var noms = all
-            .Where(n => (fy is null || n.FiscalYear == fy) && !n.IsStrategic && n.FdoStageDays.Any(d => d != null))
+            .Where(n => (fy is null || n.FiscalYear == fy) && n.FdoStageDays.Any(d => d != null))
             .ToList();
 
         StageVelocitySet Build(List<NominationDto> set, bool reachedOnly)
@@ -68,8 +69,8 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         // Completed waves were approved by definition (the completed-only FDO drop carries no approval column).
         var completed = NominationStatusType.Completed.ToDisplay();
 
-        // Period trend: completed Standard waves bucketed by actual end date (not FY-filtered — periods are their own scope).
-        var done = all.Where(n => n.Status == completed && !n.IsStrategic && n.FdoTotalDays != null && n.ActualEndDate != null).ToList();
+        // Period trend: completed waves bucketed by actual end date (not FY-filtered — periods are their own scope).
+        var done = all.Where(n => n.Status == completed && n.FdoTotalDays != null && n.ActualEndDate != null).ToList();
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var allocated = targets.Sum();
         List<VelocityPeriod> Periods(string granularity, IEnumerable<DateOnly> dates)
