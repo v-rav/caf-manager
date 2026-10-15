@@ -1,5 +1,5 @@
 import { Badge, Button, Switch, Text } from '@fluentui/react-components'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { DataTable, type Column } from '../components/DataTable'
@@ -85,10 +85,10 @@ export function VelocityPage() {
 
   const stageNo = stage ? STAGES.indexOf(stage) + 1 : undefined
   const { data, loading, error, reload } = useAsync(
-    () => api.stageVelocity(region, { fy: fy === 'all' ? undefined : fy, excludeStrategic, stage: stageNo, segment, path, sa, pm }),
-    [region, fy, excludeStrategic, stageNo, segment, path, sa, pm],
+    () => api.stageVelocity(region, { fy: fy === 'all' ? undefined : fy, excludeStrategic, stage: stageNo, segment, path, sa, pm, set }),
+    [region, fy, excludeStrategic, stageNo, segment, path, sa, pm, set],
   )
-  const waves = useMemo(() => (data?.waves ?? []).filter((w) => !set || w.set === set), [data, set])
+  const waves = data?.waves ?? []
   const anyFilter = excludeStrategic || stage || segment || path || sa || pm || set
   const reset = () => { setExcludeStrategic(false); setStage(''); setSegment(''); setPath(''); setSa(''); setPm(''); setSet('') }
 
@@ -151,7 +151,7 @@ export function VelocityPage() {
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
         <FilterSelect label="Set" value={set} options={['In-flight', 'Completed']} onChange={setSet} minWidth={120} />
-        <FilterSelect label="Stage" value={stage} options={STAGES} onChange={setStage} />
+        <FilterSelect label="Stage" value={stage} options={(o?.stages ?? [1, 2, 3, 4]).map((s) => STAGES[s - 1])} onChange={setStage} />
         <FilterSelect label="Segment" value={segment} options={o?.segments ?? []} onChange={setSegment} />
         <FilterSelect label="Migration path" value={path} options={o?.paths ?? []} onChange={setPath} minWidth={180} />
         <FilterSelect label="SA" value={sa} options={o?.sas ?? []} onChange={setSa} minWidth={180} />
@@ -162,17 +162,15 @@ export function VelocityPage() {
           onChange={(_, d) => setExcludeStrategic(d.checked)}
         />
         {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
-        {data && (
-          <Text size={300} style={{ marginLeft: 'auto' }}>
-            Total <b>{data.inFlight.count + data.completed.count}</b> waves
-            <span style={{ color: 'var(--colorNeutralForeground3)' }}> · {data.inFlight.count} in-flight · {data.completed.count} completed</span>
-          </Text>
-        )}
+        {loading && data && <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>Updating…</Text>}
       </div>
 
       {loading && !data ? <Loading label="Calculating velocity…" /> : data && (
         <>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            <KpiCard label="Total waves" value={String(data.inFlight.count + data.completed.count)} tone="brand" />
+            <KpiCard label="In-flight" value={String(data.inFlight.count)} />
+            <KpiCard label="Completed" value={String(data.completed.count)} tone="success" />
             <KpiCard label="Completed · Average Velocity" value={data.completed.overallVelocityPct != null ? `${data.completed.overallVelocityPct}%` : '—'}
               tone={data.completed.overallVelocityTone ?? 'neutral'} />
             <KpiCard label="In-flight · Average Velocity" value={data.inFlight.overallVelocityPct != null ? `${data.inFlight.overallVelocityPct}%` : '—'}

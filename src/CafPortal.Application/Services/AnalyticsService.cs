@@ -48,23 +48,36 @@ public class AnalyticsService(INominationService nominations, IApplicationDbCont
         bool InScope(NominationDto n) => n.Status == completed
             || (!n.IsSettled && string.Equals(n.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase));
         var universe = scoped.Where(InScope).ToList();
+        string SetOf(NominationDto n) => n.Status == completed ? "Completed" : "In-flight";
+
+        // skip = the dimension whose own dropdown is being built (faceted options).
+        bool Match(NominationDto n, string? skip = null) =>
+            (!f.ExcludeStrategic || !n.IsStrategic)
+            && (skip == "segment" || string.IsNullOrWhiteSpace(f.Segment) || Eq(Seg(n), f.Segment))
+            && (skip == "path" || string.IsNullOrWhiteSpace(f.Path) || Eq(Path(n), f.Path))
+            && (skip == "sa" || string.IsNullOrWhiteSpace(f.Sa) || Eq(n.SolutionArchitect, f.Sa))
+            && (skip == "pm" || string.IsNullOrWhiteSpace(f.Pm) || Eq(n.ProjectCoordinator, f.Pm))
+            && (skip == "stage" || f.Stage is null || n.StageIndex == f.Stage)
+            && (skip == "set" || string.IsNullOrWhiteSpace(f.Set) || Eq(SetOf(n), f.Set));
+        var inFy = universe.Where(n => f.Fy is null || n.FiscalYear == f.Fy).ToList();
+        List<string> Facet(string dim, Func<NominationDto, string?> pick) => inFy.Where(n => Match(n, dim))
+            .Select(n => string.Join(' ', (pick(n) ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries)))
+            .Where(x => x.Length > 0)
+            .GroupBy(x => x, StringComparer.OrdinalIgnoreCase).Select(g => g.First())
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
         var options = new VelocityOptions
         {
-            Segments = universe.Select(Seg).Distinct().OrderBy(x => x).ToList(),
-            Paths = universe.Select(Path).Distinct().OrderBy(x => x).ToList(),
-            Sas = universe.Select(n => n.SolutionArchitect?.Trim()).Where(x => !string.IsNullOrEmpty(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList()!,
-            Pms = universe.Select(n => n.ProjectCoordinator?.Trim()).Where(x => !string.IsNullOrEmpty(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList()!,
-            NonStandard = universe.Count(n => n.IsStrategic),
+            Segments = Facet("segment", Seg),
+            Paths = Facet("path", Path),
+            Sas = Facet("sa", n => n.SolutionArchitect),
+            Pms = Facet("pm", n => n.ProjectCoordinator),
+            Stages = inFy.Where(n => Match(n, "stage") && n.StageIndex != null).Select(n => n.StageIndex!.Value).Distinct().Order().ToList(),
+            NonStandard = inFy.Count(n => n.IsStrategic),
         };
 
-        // Every filter except FY (the period trend has its own FY scope).
-        var all = universe.Where(n => (!f.ExcludeStrategic || !n.IsStrategic)
-            && (string.IsNullOrWhiteSpace(f.Segment) || Eq(Seg(n), f.Segment))
-            && (string.IsNullOrWhiteSpace(f.Path) || Eq(Path(n), f.Path))
-            && (string.IsNullOrWhiteSpace(f.Sa) || Eq(n.SolutionArchitect, f.Sa))
-            && (string.IsNullOrWhiteSpace(f.Pm) || Eq(n.ProjectCoordinator, f.Pm))
-            && (f.Stage is null || n.StageIndex == f.Stage)).ToList();
-        var noms = all.Where(n => f.Fy is null || n.FiscalYear == f.Fy).ToList();
+        // Every filter except FY and Set (the period trend has its own FY scope and is completed-only).
+        var all = universe.Where(n => Match(n, "set")).ToList();
+        var noms = all.Where(n => (f.Fy is null || n.FiscalYear == f.Fy) && Match(n)).ToList();
 
         StageVelocitySet Build(List<NominationDto> set, bool reachedOnly)
         {
