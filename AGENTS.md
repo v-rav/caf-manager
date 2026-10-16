@@ -67,6 +67,9 @@ import the **web app is the system of record**.
     (Application/Common) and returned as `NominationDto.StageIndex`/`StageLabel` (plus `IsSettled`, `HealthBucket`);
     pages must use these, not re-derive them:
     1 Validating · 2 Executing Pre-Requisites · 3 Finalize Scope · 4 Executing Migration.
+    **FDO stage 1–7** (`NominationDto.FdoStage`/`FdoStageLabel`, `NominationRules.FdoStage`, KeywordRules domain `FdoStage`)
+    adds 5 Deferred by Customer · 6 Cancelled / Archived · 7 Completed — it drives the Nominations **Stage** filter/column/
+    card and the export `stage` param. `StageIndex` stays 1–4 (journey stage for SLA, velocity, flow, analytics).
   - **Status** (`Nomination.CurrentState`): whether work is **on track or blocked**. Colour via
     `stateColor()`: On Track = success, Waiting/follow-up = warning, Blocked* = danger.
   - **Summary**: operational health only — SLA stale tier (Warn/Escalate/Defer) badge, blocker
@@ -94,9 +97,9 @@ import the **web app is the system of record**.
   state `'Approved'`, with an **"All"** clear-option that shows every approval status incl. Declined);
   the approval scope drives both the KPIs and the grid so
   counts match. Surfaced as an **Approval** export column. (Declined also maps to `Status=Withdrawn`
-  via `MapStatus` on first insert.) The grid **search box is cross-field** (`matchesText`): it matches
-  account name, TPID, and all three ownership roles (PM/CFTL/SA), and the server export applies the
-  same broadened `search` predicate so the file matches the on-screen view.- **Ownership short names** used in the Nominations grid: **PM** = `ProjectCoordinator`,
+  via `MapStatus` on first insert.) The grid **search box is nomination identity** (`matchesText`): account name, TPID
+  and FDO Task Id; people are searched only via the single **SA / PM / CFTL** box (`owner`). The server export applies
+  the same `search` and `owner` predicates so the file matches the on-screen view.- **Ownership short names** used in the Nominations grid: **PM** = `ProjectCoordinator`,
   **CFTL** = `CftlPrimary`, **SA** = `SolutionArchitect`. These are **FDO-authoritative** — the import
   **overwrites them from FDO on every drop** so reassignments flow through (a **blank** FDO cell keeps the
   current value, no accidental wipe). Manage-dialog edits are editable but **superseded by the next FDO drop**.
@@ -440,13 +443,20 @@ nav, the route redirects to `/nominations`, unknown routes show a "Page not foun
   like `/governance?sla=Defer` just work) + `useFacets(rows, pickers, f, order)` (each dropdown lists only values still
   present under the other filters). Badge colours come from the server (`statusTone`, `healthTone`, `velocityTone`) and
   stage names from `stageLabel` — no local label/colour maps.
-- **Nominations page layout**: `pages/NominationsPage.tsx` (grid + filters, all URL-synced: `approval` (`all` = no filter,
-  absent = configured default) · `stage` · `status` (health bucket) · `sla` · `sa` · `pm` · `cftl` · `cls` · `links` · `ghcp` ·
+- **Nominations page layout**: filters sit **directly under the PageHeader** (like Strategic Register), then summary cards,
+  then the grid. **One `FilterText` "SA / PM / CFTL" owner search** (`owner` param, contains match on any of the three roles;
+  also on Governance; server export accepts `owner`). Strategic (SA) and Velocity (SA/PM) keep per-role text search. `pages/NominationsPage.tsx` (grid + filters, all URL-synced: `approval` (`all` = no filter,
+  absent = configured default) · `stage` · `status` (health bucket) · `sla` · `owner` · `cls` · `links` · `ghcp` ·
   `quality` · `q`; plus `?person=`), with pieces in `pages/nominations/`: `NominationDetail` (row expand + `ReadField`/`LinkChip`),
   `SummaryCards`, `ManageNominationDialog`. Export Excel passes the same filters (`stage`, `health`, `sa`, `pm`, `cftl`, …).
 - **Performance**: `api.nominations(region)` is cached per region for 60 s and shared across pages; any non-GET request
   (edit, upload, refresh) clears it (axios interceptor in `api.ts`). Pages other than Dashboard / Nominations / Workspace /
   Login are lazy-loaded (`page()` + `L()` in `App.tsx`) — add new pages the same way. Configuration is tabbed (`?tab=`).
+  `vite.config.ts` splits stable vendor chunks (react · fluent · charts · other) so deploys only change the small app
+  chunk; charts are imported via `components/lazyCharts.tsx` so Chart.js downloads only when a chart renders.
+- **Shared UI (`components/ui.tsx`)** — use instead of inline markup: `SlaBadge` (server `slaTone`), `HealthBadge`
+  (`healthTone` + Current State tooltip), `VelocityBadge`, `FixInFdoBadge`, `BarRow` (horizontal bar / funnel step),
+  `KpiRow`, `FilterBar` (filters + Reset + note), `ExportCsvButton` (date-stamped CSV).
 - **Migration Capability Utilization** (the GHCP/AppMod/accelerator value story): two portal-owned masters —
   **`MigrationTool`** (Name · Category · Vendor; seeded 15-tool taxonomy — **Assessment** (Azure Migrate, AppCAT) ·
   **GHCP** (GHCP-CI, GHCP Agent Mode, GHCP Custom Prompts, AppMod .NET/Java/CLI, Upgrade Assistant — AppMod is a

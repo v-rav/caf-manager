@@ -81,6 +81,9 @@ public class NominationDto
 
     // Server-computed rules (NominationRules) — pages render these instead of re-deriving them.
     public int? StageIndex { get; set; }
+    /// <summary>Full FDO stage 1–7 (5 Deferred · 6 Cancelled/Archived · 7 Completed); StageIndex stays the 1–4 journey stage.</summary>
+    public int? FdoStage { get; set; }
+    public string? FdoStageLabel { get; set; }
     public string StageLabel { get; set; } = string.Empty;
     public bool IsSettled { get; set; }
     /// <summary>Blocker reason suggested from Remarks (else Current State) by the BlockerReason keyword rules.</summary>
@@ -100,6 +103,7 @@ public class NominationDto
     public string StatusTone { get; set; } = "informative";
     public string HealthBucket { get; set; } = "Other";
     public string HealthTone { get; set; } = "informative";
+    public string? SlaTone { get; set; }
     public DateOnly? NominatedDate { get; set; }
     public DateOnly? ApprovalDate { get; set; }
     public DateOnly? ActualStartDate { get; set; }

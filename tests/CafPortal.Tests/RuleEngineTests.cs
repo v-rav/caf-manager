@@ -21,6 +21,21 @@ public class KeywordRulesTests
         => Assert.Equal(expected, NominationRules.StageIndex(text));
 
     [Theory]
+    [InlineData("Validating Commitment & Initial Scope", 1)]
+    [InlineData("Executing Migration", 4)]
+    [InlineData("5 - Deferred By Customer", 5)]
+    [InlineData("6 - Cancelled / Archived", 6)]
+    [InlineData("7-Completed", 7)]
+    [InlineData("Completed", 7)]
+    [InlineData("Something else", null)]
+    public void FdoStage_maps_full_1_to_7(string text, int? expected)
+    {
+        Assert.Equal(expected, NominationRules.FdoStage(text));
+        // Journey stage stays 1–4 only, so SLA/velocity are unaffected by settled stages.
+        if (expected > 4) Assert.Null(NominationRules.StageIndex(text));
+    }
+
+    [Theory]
     [InlineData("Blocked - Customer", "Blocked")]
     [InlineData("Waiting for customer", "Waiting")]
     [InlineData("Follow-up needed", "Waiting")]
@@ -172,6 +187,13 @@ public class NominationRulesTests
     [InlineData("On Track", "success")]
     [InlineData("Other", "informative")]
     public void Health_tone_maps_bucket(string bucket, string expected) => Assert.Equal(expected, NominationRules.HealthTone(bucket));
+
+    [Theory]
+    [InlineData("Warn", "warning")]
+    [InlineData("Escalate", "severe")]
+    [InlineData("Defer", "danger")]
+    [InlineData("", null)]
+    public void Sla_tone_maps_tier(string tier, string? expected) => Assert.Equal(expected, NominationRules.SlaTone(tier));
 
     [Fact]
     public void Data_quality_flags_cover_fdo_days_and_missing_cores()

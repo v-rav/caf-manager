@@ -3,9 +3,10 @@ import { ArrowDownloadRegular } from '@fluentui/react-icons'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
-import { BarChart, DoughnutChart } from '../components/charts'
+import { BarChart, DoughnutChart } from '../components/lazyCharts'
 import { ErrorText, Loading, Panel, SaWorkloadList } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
+import { BarRow as Bar } from '../components/ui'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
@@ -17,18 +18,6 @@ const CAPACITY_COLORS = ['#107c10', '#eaa300', '#ca5010', '#c50f1f']
 
 const stageIdx = (n: Nomination): number => n.stageIndex ?? 0
 const ghcpLevel = (n: Nomination): number => n.ghcpEffectiveLevel ?? n.ghcpAdoptionLevel ?? 0
-function Bar({ label, count, max }: { label: string; count: number; max: number }) {
-  const pct = max ? Math.round((count / max) * 100) : 0
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '210px 1fr 40px', gap: 10, alignItems: 'center' }}>
-      <span style={{ fontSize: 12 }}>{label}</span>
-      <div style={{ background: 'var(--colorNeutralBackground3)', borderRadius: 4, height: 14, overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: 'var(--colorBrandBackground)' }} />
-      </div>
-      <span style={{ fontSize: 12, textAlign: 'right', color: 'var(--colorNeutralForeground3)' }}>{count}</span>
-    </div>
-  )
-}
 
 type M = {
   all: Nomination[]; approved: Nomination[]; active: Nomination[]; upcoming: Nomination[]; completed: Nomination[]; blocked: Nomination[]

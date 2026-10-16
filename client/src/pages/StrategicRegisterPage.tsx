@@ -1,15 +1,15 @@
-import { Badge, Button, Tooltip } from '@fluentui/react-components'
-import { ArrowDownloadRegular } from '@fluentui/react-icons'
+import { Badge, Tooltip } from '@fluentui/react-components'
 import { useMemo } from 'react'
 import { api } from '../api'
 import { DataTable } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
-import { ErrorText, FilterSelect, Loading, NominationLink, PageHeader, Panel } from '../components/common'
+import { ErrorText, FilterSelect, FilterText, Loading, NominationLink, PageHeader, Panel } from '../components/common'
+import { ExportCsvButton, FilterBar } from '../components/ui'
 import { useFacets, useUrlFilters } from '../filters'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
-import { downloadCsv } from '../export'
+import type { CsvColumn } from '../export'
 import type { Nomination } from '../types'
 
 
@@ -19,11 +19,10 @@ function tierTone(t: string): 'success' | 'warning' | 'danger' | 'brand' {
 
 const TIERS = ['Green', 'Amber', 'Red', 'Exec']
 const KEYS = ['cls', 'tier', 'status', 'sa'] as const
-const pickers: Record<(typeof KEYS)[number], (n: Nomination) => string> = {
-  cls: (n) => n.classification ?? '',
-  tier: (n) => n.strategicTier ?? '',
-  status: (n) => n.status ?? '',
-  sa: (n) => n.solutionArchitect?.trim() ?? '',
+const pickers = {
+  cls: (n: Nomination) => n.classification ?? '',
+  tier: (n: Nomination) => n.strategicTier ?? '',
+  status: (n: Nomination) => n.status ?? '',
 }
 
 export function StrategicRegisterPage() {
@@ -33,26 +32,22 @@ export function StrategicRegisterPage() {
   const { data: vocab } = useAsync(() => api.nominationVocab(), [])
   const { f, set, reset, any: anyFilter } = useUrlFilters(KEYS)
 
-  const strategic = useMemo(() => (data ?? []).filter((n) => n.isStrategic && nominationInFy(n, fy)), [data, fy])
-  const { rows, options } = useFacets(strategic, pickers, f, { tier: TIERS })
+  const strategic = useMemo(() => (data ?? []).filter((n) => n.isStrategic && nominationInFy(n, fy)
+    && (!f.sa || (n.solutionArchitect ?? '').toLowerCase().includes(f.sa.trim().toLowerCase()))), [data, fy, f.sa])
+  const { rows, options } = useFacets<Nomination, keyof typeof pickers>(strategic, pickers, f, { tier: TIERS })
   const activeAll = useMemo(() => (data ?? []).filter((n) => nominationInFy(n, fy) && !n.isSettled), [data, fy])
 
-  const exportRows = () =>
-    downloadCsv<Nomination>(
-      `strategic-register-${new Date().toISOString().slice(0, 10)}`,
-      [
-        { header: 'Account', value: (n) => n.accountName ?? '' },
-        { header: 'TPID', value: (n) => n.tpid ?? '' },
-        { header: 'Classification', value: (n) => n.classification },
-        { header: 'Velocity % (target ÷ actual)', value: (n) => (n.velocity != null ? Math.round(n.velocity * 100) : '') },
-        { header: 'SA', value: (n) => n.solutionArchitect ?? '' },
-        { header: 'Status', value: (n) => n.status },
-        { header: 'Days in flight', value: (n) => n.daysInFlight },
-        { header: 'Threshold', value: (n) => n.strategicTier },
-        { header: 'Region', value: (n) => n.region },
-      ],
-      rows,
-    )
+  const csvColumns: CsvColumn<Nomination>[] = [
+    { header: 'Account', value: (n) => n.accountName ?? '' },
+    { header: 'TPID', value: (n) => n.tpid ?? '' },
+    { header: 'Classification', value: (n) => n.classification },
+    { header: 'Velocity % (target ÷ actual)', value: (n) => (n.velocity != null ? Math.round(n.velocity * 100) : '') },
+    { header: 'SA', value: (n) => n.solutionArchitect ?? '' },
+    { header: 'Status', value: (n) => n.status },
+    { header: 'Days in flight', value: (n) => n.daysInFlight },
+    { header: 'Threshold', value: (n) => n.strategicTier },
+    { header: 'Region', value: (n) => n.region },
+  ]
 
   const kpis = useMemo(() => {
     const active = rows.filter((n) => !n.isSettled)
@@ -85,16 +80,15 @@ export function StrategicRegisterPage() {
       <PageHeader
         title="Strategic Investment Register"
         subtitle="Pilots & strategic engagements · time-threshold governance (60/90/120) · excluded from Standard velocity"
-        actions={<Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!rows.length}>Export CSV</Button>}
+        actions={<ExportCsvButton name="strategic-register" columns={csvColumns} rows={rows} />}
       />
 
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+      <FilterBar active={anyFilter} onReset={reset}>
         <FilterSelect label="Classification" value={f.cls} options={options.cls} onChange={set('cls')} minWidth={180} />
         <FilterSelect label="Threshold" value={f.tier} options={options.tier} onChange={set('tier')} minWidth={120} />
         <FilterSelect label="Status" value={f.status} options={options.status} onChange={set('status')} minWidth={140} />
-        <FilterSelect label="SA" value={f.sa} options={options.sa} onChange={set('sa')} minWidth={180} />
-        {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
-      </div>
+        <FilterText label="SA" value={f.sa} onChange={set('sa')} placeholder="Search SA" />
+      </FilterBar>
 
       {strategic.length === 0 && (
         <Panel title="No strategic engagements yet">

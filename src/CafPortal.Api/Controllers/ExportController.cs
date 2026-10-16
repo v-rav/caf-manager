@@ -23,8 +23,8 @@ public class ExportController(IExportService export) : ControllerBase
     public async Task<IActionResult> Nominations([FromQuery] string? region, [FromQuery] string? approval,
         [FromQuery] string? migrationStatus, [FromQuery] string? currentState, [FromQuery] string? sla,
         [FromQuery] string? links, [FromQuery] string? search, [FromQuery] int? fy, [FromQuery] string? quality,
-        [FromQuery] int? stage, [FromQuery] string? health, [FromQuery] string? sa, [FromQuery] string? pm, [FromQuery] string? cftl, CancellationToken ct)
-        => File(await export.NominationsAsync(region, approval, migrationStatus, currentState, sla, links, search, fy, quality, stage, health, sa, pm, cftl, ct), Xlsx, $"nominations_{Stamp}.xlsx");
+        [FromQuery] int? stage, [FromQuery] string? health, [FromQuery] string? sa, [FromQuery] string? pm, [FromQuery] string? cftl, [FromQuery] string? owner, CancellationToken ct)
+        => File(await export.NominationsAsync(region, approval, migrationStatus, currentState, sla, links, search, fy, quality, stage, health, sa, pm, cftl, owner, ct), Xlsx, $"nominations_{Stamp}.xlsx");
 
     [HttpGet("performance")]
     public async Task<IActionResult> Performance([FromQuery] string? region, CancellationToken ct)

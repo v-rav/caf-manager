@@ -1,4 +1,4 @@
-import { Badge, Button, Dropdown, Option, Spinner, Text, Tooltip, tokens } from '@fluentui/react-components'
+import { Badge, Button, Dropdown, Option, SearchBox, Spinner, Text, Tooltip, tokens } from '@fluentui/react-components'
 import { ArrowClockwiseRegular } from '@fluentui/react-icons'
 import type { ReactNode } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
@@ -152,6 +152,24 @@ export function FilterSelect({
           </Option>
         ))}
       </Dropdown>
+    </div>
+  )
+}
+
+/** Labelled free-text filter (contains match) — same layout as FilterSelect, for long lists like people. */
+export function FilterText({ label, value, onChange, placeholder, minWidth = 150 }: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  minWidth?: number
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Text size={200} weight="semibold" style={{ color: tokens.colorNeutralForeground3 }}>
+        {label}
+      </Text>
+      <SearchBox aria-label={label} placeholder={placeholder ?? 'Any'} value={value} onChange={(_, d) => onChange(d.value)} style={{ minWidth }} />
     </div>
   )
 }

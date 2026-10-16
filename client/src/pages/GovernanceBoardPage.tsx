@@ -3,8 +3,9 @@ import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { DataTable, type Column } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
-import { ErrorText, FilterSelect, Loading, NominationLink, PageHeader, Panel } from '../components/common'
-import { downloadCsv } from '../export'
+import { ErrorText, FilterSelect, FilterText, Loading, NominationLink, PageHeader, Panel } from '../components/common'
+import { ExportCsvButton, FilterBar, HealthBadge, KpiRow, SlaBadge } from '../components/ui'
+import type { CsvColumn } from '../export'
 import { useFacets, useUrlFilters } from '../filters'
 import { nominationInFy, useFy } from '../fy'
 import { useAsync } from '../hooks'
@@ -12,18 +13,15 @@ import { useRegion } from '../region'
 import type { Blocker, Nomination } from '../types'
 
 const TIERS = ['Warn', 'Escalate', 'Defer']
-const TIER_COLOR = { Warn: 'warning', Escalate: 'severe', Defer: 'danger' } as const
 
-const KEYS = ['sla', 'status', 'stage', 'reason', 'sa', 'pm', 'cftl'] as const
-const pickers: Record<(typeof KEYS)[number], (n: Nomination) => string> = {
-  sla: (n) => n.staleTier ?? '',
-  status: (n) => n.healthBucket ?? '',
-  stage: (n) => (n.stageIndex ? `${n.stageIndex} · ${n.stageLabel ?? ''}` : ''),
-  reason: (n) => n.suggestedBlockerReason ?? '',
-  sa: (n) => n.solutionArchitect?.trim() ?? '',
-  pm: (n) => n.projectCoordinator?.trim() ?? '',
-  cftl: (n) => n.cftlPrimary?.trim() ?? '',
+const KEYS = ['sla', 'status', 'stage', 'reason', 'owner'] as const
+const pickers = {
+  sla: (n: Nomination) => n.staleTier ?? '',
+  status: (n: Nomination) => n.healthBucket ?? '',
+  stage: (n: Nomination) => (n.stageIndex ? `${n.stageIndex} · ${n.stageLabel ?? ''}` : ''),
+  reason: (n: Nomination) => n.suggestedBlockerReason ?? '',
 }
+const has = (v: string | undefined | null, part: string) => (v ?? '').toLowerCase().includes(part.trim().toLowerCase())
 
 /** Exceptions board: in-flight waves that are blocked, waiting, or past their stage target — all from FDO data. */
 export function GovernanceBoardPage() {
@@ -38,9 +36,11 @@ export function GovernanceBoardPage() {
   const exceptions = useMemo(() => (noms.data ?? []).filter((n) =>
     nominationInFy(n, fy) && !n.isSettled && !n.isUpcoming
     && n.approvalStatus?.toLowerCase() === 'approved'
-    && (n.healthBucket === 'Blocked' || n.healthBucket === 'Waiting' || !!n.staleTier)), [noms.data, fy])
+    && (n.healthBucket === 'Blocked' || n.healthBucket === 'Waiting' || !!n.staleTier)
+    && (!f.owner || has(n.solutionArchitect, f.owner) || has(n.projectCoordinator, f.owner) || has(n.cftlPrimary, f.owner))),
+    [noms.data, fy, f.owner])
 
-  const { rows, options } = useFacets(exceptions, pickers, f, { sla: TIERS })
+  const { rows, options } = useFacets<Nomination, keyof typeof pickers>(exceptions, pickers, f, { sla: TIERS })
 
   const count = (p: (n: Nomination) => boolean) => rows.filter(p).length
   const resolve = async (b: Blocker) => {
@@ -54,10 +54,9 @@ export function GovernanceBoardPage() {
       render: (n) => <NominationLink id={n.id} name={n.accountName} /> },
     { key: 'stage', header: 'Stage', align: 'center', sortValue: (n) => n.stageIndex ?? 0, render: (n) => n.stageIndex ?? '—' },
     { key: 'health', header: 'Status', sortValue: (n) => n.healthBucket ?? '',
-      render: (n) => n.healthBucket
-        ? <Badge appearance="tint" color={n.healthTone ?? 'informative'}>{n.healthBucket}</Badge> : '—' },
+      render: (n) => <HealthBadge bucket={n.healthBucket} tone={n.healthTone} currentState={n.currentState} /> },
     { key: 'tier', header: 'SLA', sortValue: (n) => TIERS.indexOf(n.staleTier ?? '') + 1,
-      render: (n) => n.staleTier ? <Badge appearance="tint" color={TIER_COLOR[n.staleTier as keyof typeof TIER_COLOR] ?? 'informative'}>{n.staleTier}</Badge> : '—' },
+      render: (n) => (n.staleTier ? <SlaBadge tier={n.staleTier} tone={n.slaTone} /> : '—') },
     { key: 'days', header: 'Days in stage', align: 'end', sortValue: (n) => n.effectiveAgeDays,
       render: (n) => `${n.effectiveAgeDays}d${n.stageTargetDays ? ` / ${n.stageTargetDays}d` : ''}` },
     { key: 'over', header: 'Over target', align: 'end', sortValue: (n) => n.daysOverTarget ?? -1,
@@ -69,8 +68,7 @@ export function GovernanceBoardPage() {
     { key: 'next', header: 'Next step', minWidth: 240, sortValue: (n) => n.nextStep ?? '', render: (n) => n.nextStep ?? '—' },
   ]
 
-  const exportRows = () =>
-    downloadCsv<Nomination>(`governance-exceptions-${new Date().toISOString().slice(0, 10)}`, [
+  const csvColumns: CsvColumn<Nomination>[] = [
       { header: 'Task Id', value: (n) => n.externalTaskId ?? '' },
       { header: 'Account', value: (n) => n.accountName ?? '' },
       { header: 'TPID', value: (n) => n.tpid ?? '' },
@@ -87,7 +85,7 @@ export function GovernanceBoardPage() {
       { header: 'CFTL', value: (n) => n.cftlPrimary ?? '' },
       { header: 'Next step', value: (n) => n.nextStep ?? '' },
       { header: 'Remarks', value: (n) => n.remarks ?? '' },
-    ], rows)
+  ]
 
   if (noms.error) return <ErrorText error={noms.error} onRetry={noms.reload} />
   if (noms.loading && !noms.data) return <Loading label="Loading governance board…" />
@@ -99,27 +97,24 @@ export function GovernanceBoardPage() {
       <PageHeader
         title="Governance Board"
         subtitle="In-flight waves that are blocked, waiting, or past their stage target — straight from FDO, worst first."
-        actions={<Button appearance="primary" onClick={exportRows} disabled={!rows.length}>Export CSV</Button>}
+        actions={<ExportCsvButton name="governance-exceptions" columns={csvColumns} rows={rows} primary />}
       />
 
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+      <FilterBar active={anyFilter} onReset={reset}>
         <FilterSelect label="SLA tier" value={f.sla} options={options.sla} onChange={set('sla')} minWidth={120} />
         <FilterSelect label="Status" value={f.status} options={options.status} onChange={set('status')} minWidth={120} />
         <FilterSelect label="Stage" value={f.stage} options={options.stage} onChange={set('stage')} />
         <FilterSelect label="Reason" value={f.reason} options={options.reason} onChange={set('reason')} minWidth={200} />
-        <FilterSelect label="SA" value={f.sa} options={options.sa} onChange={set('sa')} minWidth={180} />
-        <FilterSelect label="PM" value={f.pm} options={options.pm} onChange={set('pm')} minWidth={180} />
-        <FilterSelect label="CFTL" value={f.cftl} options={options.cftl} onChange={set('cftl')} minWidth={180} />
-        {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
-      </div>
+        <FilterText label="SA / PM / CFTL" value={f.owner} onChange={set('owner')} placeholder="Search owner name" minWidth={190} />
+      </FilterBar>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+      <KpiRow>
         <KpiCard label="Needs attention" value={String(rows.length)} tone={rows.length ? 'warning' : 'success'} />
         <KpiCard label="Blocked" value={String(count((n) => n.healthBucket === 'Blocked'))} tone="danger" />
         <KpiCard label="Waiting" value={String(count((n) => n.healthBucket === 'Waiting'))} tone="warning" />
         <KpiCard label="Past target" value={String(count((n) => !!n.staleTier))} tone="warning" />
         <KpiCard label="Long-stalled" value={String(count((n) => !!n.isLongStalled))} tone="danger" />
-      </div>
+      </KpiRow>
 
       <Panel title={`Exceptions · ${rows.length}`}>
         <DataTable<Nomination>

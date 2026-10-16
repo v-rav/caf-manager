@@ -1,12 +1,13 @@
-import { Badge, Button, Text, Tooltip } from '@fluentui/react-components'
+import { Badge, Text, Tooltip } from '@fluentui/react-components'
 import { api } from '../api'
 import { DataTable, type Column } from '../components/DataTable'
-import { ErrorText, FilterSelect, Loading, NominationLink, PageHeader, Panel } from '../components/common'
+import { ErrorText, FilterSelect, FilterText, Loading, NominationLink, PageHeader, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'
-import { downloadCsv } from '../export'
+import { ExportCsvButton, FilterBar, KpiRow, VelocityBadge } from '../components/ui'
+import type { CsvColumn } from '../export'
 import { useUrlFilters } from '../filters'
 import { useFy, fyLabel, currentFy } from '../fy'
-import { useAsync } from '../hooks'
+import { useAsync, useDebounced } from '../hooks'
 import { useRegion } from '../region'
 import type { StageVelocitySet, VelocityPeriod, VelocityWave } from '../types'
 
@@ -82,12 +83,14 @@ export function VelocityPage() {
   const [setCls, setStage, setSegment, setPath, setSa, setPm, setSet, setQuality] = KEYS.map((k) => setF(k))
 
   const stageNo = stage ? STAGES.indexOf(stage) + 1 : undefined
+  const saQ = useDebounced(sa)
+  const pmQ = useDebounced(pm)
   const excludeStrategic = cls === EXCLUDE_NON_STANDARD
   const classification = excludeStrategic ? '' : cls
   const q = QUALITY[quality]
   const { data, loading, error, reload } = useAsync(
-    () => api.stageVelocity(region, { fy: fy === 'all' ? undefined : fy, excludeStrategic, classification, stage: stageNo, segment, path, sa, pm, set, quality: q }),
-    [region, fy, excludeStrategic, classification, stageNo, segment, path, sa, pm, set, q],
+    () => api.stageVelocity(region, { fy: fy === 'all' ? undefined : fy, excludeStrategic, classification, stage: stageNo, segment, path, sa: saQ, pm: pmQ, set, quality: q }),
+    [region, fy, excludeStrategic, classification, stageNo, segment, path, saQ, pmQ, set, q],
   )
   const waves = data?.waves ?? []
 
@@ -114,14 +117,11 @@ export function VelocityPage() {
       ) },
     { key: 'target', header: 'Allocated', align: 'end', sortValue: (w) => w.targetDays ?? -1 },
     { key: 'vel', header: 'Velocity', align: 'end', sortValue: (w) => w.velocityPct ?? -1,
-      render: (w) => w.velocityPct != null
-        ? <Badge appearance="tint" color={w.tone ?? 'informative'}>{w.velocityPct}%</Badge>
-        : '—' },
+      render: (w) => <VelocityBadge pct={w.velocityPct} tone={w.tone} /> },
     { key: 'end', header: 'Actual end', sortValue: (w) => w.actualEndDate ?? '' },
   ]
 
-  const exportRows = () =>
-    downloadCsv<VelocityWave>(`velocity-${new Date().toISOString().slice(0, 10)}`, [
+  const csvColumns: CsvColumn<VelocityWave>[] = [
       { header: 'Account', value: (w) => w.accountName ?? '' },
       { header: 'TPID', value: (w) => w.tpid ?? '' },
       { header: 'Set', value: (w) => w.set },
@@ -140,7 +140,7 @@ export function VelocityPage() {
       { header: 'Allocated days', value: (w) => w.targetDays ?? '' },
       { header: 'Velocity %', value: (w) => w.velocityPct ?? '' },
       { header: 'Actual end', value: (w) => w.actualEndDate ?? '' },
-    ], waves)
+  ]
 
   if (error) return <ErrorText error={error} onRetry={reload} />
   const o = data?.options
@@ -152,16 +152,20 @@ export function VelocityPage() {
       <PageHeader
         title="Velocity Analytics"
         subtitle={`Velocity = allocated stage days ÷ FDO Total Days (higher = faster) · ${region || 'all regions'} · ${fy === 'all' ? 'all FY' : fyLabel(fy)}`}
-        actions={<Button appearance="primary" onClick={exportRows} disabled={!waves.length}>Export CSV</Button>}
+        actions={<ExportCsvButton name="velocity" columns={csvColumns} rows={waves} primary />}
       />
 
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+      <FilterBar
+        active={!!anyFilter}
+        onReset={reset}
+        note={loading && data ? <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>Updating…</Text> : null}
+      >
         <FilterSelect label="Set" value={set} options={['In-flight', 'Completed']} onChange={setSet} minWidth={120} />
         <FilterSelect label="Stage" value={stage} options={(o?.stages ?? [1, 2, 3, 4]).map((s) => STAGES[s - 1])} onChange={setStage} />
         <FilterSelect label="Segment" value={segment} options={o?.segments ?? []} onChange={setSegment} />
         <FilterSelect label="Migration path" value={path} options={o?.paths ?? []} onChange={setPath} minWidth={180} />
-        <FilterSelect label="SA" value={sa} options={o?.sas ?? []} onChange={setSa} minWidth={180} />
-        <FilterSelect label="PM" value={pm} options={o?.pms ?? []} onChange={setPm} minWidth={180} />
+        <FilterText label="SA" value={sa} onChange={setSa} placeholder="Search SA" />
+        <FilterText label="PM" value={pm} onChange={setPm} placeholder="Search PM" />
         <FilterSelect
           label={`Classification${o ? ` · ${o.nonStandard} non-Standard` : ''}`}
           value={cls}
@@ -176,13 +180,11 @@ export function VelocityPage() {
           onChange={setQuality}
           minWidth={200}
         />
-        {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
-        {loading && data && <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>Updating…</Text>}
-      </div>
+      </FilterBar>
 
       {loading && !data ? <Loading label="Calculating velocity…" /> : data && (
         <>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+          <KpiRow>
             <KpiCard label="Total waves" value={String(data.inFlight.count + data.completed.count)} tone="brand" />
             <KpiCard label="In-flight" value={String(data.inFlight.count)} />
             <KpiCard label="Completed" value={String(data.completed.count)} tone="success" />
@@ -194,7 +196,7 @@ export function VelocityPage() {
             <KpiCard label="Completed at/above target" value={done.length ? `${atTarget} · ${Math.round((atTarget / done.length) * 100)}%` : '—'} tone="brand" />
             <KpiCard label="⚠ Check FDO days" value={String(waves.filter((w) => w.fdoDaysExpected != null).length)} tone="warning"
               onClick={() => setQuality('Only ⚠ check FDO days')} />
-          </div>
+          </KpiRow>
 
           {(set === '' || set === 'In-flight') && <StageVelocityPanel title="In-flight" set={data.inFlight} />}
           {(set === '' || set === 'Completed') && <StageVelocityPanel title="Completed" set={data.completed} />}

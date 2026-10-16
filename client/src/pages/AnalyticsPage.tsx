@@ -2,7 +2,7 @@ import { Button, Dropdown, Link, Option, Text } from '@fluentui/react-components
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
-import { AttainmentChart, BarChart, DoughnutChart, TimeSeriesChart } from '../components/charts'
+import { AttainmentChart, BarChart, DoughnutChart, TimeSeriesChart } from '../components/lazyCharts'
 import { DataTable } from '../components/DataTable'
 import { ErrorText, Loading, Panel } from '../components/common'
 import { KpiCard } from '../components/KpiCard'

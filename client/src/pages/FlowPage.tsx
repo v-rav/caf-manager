@@ -1,14 +1,14 @@
-import { Badge, Button } from '@fluentui/react-components'
-import { ArrowDownloadRegular } from '@fluentui/react-icons'
+import { Badge } from '@fluentui/react-components'
 import { useMemo } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
 import { ErrorText, FilterSelect, Loading, PageHeader, Panel } from '../components/common'
+import { BarRow, ExportCsvButton, FilterBar } from '../components/ui'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
-import { downloadCsv } from '../export'
+import type { CsvColumn } from '../export'
 import { useFacets, useUrlFilters } from '../filters'
 import type { Nomination } from '../types'
 
@@ -16,20 +16,10 @@ const stageIdx = (n: Nomination): number => n.stageIndex ?? 0
 const KEYS = ['path'] as const
 const pickers = { path: (n: Nomination) => n.primaryMigrationPath?.trim() ?? '' }
 
+// Funnel step: width vs the top of the funnel, note = count · conversion from the previous step.
 function FunnelBar({ label, count, top, prev }: { label: string; count: number; top: number; prev?: number }) {
-  const pct = top ? Math.round((count / top) * 100) : 0
   const conv = prev != null && prev > 0 ? Math.round((count / prev) * 100) : null
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr 120px', gap: 10, alignItems: 'center' }}>
-      <span style={{ fontSize: 12 }}>{label}</span>
-      <div style={{ background: 'var(--colorNeutralBackground3)', borderRadius: 4, height: 18, overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: 'var(--colorBrandBackground)' }} />
-      </div>
-      <span style={{ fontSize: 12, textAlign: 'right', color: 'var(--colorNeutralForeground3)' }}>
-        {count}{conv != null ? ` · ${conv}%` : ''}
-      </span>
-    </div>
-  )
+  return <BarRow label={label} count={count} max={top} labelWidth={190} note={`${count}${conv != null ? ` · ${conv}%` : ''}`} />
 }
 
 export function FlowPage() {
@@ -45,23 +35,18 @@ export function FlowPage() {
   // Stage names come from the server (`stageLabel`), never a local list.
   const stageName = (k: number) => scoped.find((n) => n.stageIndex === k)?.stageLabel || `Stage ${k}`
 
-  const exportRows = () =>
-    downloadCsv<Nomination>(
-      `migration-flow-${new Date().toISOString().slice(0, 10)}`,
-      [
-        { header: 'Account', value: (n) => n.accountName ?? '' },
-        { header: 'TPID', value: (n) => n.tpid ?? '' },
-        { header: 'Stage', value: (n) => stageIdx(n) || '' },
-        { header: 'Migration status', value: (n) => n.migrationStatus ?? '' },
-        { header: 'Current state', value: (n) => n.currentState ?? '' },
-        { header: 'Migration path', value: (n) => n.primaryMigrationPath ?? '' },
-        { header: 'SA', value: (n) => n.solutionArchitect ?? '' },
-        { header: 'Age (stage days)', value: (n) => n.stageAgeDays ?? n.daysSinceUpdate },
-        { header: 'Status', value: (n) => n.status },
-        { header: 'Region', value: (n) => n.region },
-      ],
-      approved,
-    )
+  const csvColumns: CsvColumn<Nomination>[] = [
+    { header: 'Account', value: (n) => n.accountName ?? '' },
+    { header: 'TPID', value: (n) => n.tpid ?? '' },
+    { header: 'Stage', value: (n) => stageIdx(n) || '' },
+    { header: 'Migration status', value: (n) => n.migrationStatus ?? '' },
+    { header: 'Current state', value: (n) => n.currentState ?? '' },
+    { header: 'Migration path', value: (n) => n.primaryMigrationPath ?? '' },
+    { header: 'SA', value: (n) => n.solutionArchitect ?? '' },
+    { header: 'Age (stage days)', value: (n) => n.stageAgeDays ?? n.daysSinceUpdate },
+    { header: 'Status', value: (n) => n.status },
+    { header: 'Region', value: (n) => n.region },
+  ]
 
   const funnel = useMemo(() => {
     const reached = (k: number) => approved.filter((n) => completed(n) || stageIdx(n) >= k).length
@@ -122,9 +107,10 @@ export function FlowPage() {
         title="Migration Flow"
         subtitle="Funnel conversion & drop-off · where in-flight work sticks — click a stage or reason to see the waves"
         actions={<>
-          <FilterSelect label="Path" value={f.path} onChange={set('path')} options={options.path} minWidth={200} />
-          {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
-          <Button appearance="secondary" icon={<ArrowDownloadRegular />} onClick={exportRows} disabled={!approved.length}>Export CSV</Button>
+          <FilterBar active={anyFilter} onReset={reset}>
+            <FilterSelect label="Path" value={f.path} onChange={set('path')} options={options.path} minWidth={200} />
+          </FilterBar>
+          <ExportCsvButton name="migration-flow" columns={csvColumns} rows={approved} />
         </>}
       />
 

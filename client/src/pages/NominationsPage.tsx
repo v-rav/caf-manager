@@ -6,7 +6,8 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import { DataTable } from '../components/DataTable'
 import { Modal } from '../components/Modal'
-import { ErrorText, FilterSelect, Loading, NominationLink, PageHeader, Panel } from '../components/common'
+import { ErrorText, FilterSelect, FilterText, Loading, NominationLink, PageHeader, Panel } from '../components/common'
+import { FilterBar, HealthBadge, SlaBadge } from '../components/ui'
 import { useFacets, useUrlFilters } from '../filters'
 import { nominationInFy, useFy } from '../fy'
 import { useAsync, useDebounced } from '../hooks'
@@ -21,25 +22,20 @@ const LINK_FILTERS = ['No waves', 'Has any waves', 'Has DB', 'Has Security']
 const SLA_TIERS = ['Warn', 'Escalate', 'Defer']
 const QUALITY = ['Check FDO days', 'Missing cores']
 const STATUS_ORDER = ['On Track', 'Waiting', 'Blocked', 'Other']
-const STAGE_TONE = ['neutral', 'warning', 'warning', 'brand'] as const
+const STAGE_TONE = ['neutral', 'warning', 'warning', 'brand', 'neutral', 'neutral', 'success'] as const
+const BADGE_COLOR = ['brand', 'brand', 'brand', 'brand', 'warning', 'subtle', 'success'] as const
 
-const KEYS = ['approval', 'stage', 'status', 'sla', 'cls', 'links', 'ghcp', 'quality', 'sa', 'pm', 'cftl', 'q'] as const
+const KEYS = ['approval', 'stage', 'status', 'sla', 'cls', 'links', 'ghcp', 'quality', 'owner', 'q'] as const
 type Key = (typeof KEYS)[number]
-const stageText = (n: Nomination) => (n.stageIndex ? `${n.stageIndex} · ${n.stageLabel ?? ''}` : '')
+// Full FDO stage 1–7 (5 Deferred · 6 Cancelled / Archived · 7 Completed) — from the server.
+const stageText = (n: Nomination) => (n.fdoStage ? `${n.fdoStage} · ${n.fdoStageLabel ?? ''}` : '')
 // Dropdowns whose options narrow to values still present under the other filters.
 const facetPickers = {
   stage: stageText,
   status: (n: Nomination) => n.healthBucket ?? '',
-  sa: (n: Nomination) => n.solutionArchitect?.trim() ?? '',
-  pm: (n: Nomination) => n.projectCoordinator?.trim() ?? '',
-  cftl: (n: Nomination) => n.cftlPrimary?.trim() ?? '',
 }
-
-const staleTone: Record<string, { color: string; bg: string }> = {
-  Warn: { color: '#8a6d00', bg: '#fff4ce' },
-  Escalate: { color: '#8a3b00', bg: '#fed9cc' },
-  Defer: { color: '#a4262c', bg: '#fde7e9' },
-}
+const has = (v: string | undefined | null, part: string) => (v ?? '').toLowerCase().includes(part.trim().toLowerCase())
+const ownedBy = (n: Nomination, q: string) => has(n.solutionArchitect, q) || has(n.projectCoordinator, q) || has(n.cftlPrimary, q)
 
 // Trim the noisy offering prefix (e.g. "App Modernization Nominations - Wave 18" → "Wave 18").
 function offeringShort(tech: string): string {
@@ -57,11 +53,11 @@ function matchesPerson(n: Nomination, person: string): boolean {
     || (n.assignedResources ?? []).some((r) => r.name.toLowerCase().includes(p))
 }
 
-// Free-text search across account, TPID and the three ownership roles (PM / CFTL / SA).
+// Nomination identity search (account, TPID, FDO Task Id); people are searched via the SA / PM / CFTL box.
 function matchesText(n: Nomination, query: string): boolean {
   const q = query.toLowerCase()
-  const has = (v?: string) => (v ?? '').toLowerCase().includes(q)
-  return has(n.accountName) || has(n.tpid) || has(n.projectCoordinator) || has(n.cftlPrimary) || has(n.solutionArchitect)
+  const has = (v?: string | null) => (v ?? '').toLowerCase().includes(q)
+  return has(n.accountName) || has(n.tpid) || has(n.externalTaskId)
 }
 
 function matchesLinks(n: Nomination, links: string): boolean {
@@ -137,6 +133,7 @@ export function NominationsPage() {
     && matchesLinks(n, f.links)
     && (!f.ghcp || (f.ghcp === 'Reported' ? (n.ghcpUsageCount ?? 0) > 0 : (n.ghcpUsageCount ?? 0) === 0))
     && (!f.quality || (n.dataQualityFlags ?? []).includes(f.quality))
+    && (!f.owner || ownedBy(n, f.owner))
     && (!effectivePerson || matchesPerson(n, effectivePerson))
     && (!search || matchesText(n, search))), [scoped, f, effectivePerson, search])
   const { rows, options } = useFacets<Nomination, keyof typeof facetPickers>(base, facetPickers, f, { status: STATUS_ORDER })
@@ -148,8 +145,8 @@ export function NominationsPage() {
     () => [...new Set(['Approved', 'Declined', ...(data ?? []).map((n) => n.approvalStatus).filter((v): v is string => !!v)])],
     [data],
   )
-  // Stage names come from the server (`stageLabel`).
-  const stageName = (k: number) => (data ?? []).find((n) => n.stageIndex === k)?.stageLabel || `Stage ${k}`
+  // Stage names come from the server (`fdoStageLabel`).
+  const stageName = (k: number) => (data ?? []).find((n) => n.fdoStage === k)?.fdoStageLabel || `Stage ${k}`
 
   const exportHref = api.exportUrl('nominations', region, {
     approval,
@@ -158,9 +155,7 @@ export function NominationsPage() {
     sla: f.sla,
     links: f.links,
     quality: f.quality,
-    sa: f.sa,
-    pm: f.pm,
-    cftl: f.cftl,
+    owner: f.owner,
     search,
     fy: fy === 'all' ? undefined : String(fy),
   })
@@ -168,6 +163,20 @@ export function NominationsPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader title="Nomination Pipeline" subtitle="FDO waves with portal governance · filters are kept in the address, so a view can be bookmarked or shared" />
+
+      <FilterBar active={anyFilter} onReset={reset}>
+        <SearchBox aria-label="Search nominations" placeholder="Account, TPID or Task Id" value={f.q} onChange={(_, d) => set('q')(d.value)} style={{ minWidth: 220 }} />
+        {isSa && <Switch checked={mine} onChange={(_, d) => setMine(d.checked)} label="My nominations" />}
+        <FilterSelect label="Approval status" value={approval} options={approvalOptions} onChange={setApproval} minWidth={150} />
+        <FilterSelect label="Stage" value={f.stage} options={options.stage} onChange={set('stage')} minWidth={190} />
+        <FilterSelect label="Status" value={f.status} options={options.status} onChange={set('status')} minWidth={120} />
+        <FilterSelect label="SLA tier" value={f.sla} options={SLA_TIERS} onChange={set('sla')} minWidth={120} />
+        <FilterText label="SA / PM / CFTL" value={f.owner} onChange={set('owner')} placeholder="Search owner name" minWidth={190} />
+        {classOn && <FilterSelect label="Classification" value={f.cls} options={['Strategic (all)', ...(vocab?.classifications ?? [])]} onChange={set('cls')} minWidth={160} />}
+        <FilterSelect label="Links" value={f.links} options={LINK_FILTERS} onChange={set('links')} minWidth={140} />
+        <FilterSelect label="GHCP usage" value={f.ghcp} options={['Reported', 'None']} onChange={set('ghcp')} minWidth={130} />
+        <FilterSelect label="Data quality (fix in FDO)" value={f.quality} options={QUALITY} onChange={set('quality')} minWidth={170} />
+      </FilterBar>
 
       {person && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 6, background: 'var(--colorBrandBackground2)', border: '1px solid var(--colorBrandStroke2)', alignSelf: 'flex-start' }}>
@@ -195,9 +204,9 @@ export function NominationsPage() {
             />
             <SummaryCard
               title="Migration stage"
-              items={[1, 2, 3, 4].map((k) => {
+              items={[1, 2, 3, 4, 5, 6, 7].map((k) => {
                 const label = `${k} · ${stageName(k)}`
-                return { label, value: count((n) => n.stageIndex === k), tone: STAGE_TONE[k - 1], active: f.stage === label, onClick: () => toggle('stage', label) }
+                return { label, value: count((n) => n.fdoStage === k), tone: STAGE_TONE[k - 1], active: f.stage === label, onClick: () => toggle('stage', label) }
               })}
             />
             <SummaryCard
@@ -227,23 +236,6 @@ export function NominationsPage() {
                 { label: 'None', value: count((n) => (n.ghcpUsageCount ?? 0) === 0), tone: 'neutral', active: f.ghcp === 'None', onClick: () => toggle('ghcp', 'None') },
               ]}
             />
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <SearchBox placeholder="Search account, PM, CFTL, SA, TPID" value={f.q} onChange={(_, d) => set('q')(d.value)} style={{ minWidth: 220 }} />
-            {isSa && <Switch checked={mine} onChange={(_, d) => setMine(d.checked)} label="My nominations" />}
-            <FilterSelect label="Approval status" value={approval} options={approvalOptions} onChange={setApproval} minWidth={150} />
-            <FilterSelect label="Stage" value={f.stage} options={options.stage} onChange={set('stage')} minWidth={190} />
-            <FilterSelect label="Status" value={f.status} options={options.status} onChange={set('status')} minWidth={120} />
-            <FilterSelect label="SLA tier" value={f.sla} options={SLA_TIERS} onChange={set('sla')} minWidth={120} />
-            <FilterSelect label="SA" value={f.sa} options={options.sa} onChange={set('sa')} minWidth={170} />
-            <FilterSelect label="PM" value={f.pm} options={options.pm} onChange={set('pm')} minWidth={170} />
-            <FilterSelect label="CFTL" value={f.cftl} options={options.cftl} onChange={set('cftl')} minWidth={170} />
-            {classOn && <FilterSelect label="Classification" value={f.cls} options={['Strategic (all)', ...(vocab?.classifications ?? [])]} onChange={set('cls')} minWidth={160} />}
-            <FilterSelect label="Links" value={f.links} options={LINK_FILTERS} onChange={set('links')} minWidth={140} />
-            <FilterSelect label="GHCP usage" value={f.ghcp} options={['Reported', 'None']} onChange={set('ghcp')} minWidth={130} />
-            <FilterSelect label="Data quality (fix in FDO)" value={f.quality} options={QUALITY} onChange={set('quality')} minWidth={170} />
-            {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
           </div>
 
           <Panel
@@ -281,10 +273,10 @@ export function NominationsPage() {
                   key: 'stage',
                   header: 'Stage',
                   align: 'center',
-                  sortValue: (n) => n.stageIndex ?? 0,
-                  render: (n) => n.stageIndex ? (
-                    <Tooltip relationship="description" content={`Stage ${n.stageIndex}: ${n.stageLabel} — ${n.migrationStatus}`}>
-                      <Badge appearance="tint" color="brand" size="medium">{n.stageIndex}</Badge>
+                  sortValue: (n) => n.fdoStage ?? 0,
+                  render: (n) => n.fdoStage ? (
+                    <Tooltip relationship="description" content={`Stage ${n.fdoStage}: ${n.fdoStageLabel} — ${n.migrationStatus}`}>
+                      <Badge appearance="tint" color={BADGE_COLOR[n.fdoStage - 1]} size="medium">{n.fdoStage}</Badge>
                     </Tooltip>
                   ) : <span style={{ color: 'var(--colorNeutralForeground3)' }}>—</span>,
                 },
@@ -292,18 +284,13 @@ export function NominationsPage() {
                   key: 'state',
                   header: 'Status',
                   sortValue: (n) => n.healthBucket ?? '',
-                  render: (n) => n.currentState ? (
-                    <Tooltip relationship="description" content={`Current State (FDO): ${n.currentState}`}>
-                      <Badge appearance="tint" color={n.healthTone ?? 'informative'} size="small">{n.healthBucket}</Badge>
-                    </Tooltip>
-                  ) : <span style={{ color: 'var(--colorNeutralForeground3)' }}>—</span>,
+                  render: (n) => <HealthBadge bucket={n.healthBucket} tone={n.healthTone} currentState={n.currentState} />,
                 },
                 {
                   key: 'summary',
                   header: 'Summary',
                   sortValue: (n) => n.staleTier || '',
                   render: (n) => {
-                    const tone = staleTone[n.staleTier]
                     const details = (n.remarks ?? '').replace(/\s+/g, ' ').trim()
                     const age = n.stageAgeDays ?? n.daysSinceUpdate
                     const breakdown = (n.fdoStageDays ?? []).some((d) => d != null)
@@ -329,11 +316,7 @@ export function NominationsPage() {
                         }
                       >
                         <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', cursor: 'help', flexWrap: 'wrap' }}>
-                          {tone && (
-                            <span style={{ background: tone.bg, color: tone.color, borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 600 }}>
-                              SLA {n.staleTier}
-                            </span>
-                          )}
+                          <SlaBadge tier={n.staleTier} tone={n.slaTone} />
                           {n.blockedReason && <Badge appearance="tint" color="danger" size="small">{n.blockedReason}</Badge>}
                           {(n.dataQualityFlags ?? []).length > 0 && <Badge appearance="tint" color="warning" size="small">⚠ fix in FDO</Badge>}
                           <span style={{ color: 'var(--colorNeutralForeground3)' }}>{age}d in stage</span>

@@ -313,6 +313,8 @@ export interface Nomination {
   ghcpUsageCount?: number
   ghcpEffectiveLevel?: number
   stageIndex?: number | null
+  fdoStage?: number | null
+  fdoStageLabel?: string | null
   stageLabel?: string
   isSettled?: boolean
   suggestedBlockerReason?: string | null
@@ -334,6 +336,7 @@ export interface Nomination {
   statusTone?: 'success' | 'warning' | 'danger' | 'informative' | 'brand' | 'subtle'
   healthBucket?: string
   healthTone?: 'success' | 'warning' | 'danger' | 'informative'
+  slaTone?: 'warning' | 'severe' | 'danger' | null
   dataQualityFlags?: string[]
   nominatedDate?: string
   approvalDate?: string

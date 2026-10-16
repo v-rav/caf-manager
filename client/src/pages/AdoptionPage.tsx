@@ -5,6 +5,7 @@ import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
 import { Modal } from '../components/Modal'
 import { ErrorText, FilterSelect, Loading, PageHeader, Panel } from '../components/common'
+import { BarRow as Bar } from '../components/ui'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
@@ -13,19 +14,6 @@ import { downloadCsv } from '../export'
 import type { CapabilityUtilization, Nomination } from '../types'
 
 const SETTLED = ['Withdrawn']
-
-function Bar({ label, count, max }: { label: string; count: number; max: number }) {
-  const pct = max ? Math.round((count / max) * 100) : 0
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '210px 1fr 40px', gap: 10, alignItems: 'center' }}>
-      <span style={{ fontSize: 12 }}>{label}</span>
-      <div style={{ background: 'var(--colorNeutralBackground3)', borderRadius: 4, height: 14, overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: 'var(--colorBrandBackground)' }} />
-      </div>
-      <span style={{ fontSize: 12, textAlign: 'right', color: 'var(--colorNeutralForeground3)' }}>{count}</span>
-    </div>
-  )
-}
 
 export function AdoptionPage() {
   const { region } = useRegion()

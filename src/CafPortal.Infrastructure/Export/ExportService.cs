@@ -71,18 +71,20 @@ public class ExportService(
     public async Task<byte[]> NominationsAsync(string? region, string? approval = null, string? migrationStatus = null,
         string? currentState = null, string? sla = null, string? links = null, string? search = null, int? fy = null,
         string? quality = null, int? stage = null, string? health = null, string? sa = null, string? pm = null, string? cftl = null,
-        CancellationToken ct = default)
+        string? owner = null, CancellationToken ct = default)
     {
         var all = await nominations.GetAsync(region, status: null, ct);
         static bool Same(string? a, string? b) => string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+        static bool Has(string? value, string part) => (value ?? "").Contains(part.Trim(), StringComparison.OrdinalIgnoreCase);
         // Apply the same filters the Nominations grid uses, so the export matches the on-screen view.
         var rows = all.Where(x =>
             (fy is null || x.FiscalYear == fy) &&
-            (stage is null || x.StageIndex == stage) &&
+            (stage is null || x.FdoStage == stage) &&
             (string.IsNullOrEmpty(health) || Same(x.HealthBucket, health)) &&
-            (string.IsNullOrEmpty(sa) || Same(x.SolutionArchitect, sa)) &&
-            (string.IsNullOrEmpty(pm) || Same(x.ProjectCoordinator, pm)) &&
-            (string.IsNullOrEmpty(cftl) || Same(x.CftlPrimary, cftl)) &&
+            (string.IsNullOrEmpty(sa) || Has(x.SolutionArchitect, sa)) &&
+            (string.IsNullOrEmpty(pm) || Has(x.ProjectCoordinator, pm)) &&
+            (string.IsNullOrEmpty(cftl) || Has(x.CftlPrimary, cftl)) &&
+            (string.IsNullOrEmpty(owner) || Has(x.SolutionArchitect, owner) || Has(x.ProjectCoordinator, owner) || Has(x.CftlPrimary, owner)) &&
             (string.IsNullOrEmpty(quality) || x.DataQualityFlags.Contains(quality, StringComparer.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(approval) || string.Equals(x.ApprovalStatus ?? "", approval, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(migrationStatus) || string.Equals(x.MigrationStatus, migrationStatus, StringComparison.OrdinalIgnoreCase)) &&
@@ -92,9 +94,7 @@ public class ExportService(
             (string.IsNullOrEmpty(search)
                 || (x.AccountName ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
                 || (x.Tpid ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
-                || (x.ProjectCoordinator ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
-                || (x.CftlPrimary ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
-                || (x.SolutionArchitect ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)))
+                || (x.ExternalTaskId ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         using var wb = new XLWorkbook();

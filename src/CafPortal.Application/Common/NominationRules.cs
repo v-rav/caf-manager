@@ -121,6 +121,17 @@ public static class NominationRules
     public static readonly string[] StageLabels =
         { "Validating", "Executing Pre-Requisites", "Finalize Scope", "Executing Migration" };
 
+    /// <summary>Full FDO stage labels 1–7 (1–4 = the journey stages above).</summary>
+    public static readonly string[] FdoStageLabels =
+        { "Validating", "Executing Pre-Requisites", "Finalize Scope", "Executing Migration", "Deferred by Customer", "Cancelled / Archived", "Completed" };
+
+    /// <summary>FDO Migration Status text → full FDO stage 1–7 (null when unrecognised). Keywords: KeywordRules "FdoStage".</summary>
+    public static int? FdoStage(string? migration) =>
+        int.TryParse(KeywordRules.First(KeywordRules.FdoStage, migration), out var stage) && stage is >= 1 and <= 7 ? stage : null;
+
+    public static string FdoStageLabel(int? stage) =>
+        stage is >= 1 and <= 7 ? FdoStageLabels[stage.Value - 1] : string.Empty;
+
     /// <summary>FDO Migration Status text → stage 1–4 (null when unrecognised). Keywords: KeywordRules "Stage".</summary>
     public static int? StageIndex(string? migration) =>
         int.TryParse(KeywordRules.First(KeywordRules.Stage, migration), out var stage) ? stage : null;
@@ -131,6 +142,15 @@ public static class NominationRules
     /// <summary>FDO Current State text → health bucket. Keywords: KeywordRules "Health" (no match = Other).</summary>
     public static string HealthBucket(string? currentState) =>
         KeywordRules.First(KeywordRules.Health, currentState) ?? KeywordRules.FindDomain(KeywordRules.Health)!.Fallback!;
+
+    /// <summary>Badge tone for an SLA tier (Warn = warning, Escalate = severe, Defer = danger); null when untiered.</summary>
+    public static string? SlaTone(string? staleTier) => staleTier switch
+    {
+        "Warn" => "warning",
+        "Escalate" => "severe",
+        "Defer" => "danger",
+        _ => null,
+    };
 
     /// <summary>Badge tone for a health bucket (Blocked = danger, Waiting = warning, On Track = success).</summary>
     public static string HealthTone(string bucket) => bucket switch

@@ -22,11 +22,15 @@ public static class KeywordRules
     public const string BlockerReason = "BlockerReason";
     public const string SegmentClass = "SegmentClass";
     public const string ActivityPhase = "ActivityPhase";
+    public const string FdoStage = "FdoStage";
 
     public static readonly IReadOnlyList<RuleDomain> Domains = new RuleDomain[]
     {
         new(Stage, "Stage (FDO Migration Status → 1–4)", "Nomination Migration Status", false, null,
-            new[] { "1", "2", "3", "4" }, "First matching rule sets the stage number shown everywhere."),
+            new[] { "1", "2", "3", "4" }, "Journey stage 1–4 used for SLA, velocity and stage analytics. First match wins."),
+        new(FdoStage, "FDO stage (Migration Status → 1–7)", "Nomination Migration Status", false, null,
+            new[] { "1", "2", "3", "4", "5", "6", "7" },
+            "Full FDO stage incl. 5 Deferred by Customer · 6 Cancelled / Archived · 7 Completed — the Stage filter and column. First match wins."),
         new(Health, "Health (FDO Current State → bucket)", "Nomination Current State", false, "Other",
             new[] { "Blocked", "Waiting", "On Track" }, "First match wins; no match = Other. Drives status colours and health cuts."),
         new(WaveType, "Wave type (FDO 'Linked to' name → type)", "FDO wave link names", false, null,
@@ -54,6 +58,9 @@ public static class KeywordRules
     // Today's behaviour, captured as data. Order = priority.
     public static readonly IReadOnlyList<KeywordRuleItem> Defaults = Build(
         (Stage, "Contains", new[] { ("validating", "1"), ("pre-requisite", "2"), ("pre requisite", "2"), ("prerequisite", "2"),
+            ("finalize", "3"), ("executing migration", "4") }),
+        (FdoStage, "Contains", new[] { ("deferred", "5"), ("cancel", "6"), ("archiv", "6"), ("completed", "7"),
+            ("validating", "1"), ("pre-requisite", "2"), ("pre requisite", "2"), ("prerequisite", "2"),
             ("finalize", "3"), ("executing migration", "4") }),
         (Health, "Contains", new[] { ("block", "Blocked"), ("waiting", "Waiting"), ("follow", "Waiting"), ("on track", "On Track") }),
         (WaveType, "Contains", new[] { ("security", "Security"), ("sql", "Db"), ("ossdb", "Db"), ("database", "Db"),
