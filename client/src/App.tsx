@@ -9,7 +9,6 @@ import { GateTemplatePage } from './pages/GateTemplatePage'
 import { HelpPage } from './pages/HelpPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { VelocityPage } from './pages/VelocityPage'
-import { AcrRecoveryPage } from './pages/AcrRecoveryPage'
 import { BackupPage } from './pages/BackupPage'
 import { CapacityPage } from './pages/CapacityPage'
 import { ConfigurationPage } from './pages/ConfigurationPage'
@@ -40,7 +39,8 @@ const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
       { path: 'velocity', element: <VelocityPage /> },
-      { path: 'acr-recovery', element: <AcrRecoveryPage /> },
+      // ACR Recovery was retired (unused ledger, heuristic estimates); its data-quality signal lives on Nominations.
+      { path: 'acr-recovery', element: <Navigate to="/nominations?quality=Missing%20cores" replace /> },
       { path: 'resources', element: <ResourcesPage /> },
       { path: 'accounts', element: <AccountsPage /> },
       { path: 'capacity', element: <CapacityPage /> },

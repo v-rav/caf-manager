@@ -317,6 +317,7 @@ export function NominationsPage() {
   const [classFilter, setClassFilter] = useState('')
   const [linkFilter, setLinkFilter] = useState('')
   const [ghcpFilter, setGhcpFilter] = useState('')
+  const [qualityFilter, setQualityFilter] = useState(() => searchParams.get('quality') ?? '')
   // Default approval comes from configuration; a person drill-through widens to all approvals.
   const [approvalFilter, setApprovalFilter] = useState('')
   const approvalSeeded = useRef(false)
@@ -406,10 +407,11 @@ export function NominationsPage() {
             (linkFilter === 'Has Security' && n.securityLinked)) &&
           (!ghcpFilter ||
             (ghcpFilter === 'Reported' ? (n.ghcpUsageCount ?? 0) > 0 : (n.ghcpUsageCount ?? 0) === 0)) &&
+          (!qualityFilter || (n.dataQualityFlags ?? []).includes(qualityFilter)) &&
           (!effectivePerson || matchesPerson(n, effectivePerson)) &&
           (!debouncedSearch || matchesText(n, debouncedSearch)),
       ),
-    [scoped, currentStateFilter, migrationFilter, slaFilter, classFilter, linkFilter, ghcpFilter, effectivePerson, debouncedSearch],
+    [scoped, currentStateFilter, migrationFilter, slaFilter, classFilter, linkFilter, ghcpFilter, qualityFilter, effectivePerson, debouncedSearch],
   )
 
   const openManage = (n: Nomination) => {
@@ -601,6 +603,7 @@ export function NominationsPage() {
                 {classOn && <FilterSelect label="Classification" value={classFilter} options={['Strategic (all)', ...(vocab?.classifications ?? [])]} onChange={setClassFilter} minWidth={170} />}
                 <FilterSelect label="Links" value={linkFilter} options={LINK_FILTERS} onChange={setLinkFilter} minWidth={150} />
                 <FilterSelect label="GHCP usage" value={ghcpFilter} options={['Reported', 'None']} onChange={setGhcpFilter} minWidth={140} />
+                <FilterSelect label="Data quality (fix in FDO)" value={qualityFilter} options={['Check FDO days', 'Missing cores']} onChange={setQualityFilter} minWidth={170} />
                 {!isSa && (<>
                 <input
                   ref={fileInput}
@@ -632,6 +635,7 @@ export function NominationsPage() {
                     sla: slaFilter,
                     links: linkFilter,
                     search: debouncedSearch,
+                    quality: qualityFilter,
                     fy: fy === 'all' ? undefined : String(fy),
                   })}
                   appearance="secondary"

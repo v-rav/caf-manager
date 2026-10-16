@@ -69,12 +69,14 @@ public class ExportService(
     }
 
     public async Task<byte[]> NominationsAsync(string? region, string? approval = null, string? migrationStatus = null,
-        string? currentState = null, string? sla = null, string? links = null, string? search = null, int? fy = null, CancellationToken ct = default)
+        string? currentState = null, string? sla = null, string? links = null, string? search = null, int? fy = null,
+        string? quality = null, CancellationToken ct = default)
     {
         var all = await nominations.GetAsync(region, status: null, ct);
         // Apply the same filters the Nominations grid uses, so the export matches the on-screen view.
         var rows = all.Where(x =>
             (fy is null || x.FiscalYear == fy) &&
+            (string.IsNullOrEmpty(quality) || x.DataQualityFlags.Contains(quality, StringComparer.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(approval) || string.Equals(x.ApprovalStatus ?? "", approval, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(migrationStatus) || string.Equals(x.MigrationStatus, migrationStatus, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(currentState) || string.Equals(x.CurrentState, currentState, StringComparison.OrdinalIgnoreCase)) &&
@@ -90,7 +92,7 @@ public class ExportService(
 
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("Nominations");
-        var headers = new[] { "Task Id", "Account", "TPID", "Technology", "Region", "Stage", "Migration Status", "Current State", "Status", "Approval", "PM", "CFTL", "SA", "Blocker Reason", "Blocked Since", "Follow-up", "Age In Stage (days)", "Stale Tier", "Waves", "Wave Types", "Remarks" };
+        var headers = new[] { "Task Id", "Account", "TPID", "Technology", "Region", "Stage", "Migration Status", "Current State", "Status", "Approval", "PM", "CFTL", "SA", "Blocker Reason", "Blocked Since", "Follow-up", "Age In Stage (days)", "Stale Tier", "Waves", "Wave Types", "Data Quality", "Remarks" };
         WriteHeader(ws, headers);
         var r = 2;
         foreach (var x in rows)
@@ -117,6 +119,7 @@ public class ExportService(
             ws.Cell(r, c++).Value = x.StaleTier;
             ws.Cell(r, c++).Value = string.Join(", ", x.Waves.Select(w => $"{w.WaveType}:{w.Reference}"));
             ws.Cell(r, c++).Value = x.WaveCount == 0 ? "None" : string.Join(", ", x.Waves.Select(w => w.WaveType).Distinct());
+            ws.Cell(r, c++).Value = string.Join("; ", x.DataQualityFlags);
             ws.Cell(r, c++).Value = x.Remarks ?? "";
             r++;
         }

@@ -178,6 +178,9 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 VelocityTargetDays = velocity?.Target,
                 VelocityTone = velocity is { Days: > 0 } vt ? NominationRules.VelocityTone((double)vt.Target / vt.Days, settings) : null,
                 FdoDaysExpected = NominationRules.FdoDaysExpected(n.FdoTotalDays, n.ActualStartDate, flightEnd, settings),
+                DataQualityFlags = NominationRules.DataQualityFlags(
+                    NominationRules.FdoDaysExpected(n.FdoTotalDays, n.ActualStartDate, flightEnd, settings) is not null,
+                    n.PrimaryMigrationPath, n.TotalCores, n.Status),
                 CurrentState = n.CurrentState,
                 SolutionArchitect = n.SolutionArchitect,
                 CftlPrimary = n.CftlPrimary,

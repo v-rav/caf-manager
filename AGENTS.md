@@ -495,7 +495,11 @@ nav, the route redirects to `/nominations`, unknown routes show a "Page not foun
   chronological sort key + stable key + display label (e.g. `FY27 Q1`, `Sep 2026`, `2026-W38`).
 - **Nomination enrichment**: offering fields + dates via `import-offerings` (Summary, single source; also
   creates Completed nominations from Actual End Date); FDO withdraw guard protects settled states.
-- **Containerized ACR core-capture** (**ACR Recovery** page `/acr-recovery`, Overview nav, Admin/Lead; `GET /api/analytics/acr-capture?region=`): since ACR is linear in
+- **Containerized ACR core-capture** — ⚠ **page retired** (the ledger was never used; most flags came from the heuristic
+  core floor). `/acr-recovery` redirects to `/nominations?quality=Missing%20cores`; the real signal lives on as the server
+  **data-quality flags** (`DataQualityFlags`: "Check FDO days", "Missing cores") — a Nominations filter + an Export Excel
+  column. The API and tables below are kept (empty) for a possible return once FDO exposes an app count. Original design:
+  (`GET /api/analytics/acr-capture?region=`): since ACR is linear in
   cores (cores × per-core rate × 12) and containerized paths drive ~66% of ACR, this flags Approved containerized
   nominations (path contains container/aks/aca/eks/ecs) whose value data looks under-captured — **Missing cores**
   (0 cores), **Missing ACR** (cores but no ACR), or **Low cores** (≤16, likely app-level not container-level) — and

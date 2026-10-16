@@ -29,6 +29,8 @@ public class NominationDto
     public string? VelocityTone { get; set; }
     /// <summary>Business days between actual start and end (or today) when FDO Total Days is implausibly far from it; else null.</summary>
     public int? FdoDaysExpected { get; set; }
+    /// <summary>Things the SA should fix in FDO: "Check FDO days", "Missing cores" (containerized, no cores).</summary>
+    public List<string> DataQualityFlags { get; set; } = new();
     public string? CurrentState { get; set; }
     public string? SolutionArchitect { get; set; }
     public string? CftlPrimary { get; set; }

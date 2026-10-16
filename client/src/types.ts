@@ -334,6 +334,7 @@ export interface Nomination {
   statusTone?: 'success' | 'warning' | 'danger' | 'informative' | 'brand' | 'subtle'
   healthBucket?: string
   healthTone?: 'success' | 'warning' | 'danger' | 'informative'
+  dataQualityFlags?: string[]
   nominatedDate?: string
   approvalDate?: string
   actualStartDate?: string

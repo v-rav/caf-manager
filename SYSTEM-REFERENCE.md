@@ -457,7 +457,7 @@ Every page honours **Region** (server-side) and, where noted, **FY** (client-sid
 
 | Nav | Page (route) | Key | Default roles |
 |---|---|---|---|
-| Overview | Executive Dashboard (`/`) · Migration Analytics (`/analytics`) · ACR Recovery (`/acr-recovery`) · Help (`/help`) | dashboard · analytics · acr-recovery · help | All · A/L · A/L · All |
+| Overview | Executive Dashboard (`/`) · Migration Analytics (`/analytics`) · Velocity Analytics (`/velocity`) · Help (`/help`) | dashboard · analytics · velocity · help | All · A/L · A/L · All |
 | Delivery | Nominations (`/nominations`) · SA Workspace (`/nominations/:id`) · Governance Board (`/governance`) · Strategic Register (`/strategic`) · Migration Flow (`/flow`) · GHCP Adoption (`/adoption`) · Ownership Effectiveness (`/effectiveness`) | nominations · governance · strategic · flow · adoption · effectiveness | All · A/L · … |
 | Resourcing | Resources · Accounts · Capacity · Leave · Reconciliation · Performance | resources · accounts · capacity · leave · reconciliation · performance | All / A/L |
 | Admin | Import History · Name Consistency · Configuration · Gate Template · Capability Masters · User & Access · Backup & Restore | history · name-consistency · configuration · gates · capability · access · backup | A/L or Admin |
@@ -480,10 +480,13 @@ lag) · distributions (stage, health 🔒 keywords, SLA, region, segment, path, 
 region/segment/path, cores by stage, top partners) · **Attainment** vs `AcrTarget<FY>` (🗄️) · **Trends** (basis × granularity ×
 measure × splitBy, FY-aware, drill-down by bucket). Single page-level export `/api/export/analytics` (Trends-filter-aware).
 
-### 7.3 ACR Recovery (`/acr-recovery`)
-Gap worklist (`/api/analytics/acr-capture`) with Stage/Status/State/Gap filters, a column chooser, CSV export · per-row
-estimator (`/api/acr/estimate`) · **Apply** (writes cores/ACR + audit; superseded by the next FDO drop) · **Ledger** (Flag → Notify →
-Realized, Reconcile now) with funnel KPIs.
+### 7.3 ACR Recovery — retired
+The page was retired (the recovery ledger was never used and most worklist rows came from the heuristic core floor, PV-02).
+`/acr-recovery` redirects to Nominations filtered to **Data quality = Missing cores**. The API (`/api/analytics/acr-capture`,
+`/api/acr-recovery`) and the `AcrRecoveryEntries` table are kept (empty) so it can return once FDO exposes an app count.
+**Data quality flags** (server `NominationRules.DataQualityFlags`, DTO `dataQualityFlags`): "Check FDO days" (FDO Total
+Days vs actual dates, ⚙️ `FdoDaysGapPct`) and "Missing cores" (containerized path, 0 cores, not withdrawn) — a
+Nominations filter + an Export Excel **Data Quality** column (`quality=` param).
 
 ### 7.4 Nominations (`/nominations`)
 Data: `api.nominations` + vocab + resources. **Scope = FY ∩ Approval filter (default `Approved`)**.

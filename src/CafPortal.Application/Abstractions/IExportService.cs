@@ -6,7 +6,8 @@ public interface IExportService
     Task<byte[]> ResourcesAsync(string? region, CancellationToken ct = default);
     Task<byte[]> CapacityAsync(string? region, CancellationToken ct = default);
     Task<byte[]> NominationsAsync(string? region, string? approval = null, string? migrationStatus = null,
-        string? currentState = null, string? sla = null, string? links = null, string? search = null, int? fy = null, CancellationToken ct = default);
+        string? currentState = null, string? sla = null, string? links = null, string? search = null, int? fy = null,
+        string? quality = null, CancellationToken ct = default);
     Task<byte[]> PerformanceAsync(string? region, CancellationToken ct = default);
     Task<byte[]> ExecutiveSummaryAsync(string? region, CancellationToken ct = default);
     Task<byte[]> AnalyticsAsync(string? region, string basis, string granularity, string measure,

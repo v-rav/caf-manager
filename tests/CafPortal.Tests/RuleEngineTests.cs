@@ -174,6 +174,16 @@ public class NominationRulesTests
     public void Health_tone_maps_bucket(string bucket, string expected) => Assert.Equal(expected, NominationRules.HealthTone(bucket));
 
     [Fact]
+    public void Data_quality_flags_cover_fdo_days_and_missing_cores()
+    {
+        Assert.Equal(new[] { "Check FDO days", "Missing cores" },
+            NominationRules.DataQualityFlags(true, "Containerize to AKS", 0, CafPortal.Domain.Enums.NominationStatusType.InProgress));
+        Assert.Empty(NominationRules.DataQualityFlags(false, "Containerize to AKS", 8, CafPortal.Domain.Enums.NominationStatusType.InProgress));
+        Assert.Empty(NominationRules.DataQualityFlags(false, ".NET / Java apps migrations to PaaS", 0, CafPortal.Domain.Enums.NominationStatusType.InProgress));
+        Assert.Empty(NominationRules.DataQualityFlags(false, "Containerize to AKS", 0, CafPortal.Domain.Enums.NominationStatusType.Withdrawn));
+    }
+
+    [Fact]
     public void Blocker_age_tone_uses_settings()
     {
         var s = new Dictionary<string, double> { ["BlockerAgeAmberDays"] = 5, ["BlockerAgeRedDays"] = 10 };

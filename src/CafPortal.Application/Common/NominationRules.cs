@@ -140,4 +140,16 @@ public static class NominationRules
         "On Track" => "success",
         _ => "informative",
     };
+
+    /// <summary>Data the SA should correct in FDO. Missing cores = containerized path (KeywordRules "ContainerPath") with
+    /// no cores on a live (not withdrawn) nomination.</summary>
+    public static List<string> DataQualityFlags(bool fdoDaysSuspect, string? migrationPath, int? totalCores, NominationStatusType status)
+    {
+        var flags = new List<string>();
+        if (fdoDaysSuspect) flags.Add("Check FDO days");
+        if (status != NominationStatusType.Withdrawn && (totalCores ?? 0) <= 0
+            && KeywordRules.First(KeywordRules.ContainerPath, migrationPath) is not null)
+            flags.Add("Missing cores");
+        return flags;
+    }
 }
