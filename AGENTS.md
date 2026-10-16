@@ -96,7 +96,8 @@ import the **web app is the system of record**.
   Nominations grid **defaults to `Approved` only** via an **Approval status** `FilterSelect` (default
   state `'Approved'`, with an **"All"** clear-option that shows every approval status incl. Declined);
   the approval scope drives both the KPIs and the grid so
-  counts match. Surfaced as an **Approval** export column. (Declined also maps to `Status=Withdrawn`
+  counts match. FDO leaves approval **blank on some Completed waves**; `NominationRules.EffectiveApproval` reads a blank
+  approval on an FDO stage-7 wave as **Approved** (DTO only, stored value untouched). Surfaced as an **Approval** export column. (Declined also maps to `Status=Withdrawn`
   via `MapStatus` on first insert.) The grid **search box is nomination identity** (`matchesText`): account name, TPID
   and FDO Task Id; people are searched only via the single **SA / PM / CFTL** box (`owner`). The server export applies
   the same `search` and `owner` predicates so the file matches the on-screen view.- **Ownership short names** used in the Nominations grid: **PM** = `ProjectCoordinator`,

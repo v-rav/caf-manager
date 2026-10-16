@@ -168,7 +168,7 @@ public class NominationService(IApplicationDbContext db) : INominationService
                 Remarks = n.Remarks,
                 ExternalTaskId = n.ExternalTaskId,
                 MigrationStatus = n.MigrationStatus,
-                ApprovalStatus = n.ApprovalStatus,
+                ApprovalStatus = NominationRules.EffectiveApproval(n.ApprovalStatus, n.MigrationStatus),
                 StageAgeDays = n.StageAgeDays,
                 FdoStageDays = fdoStages,
                 FdoTotalDays = n.FdoTotalDays,

@@ -36,6 +36,14 @@ public class KeywordRulesTests
     }
 
     [Theory]
+    [InlineData(null, "Completed", "Approved")]
+    [InlineData("", "7-Completed", "Approved")]
+    [InlineData(null, "Executing Migration", null)]
+    [InlineData("Declined", "Completed", "Declined")]
+    public void Blank_approval_on_completed_wave_reads_approved(string? approval, string migration, string? expected)
+        => Assert.Equal(expected, NominationRules.EffectiveApproval(approval, migration));
+
+    [Theory]
     [InlineData("Blocked - Customer", "Blocked")]
     [InlineData("Waiting for customer", "Waiting")]
     [InlineData("Follow-up needed", "Waiting")]

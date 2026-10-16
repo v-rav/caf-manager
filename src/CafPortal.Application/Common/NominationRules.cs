@@ -132,6 +132,10 @@ public static class NominationRules
     public static string FdoStageLabel(int? stage) =>
         stage is >= 1 and <= 7 ? FdoStageLabels[stage.Value - 1] : string.Empty;
 
+    /// <summary>FDO sometimes leaves approval blank on Completed waves; a completed wave was necessarily approved.</summary>
+    public static string? EffectiveApproval(string? approval, string? migration) =>
+        string.IsNullOrWhiteSpace(approval) && FdoStage(migration) == 7 ? "Approved" : approval;
+
     /// <summary>FDO Migration Status text → stage 1–4 (null when unrecognised). Keywords: KeywordRules "Stage".</summary>
     public static int? StageIndex(string? migration) =>
         int.TryParse(KeywordRules.First(KeywordRules.Stage, migration), out var stage) ? stage : null;

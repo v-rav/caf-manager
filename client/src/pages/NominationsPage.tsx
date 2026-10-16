@@ -168,7 +168,7 @@ export function NominationsPage() {
         <SearchBox aria-label="Search nominations" placeholder="Account, TPID or Task Id" value={f.q} onChange={(_, d) => set('q')(d.value)} style={{ minWidth: 220 }} />
         {isSa && <Switch checked={mine} onChange={(_, d) => setMine(d.checked)} label="My nominations" />}
         <FilterSelect label="Approval status" value={approval} options={approvalOptions} onChange={setApproval} minWidth={150} />
-        <FilterSelect label="Stage" value={f.stage} options={options.stage} onChange={set('stage')} minWidth={190} />
+        <FilterSelect label="Stage" value={f.stage} options={[1, 2, 3, 4, 5, 6, 7].map((k) => `${k} · ${stageName(k)}`)} onChange={set('stage')} minWidth={190} />
         <FilterSelect label="Status" value={f.status} options={options.status} onChange={set('status')} minWidth={120} />
         <FilterSelect label="SLA tier" value={f.sla} options={SLA_TIERS} onChange={set('sla')} minWidth={120} />
         <FilterText label="SA / PM / CFTL" value={f.owner} onChange={set('owner')} placeholder="Search owner name" minWidth={190} />
