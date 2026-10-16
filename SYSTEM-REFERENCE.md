@@ -518,8 +518,9 @@ Client-side from nominations where `isStrategic`: KPIs (active, % of pipeline, A
 aging table · tier filter · CSV.
 
 ### 7.8 Migration Flow (`/flow`)
-Client-side: funnel Received → Approved → S1..S4 → Completed (conversion %) · stage bottleneck (count × avg age) · blockers by
-category · SA workload (started waves; future-start waves as "+N upcoming" via server `isUpcoming`) · by path · path filter · CSV. Uses server `stageIndex`.
+Client-side: funnel Received → Approved → S1..S4 → Completed (conversion %) · where work sticks (in-flight count × avg age
+per stage; each stage links to `/nominations?stage=`) · why waves are stuck (FDO Blocked/Waiting by suggested reason; each links
+to `/governance?reason=`) · by path · URL-synced path filter · CSV. SA workload lives on the Dashboard (Operational tab).
 
 ### 7.9 GHCP Adoption (`/adoption`)
 Data: `api.nominations` (FY-scoped, excluding Withdrawn) + `api.capability`.

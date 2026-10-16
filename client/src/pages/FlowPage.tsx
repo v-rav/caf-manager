@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../api'
 import { KpiCard } from '../components/KpiCard'
-import { ErrorText, FilterSelect, Loading, PageHeader, Panel, SaWorkloadList } from '../components/common'
+import { ErrorText, FilterSelect, Loading, PageHeader, Panel } from '../components/common'
 import { useAsync } from '../hooks'
 import { useRegion } from '../region'
 import { useFy, nominationInFy } from '../fy'
@@ -120,7 +120,7 @@ export function FlowPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Migration Flow"
-        subtitle="Funnel conversion & drop-off · bottleneck analytics across the migration journey"
+        subtitle="Funnel conversion & drop-off · where in-flight work sticks — click a stage or reason to see the waves"
         actions={<>
           <FilterSelect label="Path" value={f.path} onChange={set('path')} options={options.path} minWidth={200} />
           {anyFilter && <Button size="small" onClick={reset}>Reset</Button>}
@@ -149,7 +149,7 @@ export function FlowPage() {
             {stageBottleneck.rows.map((r) => (
               <div key={r.k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', borderBottom: '1px solid var(--colorNeutralStroke3)' }}>
                 <Badge appearance={r.k === stageBottleneck.worstK ? 'filled' : 'tint'} color={r.k === stageBottleneck.worstK ? 'danger' : 'informative'}>{r.k}</Badge>
-                <span style={{ flex: 1, fontSize: 13 }}>{r.label}</span>
+                <RouterLink to={`/nominations?stage=${encodeURIComponent(`${r.k} · ${r.label}`)}`} style={{ flex: 1, fontSize: 13 }}>{r.label}</RouterLink>
                 <span style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>{r.count} · avg {r.avgAge}d</span>
               </div>
             ))}
@@ -161,13 +161,13 @@ export function FlowPage() {
             <span style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>Nothing blocked or waiting.</span>
           ) : (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {byStuckReason.map(([c, n]) => <Badge key={c} appearance="tint" color="warning">{c} · {n}</Badge>)}
+              {byStuckReason.map(([c, n]) => (
+                <RouterLink key={c} to={c === 'Unspecified' ? '/governance' : `/governance?reason=${encodeURIComponent(c)}`}>
+                  <Badge appearance="tint" color="warning">{c} · {n}</Badge>
+                </RouterLink>
+              ))}
             </div>
           )}
-        </Panel>
-
-        <Panel title="SA workload (active nominations)">
-          <SaWorkloadList rows={approved.filter((n) => !completed(n))} />
         </Panel>
 
         <Panel title="By migration type (path)">

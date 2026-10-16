@@ -1,13 +1,17 @@
-import { Badge, Button, Checkbox, Dropdown, Input, Option, SpinButton, Text } from '@fluentui/react-components'
+import { Badge, Button, Checkbox, Dropdown, Input, Option, SpinButton, Tab, TabList, Text } from '@fluentui/react-components'
 import { AddRegular, CheckmarkCircleRegular, DeleteRegular, EditRegular, SaveRegular } from '@fluentui/react-icons'
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
-import { ErrorText, Loading, Panel } from '../components/common'
+import { ErrorText, Loading, PageHeader, Panel } from '../components/common'
+import { useUrlFilters } from '../filters'
 import { useAsync } from '../hooks'
 import type { RoleCapacity, AcrRates, AcrEstimate, OperationsSetting, StatusRuleRow } from '../types'
 
 export function ConfigurationPage() {
   const { data, loading, error, reload } = useAsync(() => api.roleCapacity(), [])
+  const { f, set } = useUrlFilters(['tab'] as const)
+  const tab = f.tab || 'thresholds'
+  const setTab = set('tab')
 
   // Local editable copy keyed by role → limit.
   const [edits, setEdits] = useState<Record<string, number>>({})
@@ -50,16 +54,13 @@ export function ConfigurationPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div>
-        <Text size={600} weight="bold" style={{ display: 'block' }}>
-          Configuration
-        </Text>
-        <Text size={300} style={{ color: 'var(--colorNeutralForeground3)' }}>
-          Tune the governance rules that drive capacity and utilization across the portal.
-        </Text>
-      </div>
+      <PageHeader title="Configuration" subtitle="Rule-driving settings and vocabularies used across the portal. Pick an area below." />
 
-      <Panel
+      <TabList selectedValue={tab} onTabSelect={(_, d) => setTab(String(d.value))}>
+        {TABS.map((t) => <Tab key={t.key} value={t.key}>{t.label}</Tab>)}
+      </TabList>
+
+      {tab === 'capacity' && <Panel
         title="Optimal accounts per role"
         action={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -94,8 +95,9 @@ export function ConfigurationPage() {
             </div>
           </>
         )}
-      </Panel>
+      </Panel>}
 
+      {tab === 'vocab' && <>
       <VocabPanel
         title="Account segments"
         placeholder="New segment name"
@@ -114,17 +116,27 @@ export function ConfigurationPage() {
       />
       <LookupPanel title="Classifications" category="Classification" placeholder="New classification" hint="Operating-model classifications on a nomination (Standard Factory, Strategic Pilot, …)." />
       <LookupPanel title="Milestone types" category="Milestone" placeholder="New milestone" hint="Dated app-factory events captured in the workspace (kick-off, runbook shared, actual migration start, …)." />
-      <AcrRatesPanel />
-      <OperationsSettingsPanel section="Operations" title="Operational thresholds"
-        intro="Rule-driving values read by the server (SLA cadence, strategic tiers, capacity bands, retention). Ordered tiers are validated on save; capacity changes rebuild the capacity snapshot." />
-      <OperationsSettingsPanel section="Scoring" title="Scoring models"
-        intro="MSI and Ownership Effectiveness formulas. Each weight group must total 100%; band cut-offs must stay ordered. Changes apply on the next page load everywhere the score is shown." />
-      <StatusRulesPanel />
-      <ImportProfilesPanel />
-      <FiscalTargetsPanel />
+      </>}
+      {tab === 'acr' && <><AcrRatesPanel /><FiscalTargetsPanel /></>}
+      {tab === 'thresholds' && <OperationsSettingsPanel section="Operations" title="Operational thresholds"
+        intro="Rule-driving values read by the server (SLA cadence, stage targets, strategic tiers, capacity bands, velocity, data checks, retention). Ordered tiers are validated on save; capacity changes rebuild the capacity snapshot." />}
+      {tab === 'scoring' && <OperationsSettingsPanel section="Scoring" title="Scoring models"
+        intro="MSI and Ownership Effectiveness formulas. Each weight group must total 100%; band cut-offs must stay ordered. Changes apply on the next page load everywhere the score is shown." />}
+      {tab === 'workflow' && <StatusRulesPanel />}
+      {tab === 'import' && <ImportProfilesPanel />}
     </div>
   )
 }
+
+const TABS = [
+  { key: 'thresholds', label: 'Thresholds' },
+  { key: 'scoring', label: 'Scoring models' },
+  { key: 'capacity', label: 'Capacity per role' },
+  { key: 'vocab', label: 'Vocabularies' },
+  { key: 'acr', label: 'ACR & targets' },
+  { key: 'workflow', label: 'Workflow status' },
+  { key: 'import', label: 'Import mapping' },
+]
 
 // FDO import profiles: how an uploaded workbook is recognised (signature) and which header names feed each field.
 // Lets a renamed FDO column be fixed here instead of in code.

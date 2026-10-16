@@ -69,6 +69,15 @@ import type {
 // Same-origin in production (SPA served by the API); dev uses the Vite proxy.
 const http = axios.create({ baseURL: '' })
 
+// Several pages read the full nominations list; share one download per region for a short while.
+// Any write (POST/PUT/DELETE, incl. uploads) clears it so edits show up immediately.
+const NOMINATIONS_TTL_MS = 60_000
+const nominationCache = new Map<string, { at: number; data: Promise<Nomination[]> }>()
+http.interceptors.response.use((res) => {
+  if ((res.config.method ?? 'get').toLowerCase() !== 'get') nominationCache.clear()
+  return res
+})
+
 export const api = {
   dashboard: (region?: string) =>
     http.get<ExecutiveDashboard>('/api/dashboard/executive', { params: { region } }).then((r) => r.data),
@@ -195,8 +204,18 @@ export const api = {
 
   deleteLeave: (id: number) => http.delete(`/api/leave/${id}`).then((r) => r.data),
 
-  nominations: (region?: string, status?: string) =>
-    http.get<Nomination[]>('/api/nominations', { params: { region, status } }).then((r) => r.data),
+  nominations: (region?: string, status?: string) => {
+    if (status) return http.get<Nomination[]>('/api/nominations', { params: { region, status } }).then((r) => r.data)
+    const key = region ?? ''
+    const hit = nominationCache.get(key)
+    if (hit && Date.now() - hit.at < NOMINATIONS_TTL_MS) return hit.data
+    const data = http.get<Nomination[]>('/api/nominations', { params: { region } }).then((r) => r.data)
+    data.catch(() => nominationCache.delete(key))
+    nominationCache.set(key, { at: Date.now(), data })
+    return data
+  },
+  /** Drop the shared nominations list (e.g. the header "Refresh Data"). */
+  clearNominationCache: () => nominationCache.clear(),
   nominationVocab: () =>
     http.get<{ classificationEnabled: boolean; classifications: string[]; velocityImpacts: string[] }>('/api/nominations/vocab').then((r) => r.data),
 

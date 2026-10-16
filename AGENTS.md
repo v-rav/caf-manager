@@ -444,6 +444,9 @@ nav, the route redirects to `/nominations`, unknown routes show a "Page not foun
   absent = configured default) · `stage` · `status` (health bucket) · `sla` · `sa` · `pm` · `cftl` · `cls` · `links` · `ghcp` ·
   `quality` · `q`; plus `?person=`), with pieces in `pages/nominations/`: `NominationDetail` (row expand + `ReadField`/`LinkChip`),
   `SummaryCards`, `ManageNominationDialog`. Export Excel passes the same filters (`stage`, `health`, `sa`, `pm`, `cftl`, …).
+- **Performance**: `api.nominations(region)` is cached per region for 60 s and shared across pages; any non-GET request
+  (edit, upload, refresh) clears it (axios interceptor in `api.ts`). Pages other than Dashboard / Nominations / Workspace /
+  Login are lazy-loaded (`page()` + `L()` in `App.tsx`) — add new pages the same way. Configuration is tabbed (`?tab=`).
 - **Migration Capability Utilization** (the GHCP/AppMod/accelerator value story): two portal-owned masters —
   **`MigrationTool`** (Name · Category · Vendor; seeded 15-tool taxonomy — **Assessment** (Azure Migrate, AppCAT) ·
   **GHCP** (GHCP-CI, GHCP Agent Mode, GHCP Custom Prompts, AppMod .NET/Java/CLI, Upgrade Assistant — AppMod is a

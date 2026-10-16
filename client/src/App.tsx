@@ -1,35 +1,43 @@
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { Button, Spinner, Text } from '@fluentui/react-components'
+import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
 import { Layout } from './components/Layout'
-import { AccountsPage } from './pages/AccountsPage'
-import { AccessPage } from './pages/AccessPage'
-import { CapabilityMasterPage } from './pages/CapabilityMasterPage'
-import { RulesPage } from './pages/RulesPage'
-import { GateTemplatePage } from './pages/GateTemplatePage'
-import { HelpPage } from './pages/HelpPage'
-import { AnalyticsPage } from './pages/AnalyticsPage'
-import { VelocityPage } from './pages/VelocityPage'
-import { BackupPage } from './pages/BackupPage'
-import { CapacityPage } from './pages/CapacityPage'
-import { ConfigurationPage } from './pages/ConfigurationPage'
 import { DashboardPage } from './pages/DashboardPage'
-import { HistoryPage } from './pages/HistoryPage'
-import { LeavePage } from './pages/LeavePage'
 import { LoginPage, ForcedPasswordChange } from './pages/LoginPage'
 import { NominationsPage } from './pages/NominationsPage'
 import { NominationWorkspacePage } from './pages/NominationWorkspacePage'
-import { GovernanceBoardPage } from './pages/GovernanceBoardPage'
-import { StrategicRegisterPage } from './pages/StrategicRegisterPage'
-import { AdoptionPage } from './pages/AdoptionPage'
-import { FlowPage } from './pages/FlowPage'
-import { EffectivenessPage } from './pages/EffectivenessPage'
-import { PerformancePage } from './pages/PerformancePage'
-import { ReconciliationPage } from './pages/ReconciliationPage'
-import { NameConsistencyPage } from './pages/NameConsistencyPage'
-import { ResourcesPage } from './pages/ResourcesPage'
 import { AuthProvider, useAuth } from './auth'
 import { RegionProvider } from './region'
 import { FyProvider } from './fy'
+
+// Less-used pages load on first visit, keeping the initial download small. Pages use named exports.
+function page<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K): LazyExoticComponent<ComponentType> {
+  return lazy(() => load().then((m) => ({ default: m[name] })))
+}
+const AccountsPage = page(() => import('./pages/AccountsPage'), 'AccountsPage')
+const AccessPage = page(() => import('./pages/AccessPage'), 'AccessPage')
+const CapabilityMasterPage = page(() => import('./pages/CapabilityMasterPage'), 'CapabilityMasterPage')
+const RulesPage = page(() => import('./pages/RulesPage'), 'RulesPage')
+const GateTemplatePage = page(() => import('./pages/GateTemplatePage'), 'GateTemplatePage')
+const HelpPage = page(() => import('./pages/HelpPage'), 'HelpPage')
+const AnalyticsPage = page(() => import('./pages/AnalyticsPage'), 'AnalyticsPage')
+const VelocityPage = page(() => import('./pages/VelocityPage'), 'VelocityPage')
+const BackupPage = page(() => import('./pages/BackupPage'), 'BackupPage')
+const CapacityPage = page(() => import('./pages/CapacityPage'), 'CapacityPage')
+const ConfigurationPage = page(() => import('./pages/ConfigurationPage'), 'ConfigurationPage')
+const HistoryPage = page(() => import('./pages/HistoryPage'), 'HistoryPage')
+const LeavePage = page(() => import('./pages/LeavePage'), 'LeavePage')
+const GovernanceBoardPage = page(() => import('./pages/GovernanceBoardPage'), 'GovernanceBoardPage')
+const StrategicRegisterPage = page(() => import('./pages/StrategicRegisterPage'), 'StrategicRegisterPage')
+const AdoptionPage = page(() => import('./pages/AdoptionPage'), 'AdoptionPage')
+const FlowPage = page(() => import('./pages/FlowPage'), 'FlowPage')
+const EffectivenessPage = page(() => import('./pages/EffectivenessPage'), 'EffectivenessPage')
+const PerformancePage = page(() => import('./pages/PerformancePage'), 'PerformancePage')
+const ReconciliationPage = page(() => import('./pages/ReconciliationPage'), 'ReconciliationPage')
+const NameConsistencyPage = page(() => import('./pages/NameConsistencyPage'), 'NameConsistencyPage')
+const ResourcesPage = page(() => import('./pages/ResourcesPage'), 'ResourcesPage')
+
+const L = (C: ComponentType) => <Suspense fallback={<Spinner label="Loading…" style={{ padding: 40 }} />}><C /></Suspense>
 
 const router = createBrowserRouter([
   {
@@ -37,32 +45,32 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <DashboardPage /> },
-      { path: 'analytics', element: <AnalyticsPage /> },
-      { path: 'velocity', element: <VelocityPage /> },
+      { path: 'analytics', element: L(AnalyticsPage) },
+      { path: 'velocity', element: L(VelocityPage) },
       // ACR Recovery was retired (unused ledger, heuristic estimates); its data-quality signal lives on Nominations.
       { path: 'acr-recovery', element: <Navigate to="/nominations?quality=Missing%20cores" replace /> },
-      { path: 'resources', element: <ResourcesPage /> },
-      { path: 'accounts', element: <AccountsPage /> },
-      { path: 'capacity', element: <CapacityPage /> },
-      { path: 'reconciliation', element: <ReconciliationPage /> },
-      { path: 'name-consistency', element: <NameConsistencyPage /> },
-      { path: 'leave', element: <LeavePage /> },
+      { path: 'resources', element: L(ResourcesPage) },
+      { path: 'accounts', element: L(AccountsPage) },
+      { path: 'capacity', element: L(CapacityPage) },
+      { path: 'reconciliation', element: L(ReconciliationPage) },
+      { path: 'name-consistency', element: L(NameConsistencyPage) },
+      { path: 'leave', element: L(LeavePage) },
       { path: 'nominations', element: <NominationsPage /> },
       { path: 'nominations/:id', element: <NominationWorkspacePage /> },
-      { path: 'governance', element: <GovernanceBoardPage /> },
-      { path: 'strategic', element: <StrategicRegisterPage /> },
-      { path: 'adoption', element: <AdoptionPage /> },
-      { path: 'flow', element: <FlowPage /> },
-      { path: 'effectiveness', element: <EffectivenessPage /> },
-      { path: 'performance', element: <PerformancePage /> },
-      { path: 'history', element: <HistoryPage /> },
-      { path: 'configuration', element: <ConfigurationPage /> },
-      { path: 'capability', element: <CapabilityMasterPage /> },
-      { path: 'rules', element: <RulesPage /> },
-      { path: 'gates', element: <GateTemplatePage /> },
-      { path: 'help', element: <HelpPage /> },
-      { path: 'access', element: <AccessPage /> },
-      { path: 'backup', element: <BackupPage /> },
+      { path: 'governance', element: L(GovernanceBoardPage) },
+      { path: 'strategic', element: L(StrategicRegisterPage) },
+      { path: 'adoption', element: L(AdoptionPage) },
+      { path: 'flow', element: L(FlowPage) },
+      { path: 'effectiveness', element: L(EffectivenessPage) },
+      { path: 'performance', element: L(PerformancePage) },
+      { path: 'history', element: L(HistoryPage) },
+      { path: 'configuration', element: L(ConfigurationPage) },
+      { path: 'capability', element: L(CapabilityMasterPage) },
+      { path: 'rules', element: L(RulesPage) },
+      { path: 'gates', element: L(GateTemplatePage) },
+      { path: 'help', element: L(HelpPage) },
+      { path: 'access', element: L(AccessPage) },
+      { path: 'backup', element: L(BackupPage) },
       // The P0 workspace mock was retired; old bookmarks land on the real nominations grid.
       { path: 'workspace', element: <Navigate to="/nominations" replace /> },
       { path: '*', element: <NotFound /> },
