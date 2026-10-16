@@ -440,6 +440,10 @@ nav, the route redirects to `/nominations`, unknown routes show a "Page not foun
   like `/governance?sla=Defer` just work) + `useFacets(rows, pickers, f, order)` (each dropdown lists only values still
   present under the other filters). Badge colours come from the server (`statusTone`, `healthTone`, `velocityTone`) and
   stage names from `stageLabel` — no local label/colour maps.
+- **Nominations page layout**: `pages/NominationsPage.tsx` (grid + filters, all URL-synced: `approval` (`all` = no filter,
+  absent = configured default) · `stage` · `status` (health bucket) · `sla` · `sa` · `pm` · `cftl` · `cls` · `links` · `ghcp` ·
+  `quality` · `q`; plus `?person=`), with pieces in `pages/nominations/`: `NominationDetail` (row expand + `ReadField`/`LinkChip`),
+  `SummaryCards`, `ManageNominationDialog`. Export Excel passes the same filters (`stage`, `health`, `sa`, `pm`, `cftl`, …).
 - **Migration Capability Utilization** (the GHCP/AppMod/accelerator value story): two portal-owned masters —
   **`MigrationTool`** (Name · Category · Vendor; seeded 15-tool taxonomy — **Assessment** (Azure Migrate, AppCAT) ·
   **GHCP** (GHCP-CI, GHCP Agent Mode, GHCP Custom Prompts, AppMod .NET/Java/CLI, Upgrade Assistant — AppMod is a

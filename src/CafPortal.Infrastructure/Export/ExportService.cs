@@ -70,12 +70,19 @@ public class ExportService(
 
     public async Task<byte[]> NominationsAsync(string? region, string? approval = null, string? migrationStatus = null,
         string? currentState = null, string? sla = null, string? links = null, string? search = null, int? fy = null,
-        string? quality = null, CancellationToken ct = default)
+        string? quality = null, int? stage = null, string? health = null, string? sa = null, string? pm = null, string? cftl = null,
+        CancellationToken ct = default)
     {
         var all = await nominations.GetAsync(region, status: null, ct);
+        static bool Same(string? a, string? b) => string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
         // Apply the same filters the Nominations grid uses, so the export matches the on-screen view.
         var rows = all.Where(x =>
             (fy is null || x.FiscalYear == fy) &&
+            (stage is null || x.StageIndex == stage) &&
+            (string.IsNullOrEmpty(health) || Same(x.HealthBucket, health)) &&
+            (string.IsNullOrEmpty(sa) || Same(x.SolutionArchitect, sa)) &&
+            (string.IsNullOrEmpty(pm) || Same(x.ProjectCoordinator, pm)) &&
+            (string.IsNullOrEmpty(cftl) || Same(x.CftlPrimary, cftl)) &&
             (string.IsNullOrEmpty(quality) || x.DataQualityFlags.Contains(quality, StringComparer.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(approval) || string.Equals(x.ApprovalStatus ?? "", approval, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(migrationStatus) || string.Equals(x.MigrationStatus, migrationStatus, StringComparison.OrdinalIgnoreCase)) &&
@@ -103,8 +110,8 @@ public class ExportService(
             ws.Cell(r, c++).Value = x.Tpid ?? "";
             ws.Cell(r, c++).Value = x.Technology ?? "";
             ws.Cell(r, c++).Value = x.Region;
-            var stage = StageNumber(x.MigrationStatus);
-            if (stage is int sn) ws.Cell(r, c++).Value = sn; else ws.Cell(r, c++).Value = "";
+            var stageNo = StageNumber(x.MigrationStatus);
+            if (stageNo is int sn) ws.Cell(r, c++).Value = sn; else ws.Cell(r, c++).Value = "";
             ws.Cell(r, c++).Value = x.MigrationStatus ?? "";
             ws.Cell(r, c++).Value = x.CurrentState ?? "";
             ws.Cell(r, c++).Value = x.Status;
